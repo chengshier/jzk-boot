@@ -33,7 +33,7 @@ spring:
   profiles:
     #  配置的环境
     #    active: #spring.profiles.active#
-    active:
+    active: dev
   servlet:
     multipart:
       max-file-size: 50MB #设置单个文件大小
@@ -48,7 +48,7 @@ spring:
   datasource:
     type: com.alibaba.druid.pool.DruidDataSource
     driver-class-name: com.mysql.jdbc.Driver
-    url: jdbc:mysql://rm-bp1531qh1ibq560l5km.mysql.rds.aliyuncs.com:3306/crmeb?useSSL=false&useUnicode=true&characterEncoding=utf-8&zeroDateTimeBehavior=convertToNull&transformedBitIsBoolean=true&serverTimezone=GMT%2B8&nullCatalogMeansCurrent=true&allowPublicKeyRetrieval=true
+    url: jdbc:mysql://rm-bp1531qh1ibq560l5km.mysql.rds.aliyuncs.com:3306/crmeb_wit?useSSL=false&useUnicode=true&characterEncoding=utf-8&zeroDateTimeBehavior=convertToNull&transformedBitIsBoolean=true&serverTimezone=GMT%2B8&nullCatalogMeansCurrent=true&allowPublicKeyRetrieval=true
     username: gatherwit
     password: Wit@5685199@!!!
   redis:
@@ -60,7 +60,7 @@ spring:
     host: hw.wit.cn
     port: 9999
     password: Wiot@xm@2022_
-    database: 1
+    database: 80
     timeout: 30000 # 连接超时时间（毫秒）
     jedis:
       pool:

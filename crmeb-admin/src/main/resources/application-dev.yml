@@ -7,7 +7,7 @@ crmeb:
   wechat-js-api-beta: true #微信js api是否是beta版本
   asyncConfig: true #是否同步config表数据到redis
   asyncWeChatProgramTempList: false #是否同步小程序公共模板库
-  imagePath: /D:/Desktop/code/crmeb_java/crmeb/ # 服务器图片路径配置 斜杠结尾
+  imagePath: /F:/newWorkSpace/cream-jzk/crmeb/ # 服务器图片路径配置 斜杠结尾
   captchaOn: false # 是否开启行为验证码
   demoSite: true # 是否演示站点 所有手机号码都会掩码
 
@@ -26,15 +26,18 @@ spring:
   datasource:
     type: com.alibaba.druid.pool.DruidDataSource
     driver-class-name: com.mysql.jdbc.Driver
-    url: jdbc:mysql://rm-bp1531qh1ibq560l5km.mysql.rds.aliyuncs.com:3306/crmeb_wit?useSSL=false&useUnicode=true&characterEncoding=utf-8&zeroDateTimeBehavior=convertToNull&transformedBitIsBoolean=true&serverTimezone=GMT%2B8&nullCatalogMeansCurrent=true&allowPublicKeyRetrieval=true
-    username: gatherwit
-    password: Wit@5685199@!!!
+#    url: jdbc:mysql://rm-bp1531qh1ibq560l5km.mysql.rds.aliyuncs.com:3306/crmeb_wit?useSSL=false&useUnicode=true&characterEncoding=utf-8&zeroDateTimeBehavior=convertToNull&transformedBitIsBoolean=true&serverTimezone=GMT%2B8&nullCatalogMeansCurrent=true&allowPublicKeyRetrieval=true
+#    username: gatherwit
+#    password: Wit@5685199@!!!
+    url: jdbc:mysql://localhost:3306/jzk-test?useSSL=false&useUnicode=true&characterEncoding=utf-8&zeroDateTimeBehavior=convertToNull&transformedBitIsBoolean=true&serverTimezone=GMT%2B8&nullCatalogMeansCurrent=true&allowPublicKeyRetrieval=true
+    username: root
+    password: root
   redis:
     host: 127.0.0.1 #地址
     port: 6379 #端口
     password:
     timeout: 10000 # 连接超时时间（毫秒）
-    database: 6 #默认数据库
+    database: 3 #默认数据库
     jedis:
       pool:
         max-active: 200 # 连接池最大连接数（使用负值表示没有限制）
