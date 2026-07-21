@@ -1,0 +1,3 @@
+package com.zbkj.common.request.jiuzhoukang;
+import lombok.Data;import java.math.BigDecimal;
+@Data public class JkCommissionRuleItemSaveRequest { private Long id; private Long ruleId; private Integer productId; private Integer skuId; private String receiverRoleCode; private String calculationType; private BigDecimal commissionRate; private BigDecimal fixedAmount; private Integer priority; private Boolean status; private String itemConfigJson; }

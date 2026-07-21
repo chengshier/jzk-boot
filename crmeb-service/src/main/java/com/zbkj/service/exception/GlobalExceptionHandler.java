@@ -117,10 +117,10 @@ public class GlobalExceptionHandler {
         doLog(request, e);
         e.printStackTrace();
         if (e instanceof CrmebException) {
-            return CommonResult.failed().setMessage(Objects.requireNonNull(e.getMessage()));
+            return CommonResult.failed((CrmebException) e);
         }
         if (e instanceof MissingServletRequestParameterException) {
-            return CommonResult.failed().setMessage(Objects.requireNonNull(e.getMessage()));
+            return CommonResult.failed((CrmebException) e);
         }
         //未知错误
         return CommonResult.failed().setMessage(e.getMessage());

@@ -8,7 +8,6 @@ import com.zbkj.common.model.user.User;
 import com.zbkj.common.utils.RedisUtil;
 import com.zbkj.common.utils.RequestUtil;
 import com.zbkj.common.vo.LoginUserVo;
-import org.apache.commons.lang3.ArrayUtils;
 import org.springframework.stereotype.Component;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
@@ -160,7 +159,11 @@ public class FrontTokenComponent {
 
     //路由在此处，则返回true，无论用户是否登录都可以访问
     public boolean checkRouter(String uri) {
-        String[] routerList = {
+        if (StrUtil.isBlank(uri)) {
+            return false;
+        }
+        String normalizedUri = StrUtil.removePrefix(uri, "/");
+        String[] routerPrefixes = {
                 "api/front/product/detail",
                 "api/front/coupons",
                 "api/front/index",
@@ -183,10 +186,12 @@ public class FrontTokenComponent {
                 "api/front/bargain/header",
                 "api/front/bargain/detail",
                 "api/front/seckill/header",
-                "api/front/seckill/detail"
+                "api/front/seckill/detail",
+                "api/front/login/config",
+                "api/front/jk/product/trade-view"
         };
 
-        return ArrayUtils.contains(routerList, uri);
+        return StrUtil.startWithAny(normalizedUri, routerPrefixes);
     }
 
     public Boolean check(String token, HttpServletRequest request){
@@ -207,3 +212,4 @@ public class FrontTokenComponent {
     }
 
 }
+

@@ -25,6 +25,7 @@ import com.zbkj.common.model.product.StoreProductAttrValue;
 import com.zbkj.common.model.system.SystemAdmin;
 import com.zbkj.common.utils.RedisUtil;
 import com.zbkj.service.delete.OrderUtils;
+import com.zbkj.service.service.jiuzhoukang.commission.RetailOrderCommissionAdapter;
 import com.zbkj.service.service.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -134,6 +135,9 @@ public class StoreOrderTaskServiceImpl implements StoreOrderTaskService {
     @Autowired
     private SmsTemplateService smsTemplateService;
 
+    @Autowired
+    private RetailOrderCommissionAdapter retailOrderCommissionAdapter;
+
     /**
      * 用户取消订单
      * @author Mr.Zhang
@@ -187,6 +191,7 @@ public class StoreOrderTaskServiceImpl implements StoreOrderTaskService {
          * */
         try{
             storeOrderStatusService.createLog(storeOrder.getId(), "check_order_over", "用户评价");
+            try { retailOrderCommissionAdapter.afterCrmebOrderCompleted(storeOrder); } catch (Exception commissionException) { logger.error("九州康零售订单佣金适配失败，orderId={}", storeOrder.getId(), commissionException); }
             return true;
         }catch (Exception e){
             return false;

@@ -19,6 +19,9 @@ target/
 *.iws
 *.iml
 *.ipr
+*.log
+*.sql
+*.png
 
 ### NetBeans ###
 /nbproject/private/
@@ -44,4 +47,4 @@ src/main/.DS_Store
 
 
 
-xx
+xx.worktrees/
