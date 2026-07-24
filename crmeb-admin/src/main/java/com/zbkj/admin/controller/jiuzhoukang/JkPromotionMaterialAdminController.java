@@ -38,11 +38,16 @@ public class JkPromotionMaterialAdminController {
     @JkBizPermission(value = JkBizPermissionCodes.DICT_MANAGE, checkDataScope = false)
     public CommonResult<List<Map<String, Object>>> list() {
         String raw = systemConfigService.getValueByKey(JkBizConstants.CONFIG_KEY_PROMOTION_MATERIALS);
-        if (StrUtil.isBlank(raw) || !JSONUtil.isTypeJSONArray(raw)) {
+        if (StrUtil.isBlank(raw)) {
+            return CommonResult.success(new ArrayList<Map<String, Object>>());
+        }
+        JSONArray array;
+        try {
+            array = JSONUtil.parseArray(raw);
+        } catch (Exception ignored) {
             return CommonResult.success(new ArrayList<Map<String, Object>>());
         }
         List<Map<String, Object>> result = new ArrayList<>();
-        JSONArray array = JSONUtil.parseArray(raw);
         for (Object value : array) result.add(new LinkedHashMap<>(JSONUtil.parseObj(value)));
         return CommonResult.success(result);
     }
@@ -67,15 +72,15 @@ public class JkPromotionMaterialAdminController {
             if (!"copy".equals(type) && StrUtil.isBlank(imageUrl)) {
                 throw new IllegalArgumentException("第" + (index + 1) + "条图片素材地址不能为空");
             }
-            if (StrUtil.isBlank(item.getStr("id"))) item.set("id", "PM" + System.currentTimeMillis() + index);
-            item.set("type", type);
-            item.set("title", title.trim());
-            item.set("description", StrUtil.blankToDefault(item.getStr("description"), ""));
-            item.set("copyText", StrUtil.blankToDefault(item.getStr("copyText"), ""));
-            item.set("imageUrl", StrUtil.blankToDefault(imageUrl, ""));
-            item.set("sort", item.getInt("sort", 0));
-            item.set("status", item.getBool("status", true));
-            if (item.get("roleCodes") == null) item.set("roleCodes", new JSONArray());
+            if (StrUtil.isBlank(item.getStr("id"))) item.put("id", "PM" + System.currentTimeMillis() + index);
+            item.put("type", type);
+            item.put("title", title.trim());
+            item.put("description", StrUtil.blankToDefault(item.getStr("description"), ""));
+            item.put("copyText", StrUtil.blankToDefault(item.getStr("copyText"), ""));
+            item.put("imageUrl", StrUtil.blankToDefault(imageUrl, ""));
+            item.put("sort", item.getInt("sort", 0));
+            item.put("status", item.getBool("status", true));
+            if (item.get("roleCodes") == null) item.put("roleCodes", new JSONArray());
             result.add(item);
             index++;
         }
