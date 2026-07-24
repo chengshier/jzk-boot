@@ -11,6 +11,23 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  sql-audit-index:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Collect SQL menu references
+        run: |
+          find . -type f -name '*.sql' | sort > sql-files.txt
+          grep -RIn -m 200 'eb_system_menu' . --include='*.sql' > menu-references.txt || true
+          zip -q sql-audit-index.zip sql-files.txt menu-references.txt
+      - name: Upload SQL index
+        uses: actions/upload-artifact@v4
+        with:
+          name: jk-sql-audit-index
+          path: sql-audit-index.zip
+          retention-days: 1
+
   compile:
     runs-on: ubuntu-latest
     timeout-minutes: 30
