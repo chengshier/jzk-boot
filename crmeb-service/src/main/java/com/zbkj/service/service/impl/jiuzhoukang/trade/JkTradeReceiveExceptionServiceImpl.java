@@ -228,16 +228,20 @@ public class JkTradeReceiveExceptionServiceImpl implements JkTradeReceiveExcepti
 
     private void restoreBusiness(JkTradeReceiveException entity, Long operatorId) {
         String originalStatus = TYPE_PLATFORM_ORDER.equals(entity.getBusinessType()) ? "SHIPPED" : "TRANSFERRED";
+        int updated;
         if (TYPE_PLATFORM_ORDER.equals(entity.getBusinessType())) {
-            platformOrderDao.update(null, new UpdateWrapper<JkPlatformOrder>()
+            updated = platformOrderDao.update(null, new UpdateWrapper<JkPlatformOrder>()
                     .eq("id", entity.getBusinessId()).eq("status", "RECEIVE_EXCEPTION").eq("is_deleted", false)
                     .set("status", originalStatus).set("receive_status", "UNRECEIVED")
                     .set("update_user_id", operatorId).set("update_time", new Date()));
         } else {
-            stockTransferDao.update(null, new UpdateWrapper<JkStockTransfer>()
+            updated = stockTransferDao.update(null, new UpdateWrapper<JkStockTransfer>()
                     .eq("id", entity.getBusinessId()).eq("status", "RECEIVE_EXCEPTION").eq("is_deleted", false)
                     .set("status", originalStatus).set("receive_status", "UNRECEIVED")
                     .set("update_user_id", operatorId).set("update_time", new Date()));
+        }
+        if (updated != 1) {
+            throw new CrmebException("原业务单状态已变化，异常处理未生效，请刷新后核对");
         }
     }
 
