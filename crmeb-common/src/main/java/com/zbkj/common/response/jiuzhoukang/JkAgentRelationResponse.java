@@ -17,6 +17,8 @@ public class JkAgentRelationResponse {
     private String regionName;
     private Boolean freezeStatus;
     private String identityStatusText;
+    private Integer directTeamCount;
+    private Integer teamCount;
     private Long parentUserId;
     private String parentName;
     private String parentPhone;
