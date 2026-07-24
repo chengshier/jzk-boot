@@ -16,6 +16,7 @@ public class JkPlatformOrder {
     @TableId(value = "id", type = IdType.AUTO) private Long id;
     private String platformOrderNo; private String requestNo; private Long userId; private String roleCode; private Long countyAgentId; private String regionCode;
     private String status; private String payStatus; private String auditStatus; private String logisticsStatus; private String receiveStatus; private BigDecimal totalAmount;
+    private String logisticsCompany; private String logisticsNo; private Date shippingTime;
     private Long auditUserId; private Date auditTime; private String auditRemark; private String rejectReason; private String cancelReason; private Boolean isDeleted;
     private Date createTime; private Date updateTime; private Long createUserId; private Long updateUserId; private Integer version;
     @TableField(exist = false) private String applicantName;
