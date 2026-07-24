@@ -57,9 +57,11 @@ jobs:
         }
     }
 '''
-          if old not in text:
-              raise SystemExit('restoreBusiness marker not found')
-          path.write_text(text.replace(old, new, 1), encoding='utf-8')
+          if 'int updated;' not in text:
+              if old not in text:
+                  raise SystemExit('restoreBusiness marker not found')
+              text = text.replace(old, new, 1)
+              path.write_text(text, encoding='utf-8')
           PY
       - name: Commit patch
         run: |
@@ -69,4 +71,5 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add "$FILE"
           git commit -m "fix: require CAS success when resolving receipt exceptions"
+          git pull --rebase origin fix/jk-business-consistency
           git push origin HEAD:fix/jk-business-consistency
