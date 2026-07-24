@@ -34,6 +34,7 @@ public class JkAgentRelationChangeServiceImpl implements JkAgentRelationChangeSe
     @Autowired private JkWithdrawApplyDao withdrawDao;
     @Autowired private UserService userService;
     @Autowired private JkAgentRelationService relationService;
+    @Autowired private JkRelationChangeBlockerService blockerService;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -88,7 +89,7 @@ public class JkAgentRelationChangeServiceImpl implements JkAgentRelationChangeSe
     public JkAgentRelationChangeApply detail(Long viewerUserId, Long id, boolean admin) {
         JkAgentRelationChangeApply value = require(id);
         if (!admin && !viewerUserId.equals(value.getUserId())) throw new IllegalArgumentException("无权查看该换绑申请");
-        return enrich(value);
+        return enrichWithBlockers(value);
     }
 
     @Override
@@ -103,7 +104,7 @@ public class JkAgentRelationChangeServiceImpl implements JkAgentRelationChangeSe
             applyDao.updateById(entity);
             return enrich(entity);
         }
-        assertNoBusinessBlockers(entity.getUserId());
+        blockerService.assertNoBlockers(entity);
         validateTargetParent(entity.getUserId(), entity.getTargetParentUserId());
         JkAgentRelation current = currentRelation(entity.getUserId());
         if (current == null || !Objects.equals(current.getId(), entity.getCurrentRelationId())) {
@@ -221,6 +222,11 @@ public class JkAgentRelationChangeServiceImpl implements JkAgentRelationChangeSe
         JkAgentRelationChangeApply value = applyDao.selectById(id);
         if (value == null || Boolean.TRUE.equals(value.getIsDeleted())) throw new IllegalArgumentException("换绑申请不存在");
         return value;
+    }
+
+    private JkAgentRelationChangeApply enrichWithBlockers(JkAgentRelationChangeApply row) {
+        enrich(row);
+        return blockerService.fill(row);
     }
 
     private JkAgentRelationChangeApply enrich(JkAgentRelationChangeApply row) {
