@@ -32,8 +32,7 @@ public class JkTradeReceiveExceptionAdminController {
 
     @GetMapping("/list")
     @ApiOperation("异常收货列表")
-    @PreAuthorize("hasAnyAuthority('" + JkPermissionCodes.ADMIN_PLATFORM_ORDER_LIST + "','"
-            + JkPermissionCodes.ADMIN_STOCK_TRANSFER_LIST + "')")
+    @PreAuthorize("hasAuthority('" + JkPermissionCodes.ADMIN_RECEIVE_EXCEPTION_LIST + "')")
     public CommonResult<CommonPage<JkTradeReceiveException>> list(
             @RequestParam(required = false) String status,
             @RequestParam(required = false) String businessType,
@@ -45,16 +44,14 @@ public class JkTradeReceiveExceptionAdminController {
 
     @GetMapping("/{id}")
     @ApiOperation("异常收货详情")
-    @PreAuthorize("hasAnyAuthority('" + JkPermissionCodes.ADMIN_PLATFORM_ORDER_LIST + "','"
-            + JkPermissionCodes.ADMIN_STOCK_TRANSFER_LIST + "')")
+    @PreAuthorize("hasAuthority('" + JkPermissionCodes.ADMIN_RECEIVE_EXCEPTION_LIST + "')")
     public CommonResult<JkTradeReceiveExceptionDetailResponse> detail(@PathVariable Long id) {
         return CommonResult.success(service.detailAdmin(id));
     }
 
     @PostMapping("/handle")
     @ApiOperation("标记处理中、处理完成或驳回异常上报")
-    @PreAuthorize("hasAnyAuthority('" + JkPermissionCodes.ADMIN_PLATFORM_ORDER_AUDIT + "','"
-            + JkPermissionCodes.ADMIN_STOCK_TRANSFER_AUDIT + "')")
+    @PreAuthorize("hasAuthority('" + JkPermissionCodes.ADMIN_RECEIVE_EXCEPTION_HANDLE + "')")
     public CommonResult<JkTradeReceiveExceptionDetailResponse> handle(
             @RequestBody @Validated JkTradeReceiveExceptionHandleRequest request) {
         return CommonResult.success(service.handle(operatorId(), request));
