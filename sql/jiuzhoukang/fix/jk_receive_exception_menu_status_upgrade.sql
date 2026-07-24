@@ -16,30 +16,35 @@ SET @now = NOW();
 -- ============================================================================
 -- 一、状态字典
 -- ============================================================================
+-- NOT EXISTS 不过滤软删除状态，避免历史软删除记录仍受唯一键约束时重复插入失败；
+-- 随后的 UPDATE 会统一恢复状态、文案与标签。
 
 INSERT INTO `jk_dict_type`
 (`dict_type`,`dict_name`,`remark`,`status`,`is_deleted`,`create_time`,`update_time`)
 SELECT 'platform_order_status','平台订货状态','九州康平台订货状态',1,0,@now,@now
 WHERE NOT EXISTS (
-  SELECT 1 FROM `jk_dict_type`
-  WHERE `dict_type`='platform_order_status' AND `is_deleted`=0
+  SELECT 1 FROM `jk_dict_type` WHERE `dict_type`='platform_order_status'
 );
 
 INSERT INTO `jk_dict_type`
 (`dict_type`,`dict_name`,`remark`,`status`,`is_deleted`,`create_time`,`update_time`)
 SELECT 'stock_transfer_status','库存调拨状态','九州康库存调拨状态',1,0,@now,@now
 WHERE NOT EXISTS (
-  SELECT 1 FROM `jk_dict_type`
-  WHERE `dict_type`='stock_transfer_status' AND `is_deleted`=0
+  SELECT 1 FROM `jk_dict_type` WHERE `dict_type`='stock_transfer_status'
 );
 
 INSERT INTO `jk_dict_type`
 (`dict_type`,`dict_name`,`remark`,`status`,`is_deleted`,`create_time`,`update_time`)
 SELECT 'receive_status','收货状态','九州康订货与调拨收货状态',1,0,@now,@now
 WHERE NOT EXISTS (
-  SELECT 1 FROM `jk_dict_type`
-  WHERE `dict_type`='receive_status' AND `is_deleted`=0
+  SELECT 1 FROM `jk_dict_type` WHERE `dict_type`='receive_status'
 );
+
+UPDATE `jk_dict_type`
+SET `status`=1,
+    `is_deleted`=0,
+    `update_time`=@now
+WHERE `dict_type` IN ('platform_order_status','stock_transfer_status','receive_status');
 
 INSERT INTO `jk_dict_item`
 (`dict_type`,`item_code`,`item_label`,`item_tag`,`sort`,`remark`,`status`,`is_deleted`,`create_time`,`update_time`)
@@ -47,9 +52,7 @@ SELECT 'platform_order_status','RECEIVE_EXCEPTION','收货异常处理中','warn
        '用户已上报短缺、破损或其他收货异常，异常关闭前禁止正常入库',1,0,@now,@now
 WHERE NOT EXISTS (
   SELECT 1 FROM `jk_dict_item`
-  WHERE `dict_type`='platform_order_status'
-    AND `item_code`='RECEIVE_EXCEPTION'
-    AND `is_deleted`=0
+  WHERE `dict_type`='platform_order_status' AND `item_code`='RECEIVE_EXCEPTION'
 );
 
 INSERT INTO `jk_dict_item`
@@ -58,9 +61,7 @@ SELECT 'stock_transfer_status','RECEIVE_EXCEPTION','收货异常处理中','warn
        '下级已上报调拨收货异常，异常关闭前禁止正常入库',1,0,@now,@now
 WHERE NOT EXISTS (
   SELECT 1 FROM `jk_dict_item`
-  WHERE `dict_type`='stock_transfer_status'
-    AND `item_code`='RECEIVE_EXCEPTION'
-    AND `is_deleted`=0
+  WHERE `dict_type`='stock_transfer_status' AND `item_code`='RECEIVE_EXCEPTION'
 );
 
 INSERT INTO `jk_dict_item`
@@ -69,9 +70,7 @@ SELECT 'receive_status','EXCEPTION','收货异常处理中','warning',20,
        '收货差异已上报，暂不执行库存入库',1,0,@now,@now
 WHERE NOT EXISTS (
   SELECT 1 FROM `jk_dict_item`
-  WHERE `dict_type`='receive_status'
-    AND `item_code`='EXCEPTION'
-    AND `is_deleted`=0
+  WHERE `dict_type`='receive_status' AND `item_code`='EXCEPTION'
 );
 
 INSERT INTO `jk_dict_item`
@@ -80,20 +79,34 @@ SELECT 'receive_status','UNRECEIVED','待收货','warning',10,
        '已发货或已拨货，等待收货人确认',1,0,@now,@now
 WHERE NOT EXISTS (
   SELECT 1 FROM `jk_dict_item`
-  WHERE `dict_type`='receive_status'
-    AND `item_code`='UNRECEIVED'
-    AND `is_deleted`=0
+  WHERE `dict_type`='receive_status' AND `item_code`='UNRECEIVED'
 );
 
 -- 已有记录存在但被停用或删除时恢复并统一文案。
 UPDATE `jk_dict_item`
-SET `item_label`='收货异常处理中', `item_tag`='warning', `status`=1, `is_deleted`=0, `update_time`=@now
+SET `item_label`='收货异常处理中',
+    `item_tag`='warning',
+    `status`=1,
+    `is_deleted`=0,
+    `update_time`=@now
 WHERE `dict_type` IN ('platform_order_status','stock_transfer_status')
   AND `item_code`='RECEIVE_EXCEPTION';
 
 UPDATE `jk_dict_item`
-SET `item_label`='收货异常处理中', `item_tag`='warning', `status`=1, `is_deleted`=0, `update_time`=@now
+SET `item_label`='收货异常处理中',
+    `item_tag`='warning',
+    `status`=1,
+    `is_deleted`=0,
+    `update_time`=@now
 WHERE `dict_type`='receive_status' AND `item_code`='EXCEPTION';
+
+UPDATE `jk_dict_item`
+SET `item_label`='待收货',
+    `item_tag`='warning',
+    `status`=1,
+    `is_deleted`=0,
+    `update_time`=@now
+WHERE `dict_type`='receive_status' AND `item_code`='UNRECEIVED';
 
 -- ============================================================================
 -- 二、后台菜单与 authority
@@ -111,11 +124,11 @@ SET @operation_root_id = (
 -- 兼容历史数据中“设置”根菜单固定 ID=12 的情况。
 SET @operation_root_id = IFNULL(@operation_root_id, 12);
 
+-- 包含软删除记录，避免 path 或业务唯一约束下重复插入。
 SET @jk_root_id = (
   SELECT `id` FROM `eb_system_menu`
   WHERE (`path`='/operation/jzk' OR `name` IN ('九州康管理','九州康'))
-    AND `is_del`=0
-  ORDER BY `id` ASC LIMIT 1
+  ORDER BY `is_del` ASC, `id` ASC LIMIT 1
 );
 
 INSERT INTO `eb_system_menu`
@@ -126,9 +139,18 @@ WHERE @jk_root_id IS NULL;
 SET @jk_root_id = (
   SELECT `id` FROM `eb_system_menu`
   WHERE (`path`='/operation/jzk' OR `name` IN ('九州康管理','九州康'))
-    AND `is_del`=0
-  ORDER BY `id` ASC LIMIT 1
+  ORDER BY `is_del` ASC, `id` ASC LIMIT 1
 );
+
+UPDATE `eb_system_menu`
+SET `pid`=@operation_root_id,
+    `name`='九州康管理',
+    `path`='/operation/jzk',
+    `menu_type`='M',
+    `is_show`=1,
+    `is_del`=0,
+    `update_time`=@now
+WHERE `id`=@jk_root_id;
 
 SET @receive_exception_menu_id = (
   SELECT `id` FROM `eb_system_menu`
@@ -156,6 +178,7 @@ SET `pid`=@jk_root_id,
     `perms`='admin:jk:receive:exception:list',
     `path`='/operation/jzk/receiveException',
     `menu_type`='C',
+    `sort`=72,
     `is_show`=1,
     `is_del`=0,
     `update_time`=@now
@@ -184,6 +207,7 @@ SET `pid`=@receive_exception_menu_id,
     `name`='处理异常收货',
     `path`='',
     `menu_type`='A',
+    `sort`=1,
     `is_show`=1,
     `is_del`=0,
     `update_time`=@now
