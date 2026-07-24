@@ -122,8 +122,10 @@ public class StockFlowServiceImpl implements StockFlowService {
                 .setUpdateUserId(request.getOperatorUserId());
         try {
             stockFlowDao.insert(flow);
-        } catch (DuplicateKeyException ignored) {
-            return;
+        } catch (DuplicateKeyException duplicate) {
+            // 平台库存可能已在当前事务内调整。并发命中幂等键时必须抛异常，
+            // 让 Spring 回滚 CRMEB 主库存和镜像库存，不能直接 return。
+            throw new CrmebException("库存动作正在处理，请勿重复提交");
         }
         if (setTemplate == null) return;
 
