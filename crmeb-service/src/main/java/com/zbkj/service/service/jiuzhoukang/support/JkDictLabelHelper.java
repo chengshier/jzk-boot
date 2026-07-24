@@ -20,6 +20,7 @@ public final class JkDictLabelHelper {
         put(labels, "platform_order_status", "PAYMENT_APPROVED", "付款审核通过");
         put(labels, "platform_order_status", "WAIT_SHIP", "待发货");
         put(labels, "platform_order_status", "SHIPPED", "已发货");
+        put(labels, "platform_order_status", "RECEIVE_EXCEPTION", "收货异常处理中");
         put(labels, "platform_order_status", "RECEIVED", "已收货");
         put(labels, "platform_order_status", "STOCK_IN", "已入库");
         put(labels, "platform_order_status", "CANCELLED", "已取消");
@@ -39,9 +40,13 @@ public final class JkDictLabelHelper {
         put(labels, "stock_transfer_status", "PAYMENT_REJECTED", "付款驳回");
         put(labels, "stock_transfer_status", "PAYMENT_APPROVED", "付款确认通过");
         put(labels, "stock_transfer_status", "TRANSFERRED", "已拨货");
+        put(labels, "stock_transfer_status", "RECEIVE_EXCEPTION", "收货异常处理中");
         put(labels, "stock_transfer_status", "STOCK_IN", "已入库");
         put(labels, "stock_transfer_status", "CANCELLED", "已取消");
         put(labels, "stock_transfer_status", "CLOSED", "已关闭");
+        put(labels, "receive_status", "UNRECEIVED", "待收货");
+        put(labels, "receive_status", "EXCEPTION", "收货异常处理中");
+        put(labels, "receive_status", "STOCK_IN", "已入库");
         put(labels, "voucher_audit_status", "PENDING", "待审核");
         put(labels, "voucher_audit_status", "APPROVED", "审核通过");
         put(labels, "voucher_audit_status", "REJECTED", "审核驳回");
