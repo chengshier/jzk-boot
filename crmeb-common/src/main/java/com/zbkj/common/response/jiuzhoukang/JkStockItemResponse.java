@@ -4,6 +4,7 @@ import lombok.Data;
 
 import java.io.Serializable;
 import java.math.BigDecimal;
+import java.util.Date;
 
 @Data
 public class JkStockItemResponse implements Serializable {
@@ -38,4 +39,6 @@ public class JkStockItemResponse implements Serializable {
     private Integer totalInQty;
     private Integer totalOutQty;
     private Integer version;
+    private Date createTime;
+    private Date updateTime;
 }
