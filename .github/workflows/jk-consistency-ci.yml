@@ -22,4 +22,13 @@ jobs:
           java-version: '8'
           cache: maven
       - name: Compile all modules
-        run: mvn -B -DskipTests compile
+        run: |
+          set -o pipefail
+          mvn -B -DskipTests compile 2>&1 | tee maven-compile.log
+      - name: Upload compile log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: maven-compile-log
+          path: maven-compile.log
+          retention-days: 7
