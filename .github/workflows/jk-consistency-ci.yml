@@ -11,24 +11,6 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  source-index:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Build relevant source index
-        run: |
-          find crmeb-admin crmeb-front crmeb-common crmeb-service sql docs -type f \
-            \( -path '*jiuzhoukang*' -o -path '*jkBusiness*' \) \
-            | grep -Ei 'relation|receive|platform|transfer|health|commission|withdraw|menu|route' \
-            | sort > source-index.txt
-      - name: Upload source index
-        uses: actions/upload-artifact@v4
-        with:
-          name: jk-source-index
-          path: source-index.txt
-          retention-days: 1
-
   compile:
     runs-on: ubuntu-latest
     timeout-minutes: 30
