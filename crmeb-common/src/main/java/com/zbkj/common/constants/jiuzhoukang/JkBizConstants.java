@@ -44,6 +44,9 @@ public class JkBizConstants {
 
     public static final String REDIS_CONTEXT_KEY_PREFIX = "jk:permission:context:";
 
+    /** 九洲康推广素材 JSON 配置键。 */
+    public static final String CONFIG_KEY_PROMOTION_MATERIALS = "jk_promotion_materials_json";
+
     public static final String PERMISSION_PRICE_RULE_CONFIG = "price.rule.config";
     public static final String PERMISSION_STOCK_VIEW_SELF = "stock.view.self";
     public static final String PERMISSION_STOCK_VIEW_REGION = "stock.view.region";
