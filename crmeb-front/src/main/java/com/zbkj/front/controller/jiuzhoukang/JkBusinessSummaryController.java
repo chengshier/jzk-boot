@@ -1,6 +1,7 @@
 package com.zbkj.front.controller.jiuzhoukang;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.zbkj.common.exception.CrmebException;
 import com.zbkj.common.model.jiuzhoukang.JkCommissionAccount;
 import com.zbkj.common.model.jiuzhoukang.JkFundAccount;
 import com.zbkj.common.model.jiuzhoukang.JkPlatformOrder;
@@ -29,7 +30,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.math.BigDecimal;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -61,7 +61,11 @@ public class JkBusinessSummaryController {
     @GetMapping("/summary")
     @ApiOperation("当前用户业务中心汇总")
     public CommonResult<Map<String, Object>> summary() {
-        Long userId = Long.valueOf(token.getUserId());
+        Integer frontUserId = token.getUserId();
+        if (frontUserId == null || frontUserId <= 0) {
+            throw new CrmebException("请先登录");
+        }
+        Long userId = Long.valueOf(frontUserId);
         JkUserContext context = contextService.getFrontContext(userId);
         String roleCode = context.getPrimaryRoleCode();
 
@@ -115,6 +119,7 @@ public class JkBusinessSummaryController {
     }
 
     private long countPlatformOrders(Long userId, List<String> statuses) {
+        if (statuses == null || statuses.isEmpty()) return 0L;
         return platformOrderDao.selectCount(new LambdaQueryWrapper<JkPlatformOrder>()
                 .eq(JkPlatformOrder::getUserId, userId)
                 .in(JkPlatformOrder::getStatus, statuses)
@@ -122,6 +127,7 @@ public class JkBusinessSummaryController {
     }
 
     private long countUserTransfers(Long userId, List<String> statuses) {
+        if (statuses == null || statuses.isEmpty()) return 0L;
         return stockTransferDao.selectCount(new LambdaQueryWrapper<JkStockTransfer>()
                 .eq(JkStockTransfer::getUserId, userId)
                 .in(JkStockTransfer::getStatus, statuses)
@@ -129,6 +135,7 @@ public class JkBusinessSummaryController {
     }
 
     private long countHandledTransfers(Long countyAgentId, List<String> statuses) {
+        if (statuses == null || statuses.isEmpty()) return 0L;
         return stockTransferDao.selectCount(new LambdaQueryWrapper<JkStockTransfer>()
                 .eq(JkStockTransfer::getCountyAgentId, countyAgentId)
                 .ne(JkStockTransfer::getUserId, countyAgentId)
