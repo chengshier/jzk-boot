@@ -121,8 +121,9 @@ SET @operation_root_id = (
   ORDER BY `id` ASC LIMIT 1
 );
 
--- 兼容历史数据中“设置”根菜单固定 ID=12 的情况。
-SET @operation_root_id = IFNULL(@operation_root_id, 12);
+-- 未配置独立“运营管理”根菜单时，九州康作为一级菜单挂载，禁止使用固定菜单 ID。
+-- CRMEB 基础数据中的 ID=12 通常是“分销”，错误挂载会导致菜单权限层级混乱。
+SET @operation_root_id = IFNULL(@operation_root_id, 0);
 
 -- 包含软删除记录，避免 path 或业务唯一约束下重复插入。
 SET @jk_root_id = (
