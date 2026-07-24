@@ -22,7 +22,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-/** 提现收款账户服务：完整卡号只在服务端加密保存，列表仅返回掩码。 */
+/** 提现收款账户服务：完整卡号只在服务端认证加密保存，列表仅返回掩码。 */
 @Service
 public class JkWithdrawPayeeAccountServiceImpl implements JkWithdrawPayeeAccountService {
     private static final String ACCOUNT_TYPE_BANK = "BANK";
@@ -48,42 +48,39 @@ public class JkWithdrawPayeeAccountServiceImpl implements JkWithdrawPayeeAccount
     @Transactional(rollbackFor = Exception.class)
     public JkWithdrawPayeeAccountResponse save(Long userId, JkWithdrawPayeeAccountSaveRequest request) {
         if (userId == null) throw new IllegalArgumentException("请先登录");
-        validate(request);
+        JkWithdrawPayeeAccount entity = request != null && request.getId() != null
+                ? requireOwned(userId, request.getId(), false) : null;
+        validate(request, entity == null);
+
         String bankAccount = normalize(request.getBankAccount());
-        String accountHash = cryptoSupport.sha256(bankAccount);
-        JkWithdrawPayeeAccount duplicate = accountDao.selectOne(new LambdaQueryWrapper<JkWithdrawPayeeAccount>()
-                .eq(JkWithdrawPayeeAccount::getUserId, userId)
-                .eq(JkWithdrawPayeeAccount::getBankAccountHash, accountHash)
-                .eq(JkWithdrawPayeeAccount::getIsDeleted, false)
-                .ne(request.getId() != null, JkWithdrawPayeeAccount::getId, request.getId())
-                .last("limit 1"));
-        if (duplicate != null) throw new IllegalArgumentException("该银行卡已添加，请勿重复保存");
+        boolean cardChanged = StrUtil.isNotBlank(bankAccount);
+        if (cardChanged) assertNoDuplicate(userId, request.getId(), bankAccount);
 
         Date now = new Date();
-        JkWithdrawPayeeAccount entity;
-        if (request.getId() == null) {
+        if (entity == null) {
             entity = new JkWithdrawPayeeAccount().setUserId(userId).setIsDeleted(false).setStatus(true)
                     .setVersion(0).setCreateTime(now);
-        } else {
-            entity = requireOwned(userId, request.getId(), false);
         }
-        boolean firstAccount = accountDao.selectCount(new LambdaQueryWrapper<JkWithdrawPayeeAccount>()
+        Integer count = accountDao.selectCount(new LambdaQueryWrapper<JkWithdrawPayeeAccount>()
                 .eq(JkWithdrawPayeeAccount::getUserId, userId)
                 .eq(JkWithdrawPayeeAccount::getStatus, true)
                 .eq(JkWithdrawPayeeAccount::getIsDeleted, false)
-                .ne(request.getId() != null, JkWithdrawPayeeAccount::getId, request.getId())) == 0;
+                .ne(entity.getId() != null, JkWithdrawPayeeAccount::getId, entity.getId()));
+        boolean firstAccount = count == null || count == 0;
         boolean makeDefault = firstAccount || Boolean.TRUE.equals(request.getSetDefault()) || Boolean.TRUE.equals(entity.getIsDefault());
         if (makeDefault) clearDefault(userId);
 
         entity.setAccountType(ACCOUNT_TYPE_BANK)
                 .setAccountName(request.getAccountName().trim())
                 .setBankName(request.getBankName().trim())
-                .setBankAccountCipher(cryptoSupport.encrypt(bankAccount))
-                .setBankAccountHash(accountHash)
-                .setBankAccountMask(mask(bankAccount))
                 .setIsDefault(makeDefault)
                 .setStatus(true)
                 .setUpdateTime(now);
+        if (cardChanged) {
+            entity.setBankAccountCipher(cryptoSupport.encrypt(bankAccount))
+                    .setBankAccountHash(cryptoSupport.sha256(bankAccount))
+                    .setBankAccountMask(mask(bankAccount));
+        }
         if (entity.getId() == null) accountDao.insert(entity); else accountDao.updateById(entity);
         return toResponse(entity);
     }
@@ -105,18 +102,7 @@ public class JkWithdrawPayeeAccountServiceImpl implements JkWithdrawPayeeAccount
         boolean wasDefault = Boolean.TRUE.equals(entity.getIsDefault());
         entity.setIsDeleted(true).setStatus(false).setIsDefault(false).setUpdateTime(new Date());
         accountDao.updateById(entity);
-        if (wasDefault) {
-            JkWithdrawPayeeAccount replacement = accountDao.selectOne(new LambdaQueryWrapper<JkWithdrawPayeeAccount>()
-                    .eq(JkWithdrawPayeeAccount::getUserId, userId)
-                    .eq(JkWithdrawPayeeAccount::getStatus, true)
-                    .eq(JkWithdrawPayeeAccount::getIsDeleted, false)
-                    .orderByDesc(JkWithdrawPayeeAccount::getId)
-                    .last("limit 1"));
-            if (replacement != null) {
-                replacement.setIsDefault(true).setUpdateTime(new Date());
-                accountDao.updateById(replacement);
-            }
-        }
+        if (wasDefault) promoteNewestAsDefault(userId);
     }
 
     @Override
@@ -136,7 +122,12 @@ public class JkWithdrawPayeeAccountServiceImpl implements JkWithdrawPayeeAccount
     @Override
     public Map<String, Object> maskedSnapshot(String snapshotJson) {
         if (StrUtil.isBlank(snapshotJson)) return Collections.emptyMap();
-        JSONObject source = JSONUtil.parseObj(snapshotJson);
+        JSONObject source;
+        try {
+            source = JSONUtil.parseObj(snapshotJson);
+        } catch (Exception e) {
+            return Collections.emptyMap();
+        }
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("payeeAccountId", source.getLong("payeeAccountId"));
         result.put("accountType", source.getStr("accountType"));
@@ -157,14 +148,28 @@ public class JkWithdrawPayeeAccountServiceImpl implements JkWithdrawPayeeAccount
         return result;
     }
 
-    private void validate(JkWithdrawPayeeAccountSaveRequest request) {
+    private void validate(JkWithdrawPayeeAccountSaveRequest request, boolean cardRequired) {
         if (request == null) throw new IllegalArgumentException("收款账户不能为空");
         String accountType = StrUtil.blankToDefault(request.getAccountType(), ACCOUNT_TYPE_BANK).trim().toUpperCase();
         if (!ACCOUNT_TYPE_BANK.equals(accountType)) throw new IllegalArgumentException("当前仅支持银行卡提现");
         if (StrUtil.isBlank(request.getAccountName())) throw new IllegalArgumentException("请填写收款人姓名");
         if (StrUtil.isBlank(request.getBankName())) throw new IllegalArgumentException("请填写开户银行");
         String bankAccount = normalize(request.getBankAccount());
-        if (!bankAccount.matches("\\d{8,30}")) throw new IllegalArgumentException("请填写有效银行卡号");
+        if (cardRequired && StrUtil.isBlank(bankAccount)) throw new IllegalArgumentException("请填写银行卡号");
+        if (StrUtil.isNotBlank(bankAccount) && !bankAccount.matches("\\d{8,30}")) {
+            throw new IllegalArgumentException("请填写有效银行卡号");
+        }
+    }
+
+    private void assertNoDuplicate(Long userId, Long excludeId, String bankAccount) {
+        String accountHash = cryptoSupport.sha256(bankAccount);
+        JkWithdrawPayeeAccount duplicate = accountDao.selectOne(new LambdaQueryWrapper<JkWithdrawPayeeAccount>()
+                .eq(JkWithdrawPayeeAccount::getUserId, userId)
+                .eq(JkWithdrawPayeeAccount::getBankAccountHash, accountHash)
+                .eq(JkWithdrawPayeeAccount::getIsDeleted, false)
+                .ne(excludeId != null, JkWithdrawPayeeAccount::getId, excludeId)
+                .last("limit 1"));
+        if (duplicate != null) throw new IllegalArgumentException("该银行卡已添加，请勿重复保存");
     }
 
     private JkWithdrawPayeeAccount requireOwned(Long userId, Long id, boolean requireEnabled) {
@@ -183,6 +188,19 @@ public class JkWithdrawPayeeAccountServiceImpl implements JkWithdrawPayeeAccount
                 .eq(JkWithdrawPayeeAccount::getIsDeleted, false)
                 .set(JkWithdrawPayeeAccount::getIsDefault, false)
                 .set(JkWithdrawPayeeAccount::getUpdateTime, new Date()));
+    }
+
+    private void promoteNewestAsDefault(Long userId) {
+        JkWithdrawPayeeAccount replacement = accountDao.selectOne(new LambdaQueryWrapper<JkWithdrawPayeeAccount>()
+                .eq(JkWithdrawPayeeAccount::getUserId, userId)
+                .eq(JkWithdrawPayeeAccount::getStatus, true)
+                .eq(JkWithdrawPayeeAccount::getIsDeleted, false)
+                .orderByDesc(JkWithdrawPayeeAccount::getId)
+                .last("limit 1"));
+        if (replacement != null) {
+            replacement.setIsDefault(true).setUpdateTime(new Date());
+            accountDao.updateById(replacement);
+        }
     }
 
     private JkWithdrawPayeeAccountResponse toResponse(JkWithdrawPayeeAccount entity) {
