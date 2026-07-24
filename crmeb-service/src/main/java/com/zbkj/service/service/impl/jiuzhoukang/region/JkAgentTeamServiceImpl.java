@@ -187,7 +187,8 @@ public class JkAgentTeamServiceImpl implements JkAgentTeamService {
         if (role == null) return;
         relation.setRoleCode(role.getRoleCode());
         relation.setRegionCode(role.getRegionCode());
-        relation.setStatusText(roleStatusText(role));
+        relation.setFreezeStatus(role.getFreezeStatus());
+        relation.setIdentityStatusText(roleStatusText(role));
         JkBusinessRole definition = roleDao.selectOne(new LambdaQueryWrapper<JkBusinessRole>()
                 .eq(JkBusinessRole::getRoleCode, role.getRoleCode())
                 .eq(JkBusinessRole::getIsDeleted, false)
@@ -201,7 +202,7 @@ public class JkAgentTeamServiceImpl implements JkAgentTeamService {
             if (region != null) relation.setRegionName(region.getRegionName());
         }
         User user = userService.getById(relation.getUserId().intValue());
-        if (user != null) relation.setAvatar(user.getAvatar());
+        if (user != null) relation.setUserAvatar(user.getAvatar());
         relation.setDirectTeamCount(relationService.list(null, relation.getUserId(), true).size());
         relation.setTeamCount(collectAllTeamUserIds(relation.getUserId()).size());
     }
