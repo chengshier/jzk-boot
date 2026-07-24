@@ -45,9 +45,14 @@ public class JkPromotionMaterialController {
         String roleCode = context == null ? null : context.getPrimaryRoleCode();
         String raw = systemConfigService.getValueByKey(JkBizConstants.CONFIG_KEY_PROMOTION_MATERIALS);
         List<Map<String, Object>> rows = new ArrayList<>();
-        if (StrUtil.isBlank(raw) || !JSONUtil.isTypeJSONArray(raw)) return CommonResult.success(rows);
+        if (StrUtil.isBlank(raw)) return CommonResult.success(rows);
 
-        JSONArray array = JSONUtil.parseArray(raw);
+        JSONArray array;
+        try {
+            array = JSONUtil.parseArray(raw);
+        } catch (Exception ignored) {
+            return CommonResult.success(rows);
+        }
         for (Object value : array) {
             JSONObject item = JSONUtil.parseObj(value);
             if (!item.getBool("status", true)) continue;
@@ -70,7 +75,12 @@ public class JkPromotionMaterialController {
 
     private boolean roleVisible(Object configuredRoles, String roleCode) {
         if (configuredRoles == null) return true;
-        JSONArray roles = JSONUtil.parseArray(configuredRoles);
+        JSONArray roles;
+        try {
+            roles = JSONUtil.parseArray(configuredRoles);
+        } catch (Exception ignored) {
+            return true;
+        }
         if (roles.isEmpty()) return true;
         for (Object role : roles) {
             if (String.valueOf(role).equals(roleCode)) return true;
