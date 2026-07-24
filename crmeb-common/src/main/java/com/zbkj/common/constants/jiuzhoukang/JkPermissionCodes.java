@@ -40,6 +40,10 @@ public final class JkPermissionCodes {
     public static final String ADMIN_STOCK_TRANSFER_DISPATCH = "admin:jk:stock:transfer:dispatch";
     /** 调拨关闭。 */
     public static final String ADMIN_STOCK_TRANSFER_CLOSE = "admin:jk:stock:transfer:close";
+    /** 异常收货工作台列表与详情。 */
+    public static final String ADMIN_RECEIVE_EXCEPTION_LIST = "admin:jk:receive:exception:list";
+    /** 异常收货受理、处理完成与驳回。 */
+    public static final String ADMIN_RECEIVE_EXCEPTION_HANDLE = "admin:jk:receive:exception:handle";
     /** 佣金账户列表。 */
     public static final String ADMIN_COMMISSION_ACCOUNT_LIST = "admin:jk:commission:account:list";
     /** 佣金流水列表。 */
@@ -95,7 +99,6 @@ public final class JkPermissionCodes {
     /** 身份取消。 */
     public static final String ADMIN_IDENTITY_CANCEL = "admin:jk:identity:cancel";
 
-
     /** 区域管理。 */
     public static final String ADMIN_REGION_MANAGE = "admin:jk:region:manage";
     /** 区域代理管理。 */
@@ -133,7 +136,6 @@ public final class JkPermissionCodes {
     public static final String ADMIN_STOCK_TRANSFER_RETURN_CLOSE = "admin:jk:stock:transfer:return:close";
     /** 九州康后台通用选择器。 */
     public static final String ADMIN_MANAGEMENT_OPTION_LIST = "admin:jk:management:option:list";
-
 
     /** 健康设备管理。 */
     public static final String ADMIN_HEALTH_DEVICE_MANAGE = "admin:jk:health:device:manage";
