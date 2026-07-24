@@ -8,6 +8,7 @@ import com.zbkj.common.model.jiuzhoukang.JkPlatformOrder;
 import com.zbkj.common.model.jiuzhoukang.JkStockAccount;
 import com.zbkj.common.model.jiuzhoukang.JkStockItem;
 import com.zbkj.common.model.jiuzhoukang.JkStockTransfer;
+import com.zbkj.common.model.jiuzhoukang.JkTradeReceiveException;
 import com.zbkj.common.response.jiuzhoukang.JkStockItemResponse;
 import com.zbkj.common.result.CommonResult;
 import com.zbkj.common.token.FrontTokenComponent;
@@ -17,6 +18,7 @@ import com.zbkj.service.dao.jiuzhoukang.JkPlatformOrderDao;
 import com.zbkj.service.dao.jiuzhoukang.JkStockAccountDao;
 import com.zbkj.service.dao.jiuzhoukang.JkStockItemDao;
 import com.zbkj.service.dao.jiuzhoukang.JkStockTransferDao;
+import com.zbkj.service.dao.jiuzhoukang.JkTradeReceiveExceptionDao;
 import com.zbkj.service.service.jiuzhoukang.context.JkUserContext;
 import com.zbkj.service.service.jiuzhoukang.context.JkUserContextService;
 import com.zbkj.service.service.jiuzhoukang.support.JkDisplayEnrichmentSupport;
@@ -55,6 +57,7 @@ public class JkBusinessSummaryController {
     @Autowired private JkFundAccountDao fundAccountDao;
     @Autowired private JkPlatformOrderDao platformOrderDao;
     @Autowired private JkStockTransferDao stockTransferDao;
+    @Autowired private JkTradeReceiveExceptionDao receiveExceptionDao;
     @Autowired private JkDisplayEnrichmentSupport displayEnrichmentSupport;
     @Autowired private JkStockProductEnrichmentSupport stockProductEnrichmentSupport;
 
@@ -101,6 +104,7 @@ public class JkBusinessSummaryController {
                 "PAYMENT_APPROVED", "TRANSFERRED"));
         long pendingAuditCount = countHandledTransfers(userId, Arrays.asList(
                 "SUBMITTED", "PAYMENT_SUBMITTED", "PAYMENT_APPROVED"));
+        long receiveExceptionCount = countReceiveExceptions(userId);
 
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("identity", context);
@@ -113,7 +117,9 @@ public class JkBusinessSummaryController {
         result.put("pendingReceiveCount", pendingReceiveCount);
         result.put("pendingTransferCount", pendingTransferCount);
         result.put("pendingAuditCount", pendingAuditCount);
-        result.put("pendingCount", pendingOrderCount + pendingReceiveCount + pendingTransferCount + pendingAuditCount);
+        result.put("receiveExceptionCount", receiveExceptionCount);
+        result.put("pendingCount", pendingOrderCount + pendingReceiveCount + pendingTransferCount
+                + pendingAuditCount + receiveExceptionCount);
         result.put("menuPermissions", context.getPermissions() == null ? Collections.emptyList() : context.getPermissions());
         return CommonResult.success(result);
     }
@@ -141,6 +147,13 @@ public class JkBusinessSummaryController {
                 .ne(JkStockTransfer::getUserId, countyAgentId)
                 .in(JkStockTransfer::getStatus, statuses)
                 .eq(JkStockTransfer::getIsDeleted, false));
+    }
+
+    private long countReceiveExceptions(Long userId) {
+        return receiveExceptionDao.selectCount(new LambdaQueryWrapper<JkTradeReceiveException>()
+                .eq(JkTradeReceiveException::getReceiverUserId, userId)
+                .in(JkTradeReceiveException::getStatus, Arrays.asList("PENDING", "PROCESSING"))
+                .eq(JkTradeReceiveException::getIsDeleted, false));
     }
 
     private JkStockItemResponse toStockResponse(JkStockItem item) {
