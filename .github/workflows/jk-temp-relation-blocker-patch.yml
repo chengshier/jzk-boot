@@ -1,0 +1,47 @@
+name: JK temporary relation blocker patch
+
+on:
+  push:
+    branches:
+      - fix/jk-business-consistency
+    paths:
+      - .github/workflows/jk-temp-relation-blocker-patch.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/jk-business-consistency
+      - name: Patch relation change service
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          path = Path('crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/region/JkAgentRelationChangeServiceImpl.java')
+          text = path.read_text(encoding='utf-8')
+          field = '    @Autowired private JkAgentRelationService relationService;\n'
+          if 'JkRelationChangeBlockerService blockerService' not in text:
+              text = text.replace(field, field + '    @Autowired private JkRelationChangeBlockerService blockerService;\n', 1)
+          text = text.replace('        return enrich(value);\n', '        return enrichWithBlockers(value);\n', 1)
+          text = text.replace('        assertNoBusinessBlockers(entity.getUserId());\n', '        blockerService.assertNoBlockers(entity);\n', 1)
+          marker = '    private JkAgentRelationChangeApply enrich(JkAgentRelationChangeApply row) {'
+          helper = '    private JkAgentRelationChangeApply enrichWithBlockers(JkAgentRelationChangeApply row) {\n        enrich(row);\n        return blockerService.fill(row);\n    }\n\n'
+          if 'enrichWithBlockers(JkAgentRelationChangeApply row)' not in text:
+              if marker not in text:
+                  raise SystemExit('enrich marker not found')
+              text = text.replace(marker, helper + marker, 1)
+          path.write_text(text, encoding='utf-8')
+          PY
+      - name: Commit patch
+        run: |
+          FILE=crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/region/JkAgentRelationChangeServiceImpl.java
+          if git diff --quiet -- "$FILE"; then exit 0; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "$FILE"
+          git commit -m "feat: expose live relation change blocker details"
+          git push origin HEAD:fix/jk-business-consistency
