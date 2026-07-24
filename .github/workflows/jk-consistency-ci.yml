@@ -17,6 +17,11 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      - name: Print temporary source index
+        run: |
+          find crmeb-admin crmeb-front crmeb-common crmeb-service sql docs -type f \
+            \( -path '*jiuzhoukang*' -o -path '*jkBusiness*' \) \
+            | sort | tee source-index.txt
       - name: Set up JDK 8
         uses: actions/setup-java@v4
         with:
