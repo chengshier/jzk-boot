@@ -16,12 +16,18 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Print relevant source index
+      - name: Build relevant source index
         run: |
           find crmeb-admin crmeb-front crmeb-common crmeb-service sql docs -type f \
             \( -path '*jiuzhoukang*' -o -path '*jkBusiness*' \) \
             | grep -Ei 'relation|receive|platform|transfer|health|commission|withdraw|menu|route' \
-            | sort
+            | sort > source-index.txt
+      - name: Upload source index
+        uses: actions/upload-artifact@v4
+        with:
+          name: jk-source-index
+          path: source-index.txt
+          retention-days: 1
 
   compile:
     runs-on: ubuntu-latest
