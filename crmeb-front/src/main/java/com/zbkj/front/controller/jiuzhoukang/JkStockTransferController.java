@@ -73,6 +73,14 @@ public class JkStockTransferController {
     @PostMapping("/handle/close")
     @JkBizPermission(value = JkBizPermissionCodes.STOCK_TRANSFER_CONFIRM, checkDataScope = true)
     public CommonResult<JkStockTransfer> handleClose(@RequestBody @Validated JkBusinessActionRequest request) { return CommonResult.success(service.close(Long.valueOf(token.getUserId()), request)); }
+    @PostMapping("/{id}/cancel")
+    @ApiOperation("申请人取消未进入审核/付款处理的调拨单")
+    @JkBizPermission(value = JkBizPermissionCodes.TRADE_CANCEL_SELF, checkDataScope = true)
+    public CommonResult<JkStockTransfer> cancel(@PathVariable Long id, @RequestBody JkBusinessActionRequest request) {
+        request.setBusinessId(id);
+        return CommonResult.success(service.cancel(Long.valueOf(token.getUserId()), request));
+    }
+
     @PostMapping("/{id}/receive")
     @ApiOperation("确认调拨收货入库")
     public CommonResult<JkStockTransfer> receive(@PathVariable Long id, @RequestBody JkBusinessActionRequest request) {

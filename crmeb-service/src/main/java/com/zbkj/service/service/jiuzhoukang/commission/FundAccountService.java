@@ -7,4 +7,7 @@ public interface FundAccountService {
  JkFundAccount releaseWithdraw(Long userId,String roleCode,BigDecimal amount,String requestNo,String idempotencyKey);
  JkFundAccount confirmPaid(Long userId,String roleCode,BigDecimal amount,String requestNo,String idempotencyKey);
  JkFundAccount reverseAvailableCommission(Long userId,String roleCode,BigDecimal amount,Long commissionRecordId,String requestNo,String idempotencyKey);
+ JkFundAccount reverseCommissionAcrossBalances(Long userId,String roleCode,BigDecimal amount,Long commissionRecordId,String requestNo,String idempotencyKey);
+ JkFundAccount freezeAvailable(Long userId,String roleCode,BigDecimal amount,String sourceType,Long sourceId,String requestNo,String idempotencyKey,String reason);
+ JkFundAccount releaseIdentityFrozen(Long userId,String roleCode,BigDecimal amount,String sourceType,Long sourceId,String requestNo,String idempotencyKey,String reason);
 }

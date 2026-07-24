@@ -16,6 +16,7 @@ public interface PlatformOrderService {
     JkPlatformOrder auditPayment(Long adminUserId, JkPaymentAuditRequest request);
     JkPlatformOrder ship(Long adminUserId, JkBusinessActionRequest request);
     JkPlatformOrder receive(Long userId, JkBusinessActionRequest request);
+    JkPlatformOrder cancel(Long userId, JkBusinessActionRequest request);
     JkPlatformOrder close(Long adminUserId, JkBusinessActionRequest request);
     PageInfo<JkPlatformOrder> getFrontList(Long userId, JkTradeDocumentSearchRequest request, PageParamRequest pageParamRequest);
     PageInfo<JkPlatformOrder> getAdminList(JkTradeDocumentSearchRequest request, PageParamRequest pageParamRequest);

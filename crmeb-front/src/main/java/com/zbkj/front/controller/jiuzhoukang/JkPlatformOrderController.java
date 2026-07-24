@@ -54,6 +54,14 @@ public class JkPlatformOrderController {
         return CommonResult.success(platformOrderService.submitVoucher(Long.valueOf(frontTokenComponent.getUserId()), id, request));
     }
 
+    @PostMapping("/{id}/cancel")
+    @ApiOperation("申请人取消未进入付款审核的订货单")
+    @JkBizPermission(value = JkBizPermissionCodes.TRADE_CANCEL_SELF, checkDataScope = true)
+    public CommonResult<JkPlatformOrder> cancel(@PathVariable Long id, @RequestBody JkBusinessActionRequest request) {
+        request.setBusinessId(id);
+        return CommonResult.success(platformOrderService.cancel(Long.valueOf(frontTokenComponent.getUserId()), request));
+    }
+
     @PostMapping("/{id}/receive")
     @ApiOperation("区县代确认收货入库")
     public CommonResult<JkPlatformOrder> receive(@PathVariable Long id, @RequestBody JkBusinessActionRequest request) {

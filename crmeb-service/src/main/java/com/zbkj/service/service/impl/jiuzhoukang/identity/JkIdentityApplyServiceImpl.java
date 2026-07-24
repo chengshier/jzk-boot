@@ -16,6 +16,8 @@ import com.zbkj.common.request.jiuzhoukang.JkIdentityApplyAuditRequest;
 import com.zbkj.common.request.jiuzhoukang.JkIdentityApplyRequest;
 import com.zbkj.common.request.jiuzhoukang.JkIdentityApplySearchRequest;
 import com.zbkj.common.response.jiuzhoukang.JkIdentityApplyResponse;
+import com.zbkj.common.response.jiuzhoukang.JkIdentityApplyDetailResponse;
+import com.zbkj.common.response.jiuzhoukang.JkAuditLogResponse;
 import com.zbkj.common.utils.RedisUtil;
 import com.zbkj.service.dao.jiuzhoukang.JkIdentityApplyDao;
 import com.zbkj.service.service.jiuzhoukang.audit.JkAdminActorService;
@@ -24,6 +26,7 @@ import com.zbkj.service.service.jiuzhoukang.identity.IdentityEffectiveService;
 import com.zbkj.service.service.jiuzhoukang.identity.JkIdentityApplyService;
 import com.zbkj.service.service.jiuzhoukang.permission.JkBusinessRoleService;
 import com.zbkj.service.service.jiuzhoukang.permission.JkPermissionCacheVersionService;
+import com.zbkj.service.service.jiuzhoukang.scope.JkAdminDataScopeService;
 import com.zbkj.service.service.jiuzhoukang.support.JkDisplayEnrichmentSupport;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -53,6 +56,8 @@ public class JkIdentityApplyServiceImpl extends ServiceImpl<JkIdentityApplyDao, 
     private RedisUtil redisUtil;
     @Autowired
     private JkDisplayEnrichmentSupport displayEnrichmentSupport;
+    @Autowired
+    private JkAdminDataScopeService adminDataScopeService;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -110,10 +115,29 @@ public class JkIdentityApplyServiceImpl extends ServiceImpl<JkIdentityApplyDao, 
     }
 
     @Override
+    public JkIdentityApplyDetailResponse getMyApplyDetail(Long userId, Long applyId) {
+        JkIdentityApply apply = getById(applyId);
+        if (apply == null || Boolean.TRUE.equals(apply.getIsDeleted()) || !userId.equals(apply.getUserId())) {
+            throw new JkBizException("申请记录不存在");
+        }
+        LambdaQueryWrapper<JkAuditLog> logQuery = new LambdaQueryWrapper<>();
+        logQuery.eq(JkAuditLog::getBusinessType, JkBizConstants.BUSINESS_TYPE_IDENTITY_APPLY);
+        logQuery.eq(JkAuditLog::getBusinessId, apply.getId());
+        logQuery.eq(JkAuditLog::getIsDeleted, false);
+        logQuery.orderByAsc(JkAuditLog::getId);
+        List<JkAuditLogResponse> logs = auditLogService.toResponses(auditLogService.list(logQuery));
+        JkIdentityApplyDetailResponse response = new JkIdentityApplyDetailResponse();
+        response.setApplication(enrichSingle(toResponse(apply, roleNameMap())));
+        response.setAuditLogs(logs);
+        return response;
+    }
+
+    @Override
     public List<JkIdentityApplyResponse> getAdminApplyList(JkIdentityApplySearchRequest request, PageParamRequest pageParamRequest) {
         PageHelper.startPage(pageParamRequest.getPage(), pageParamRequest.getLimit());
         LambdaQueryWrapper<JkIdentityApply> lqw = new LambdaQueryWrapper<>();
         lqw.eq(JkIdentityApply::getIsDeleted, false);
+        adminDataScopeService.applyIdentityApplyScope(lqw);
         if (request != null && StrUtil.isNotBlank(request.getAuditStatus())) {
             lqw.eq(JkIdentityApply::getAuditStatus, request.getAuditStatus());
         }
@@ -136,6 +160,7 @@ public class JkIdentityApplyServiceImpl extends ServiceImpl<JkIdentityApplyDao, 
         if (apply == null || Boolean.TRUE.equals(apply.getIsDeleted())) {
             throw new JkBizException("申请记录不存在");
         }
+        adminDataScopeService.assertCanManageIdentityApply(apply);
         if (!JkBizConstants.AUDIT_STATUS_PENDING.equals(apply.getAuditStatus())) {
             throw new JkBizException("当前申请状态不可审核");
         }

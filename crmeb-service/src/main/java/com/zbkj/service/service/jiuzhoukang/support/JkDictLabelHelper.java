@@ -9,6 +9,7 @@ import java.util.Map;
  */
 public final class JkDictLabelHelper {
     private static final Map<String, String> LABELS;
+    private static volatile Resolver resolver;
 
     static {
         Map<String, String> labels = new HashMap<>();
@@ -108,18 +109,56 @@ public final class JkDictLabelHelper {
         put(labels, "audit_action", "PAY", "付款确认");
         put(labels, "audit_action", "SHIP", "发货");
         put(labels, "audit_action", "RECEIVE", "收货");
+        put(labels, "audit_action", "SUBMIT", "提交");
+        put(labels, "audit_action", "SHIP_RETURN", "寄回退货");
+        put(labels, "audit_action", "RECEIVE_RETURN", "确认退货收货");
+        put(labels, "audit_action", "CONFIRM_REFUND", "确认退款");
+        put(labels, "relation_change_status", "PENDING", "待审核");
+        put(labels, "relation_change_status", "APPROVED", "已通过");
+        put(labels, "relation_change_status", "REJECTED", "已驳回");
+        put(labels, "relation_change_status", "CANCELLED", "已取消");
+        put(labels, "business_event_status", "PENDING", "待处理");
+        put(labels, "business_event_status", "PROCESSING", "处理中");
+        put(labels, "business_event_status", "FAILED", "处理失败");
+        put(labels, "business_event_status", "SUCCESS", "处理成功");
+        put(labels, "business_event_status", "DEAD", "已终止");
+        put(labels, "account_reconcile_status", "BALANCED", "账目平衡");
+        put(labels, "account_reconcile_status", "DIFFERENCE", "存在差异");
+        put(labels, "stock_transfer_return_status", "SUBMITTED", "待区县代审核");
+        put(labels, "stock_transfer_return_status", "AUDIT_APPROVED", "审核通过待寄回");
+        put(labels, "stock_transfer_return_status", "AUDIT_REJECTED", "审核驳回");
+        put(labels, "stock_transfer_return_status", "RETURN_SHIPPED", "已寄回待收货");
+        put(labels, "stock_transfer_return_status", "REFUND_PENDING", "已收货待退款");
+        put(labels, "stock_transfer_return_status", "COMPLETED", "退回完成");
+        put(labels, "stock_transfer_return_status", "CANCELLED", "已取消");
+        put(labels, "stock_transfer_return_status", "CLOSED", "已关闭");
+        put(labels, "refund_status", "UNREFUNDED", "未退款");
+        put(labels, "refund_status", "REFUND_PENDING", "待退款");
+        put(labels, "refund_status", "REFUNDED", "已退款");
+        put(labels, "stock_business_type", "STOCK_TRANSFER_RETURN", "调拨退回");
         LABELS = Collections.unmodifiableMap(labels);
     }
 
     private JkDictLabelHelper() { }
 
     public static String label(String dictType, String code) {
-        if (code == null || code.trim().isEmpty()) {
-            return "--";
+        if (code == null || code.trim().isEmpty()) return "--";
+        Resolver current = resolver;
+        if (current != null) {
+            try {
+                String dynamic = current.label(dictType, code);
+                if (dynamic != null && !dynamic.trim().isEmpty()) return dynamic;
+            } catch (RuntimeException ignored) {
+                // 数据库字典不可用时继续使用静态安全兜底，不影响核心业务响应。
+            }
         }
         String label = LABELS.get(dictType + ':' + code);
         return label == null ? code : label;
     }
+
+    public static void installResolver(Resolver value) { resolver = value; }
+
+    public interface Resolver { String label(String dictType, String code); }
 
     private static void put(Map<String, String> labels, String dictType, String code, String label) {
         labels.put(dictType + ':' + code, label);

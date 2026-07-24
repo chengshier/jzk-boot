@@ -6,6 +6,7 @@ import com.zbkj.common.model.jiuzhoukang.JkRegion;
 import com.zbkj.common.request.PageParamRequest;
 import com.zbkj.common.request.jiuzhoukang.JkIdentityApplyRequest;
 import com.zbkj.common.response.jiuzhoukang.JkIdentityApplyResponse;
+import com.zbkj.common.response.jiuzhoukang.JkIdentityApplyDetailResponse;
 import com.zbkj.common.response.jiuzhoukang.JkPermissionContextResponse;
 import com.zbkj.common.result.CommonResult;
 import com.zbkj.common.token.FrontTokenComponent;
@@ -18,6 +19,7 @@ import io.swagger.annotations.ApiOperation;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -54,6 +56,13 @@ public class JkIdentityController {
     public CommonResult<List<JkIdentityApplyResponse>> applyList(@Validated PageParamRequest pageParamRequest) {
         Long userId = Long.valueOf(frontTokenComponent.getUserId());
         return CommonResult.success(identityApplyService.getMyApplyList(userId, pageParamRequest));
+    }
+
+    @ApiOperation("我的申请详情")
+    @GetMapping("/apply/{applyId}")
+    public CommonResult<JkIdentityApplyDetailResponse> applyDetail(@PathVariable("applyId") Long applyId) {
+        Long userId = Long.valueOf(frontTokenComponent.getUserId());
+        return CommonResult.success(identityApplyService.getMyApplyDetail(userId, applyId));
     }
 
     @ApiOperation("身份申请区域选项")

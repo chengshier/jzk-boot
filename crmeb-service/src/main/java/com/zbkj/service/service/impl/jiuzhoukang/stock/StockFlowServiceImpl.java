@@ -11,15 +11,22 @@ import com.zbkj.service.dao.jiuzhoukang.JkStockFlowDao;
 import com.zbkj.service.dao.jiuzhoukang.JkStockItemDao;
 import com.zbkj.service.service.jiuzhoukang.stock.StockActionKey;
 import com.zbkj.service.service.jiuzhoukang.stock.StockFlowService;
+import com.zbkj.service.service.jiuzhoukang.stock.StockBatchService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+/**
+ * 分级库存唯一写入口。
+ * <p>冻结、释放、冻结出库和入库均采用条件更新并写库存流水；业务 Service 不允许直接 update 库存数量。
+ * requestNo/actionKey 用于幂等，数据库可用量条件用于防止并发超扣。</p>
+ */
 @Service
 public class StockFlowServiceImpl implements StockFlowService {
     @Autowired private JkStockItemDao stockItemDao;
     @Autowired private JkStockFlowDao stockFlowDao;
+    @Autowired private StockBatchService stockBatchService;
 
     @Override @Transactional(rollbackFor = Exception.class)
     public void freezeStock(JkStockActionRequest request) { change(request, "FREEZE", "available_qty = available_qty - {q}, frozen_qty = frozen_qty + {q}", "available_qty >= {q}"); }
@@ -50,6 +57,11 @@ public class StockFlowServiceImpl implements StockFlowService {
             .setSql(setTemplate.replace("{q}", String.valueOf(request.getQuantity())) + ", version = version + 1, update_time = NOW()");
         if (conditionTemplate != null) update.apply(conditionTemplate.replace("{q}", String.valueOf(request.getQuantity())));
         if (stockItemDao.update(null, update) != 1) throw new CrmebException("库存不足");
+        // 库存总账更新成功后，在同一事务内同步批次账；批次账失败会回滚总账和库存流水。
+        if ("FREEZE".equals(action)) stockBatchService.freeze(request);
+        else if ("RELEASE".equals(action)) stockBatchService.release(request);
+        else if ("OUTBOUND".equals(action)) stockBatchService.outbound(request);
+        else if ("INBOUND".equals(action)) stockBatchService.inbound(request);
         JkStockItem after = stockItemDao.selectById(item.getId());
         flow.setAfterAvailableQty(after.getAvailableQty()).setAfterFrozenQty(after.getFrozenQty());
         stockFlowDao.updateById(flow);

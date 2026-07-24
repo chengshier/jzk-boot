@@ -177,3 +177,18 @@ aj:
     timing-clear: 3600
 
     history-data-clear-enable: false
+# 九州康第五阶段健康数据安全配置。
+# 生产环境必须通过环境变量配置加密密钥和回调密钥；默认关闭设备回调，避免未验签数据入库。
+jk:
+  health:
+    callback-enabled: ${JK_HEALTH_CALLBACK_ENABLED:false}
+    callback-secret: ${JK_HEALTH_CALLBACK_SECRET:}
+    data-encryption-key: ${JK_HEALTH_DATA_ENCRYPTION_KEY:}
+    allow-plaintext: ${JK_HEALTH_ALLOW_PLAINTEXT:false}
+    # 失败回调自动重试默认关闭；完成真实设备联调后再开启。
+    sync-auto-retry-enabled: ${JK_HEALTH_SYNC_AUTO_RETRY_ENABLED:false}
+    sync-retry-cron: "${JK_HEALTH_SYNC_RETRY_CRON:0 */5 * * * ?}"
+    # 0 表示暂不自动清理；正式上线前应结合合规要求确定保留期和归档策略。
+    retention-days: ${JK_HEALTH_RETENTION_DAYS:0}
+    archive-enabled: ${JK_HEALTH_ARCHIVE_ENABLED:false}
+

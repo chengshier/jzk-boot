@@ -43,6 +43,7 @@ import com.zbkj.common.utils.RedisUtil;
 import com.zbkj.common.vo.*;
 import com.zbkj.service.delete.OrderUtils;
 import com.zbkj.service.service.*;
+import com.zbkj.service.service.jiuzhoukang.order.RetailOrderAttributionService;
 import org.apache.commons.lang3.StringEscapeUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
@@ -88,6 +89,9 @@ public class OrderServiceImpl implements OrderService {
 
     @Autowired
     private StoreOrderInfoService storeOrderInfoService;
+
+    @Autowired
+    private RetailOrderAttributionService retailOrderAttributionService;
 
     @Autowired
     private StoreOrderStatusService storeOrderStatusService;
@@ -1173,6 +1177,13 @@ public class OrderServiceImpl implements OrderService {
         });
         if (!execute) {
             throw new CrmebException("订单生成失败");
+        }
+
+        // 九州康扩展快照不得阻断 CRMEB 普通下单，但失败时禁止后续使用当前关系错误分佣。
+        try {
+            retailOrderAttributionService.snapshot(storeOrder);
+        } catch (Exception attributionException) {
+            logger.error("九州康零售订单归属快照生成失败，订单仍按 CRMEB 原主链创建，orderId={}", storeOrder.getId(), attributionException);
         }
 
         // 删除缓存订单

@@ -15,5 +15,16 @@ public class CommissionSettleTaskPersistenceService {
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public JkCommissionSettleTask create(JkCommissionSettleTask task) { taskDao.insert(task); return task; }
     @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public JkCommissionSettleTask restartFailed(Long taskId, int totalCount, Long operatorId) {
+        JkCommissionSettleTask task = taskDao.selectById(taskId);
+        if (task == null) return null;
+        if (!"FAILED".equals(task.getStatus())) return task;
+        Date now = new Date();
+        task.setStatus("RUNNING").setTotalCount(totalCount).setSuccessCount(0).setFailCount(0)
+                .setFailReason(null).setOperatorId(operatorId).setStartTime(now).setFinishTime(null).setUpdateTime(now);
+        taskDao.updateById(task);
+        return task;
+    }
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void markFailed(Long taskId, String reason) { JkCommissionSettleTask task = taskDao.selectById(taskId); if (task == null) return; task.setStatus("FAILED").setFailCount(task.getTotalCount()).setFailReason(reason).setFinishTime(new Date()).setUpdateTime(new Date()); taskDao.updateById(task); }
 }

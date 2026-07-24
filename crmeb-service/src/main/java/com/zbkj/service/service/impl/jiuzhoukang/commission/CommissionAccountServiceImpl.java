@@ -31,15 +31,59 @@ public class CommissionAccountServiceImpl extends ServiceImpl<JkCommissionAccoun
         JkCommissionAccount account = initialize(userId, roleCode, null); BigDecimal before = account.getPendingSettleAmount(); account.setPendingSettleAmount(before.add(amount)).setTotalCommissionAmount(account.getTotalCommissionAmount().add(amount)).setUpdateTime(new Date()); optimisticUpdate(account); writeFlow(account, null, "CREDIT_PENDING", amount, before, account.getPendingSettleAmount(), "RETAIL_ORDER", null, requestNo, key, "佣金待结算入账"); return account;
     }
 
-    @Override @Transactional public JkCommissionAccount settle(Long userId, String roleCode, BigDecimal amount, String requestNo, String key) {
-        requirePositive(amount, "结算金额非法"); JkCommissionFlow old = findFlow(key); if (old != null) return getById(old.getAccountId());
-        JkCommissionAccount account = initialize(userId, roleCode, null); BigDecimal before = account.getPendingSettleAmount(); CommissionAccountSupport.Balance balance = CommissionAccountSupport.settle(before, account.getSettledAmount(), account.getTotalCommissionAmount(), amount); account.setPendingSettleAmount(balance.getPendingSettleAmount()).setSettledAmount(balance.getSettledAmount()).setUpdateTime(new Date()); optimisticUpdate(account); writeFlow(account, null, "SETTLE", amount.negate(), before, account.getPendingSettleAmount(), "COMMISSION_SETTLE", null, requestNo, key, "待结算佣金转可提现资金"); return account;
+    @Override
+    @Transactional
+    public JkCommissionAccount settle(Long userId, String roleCode, BigDecimal amount, String requestNo, String key) {
+        requirePositive(amount, "结算金额非法");
+        JkCommissionFlow old = findFlow(key);
+        if (old != null) return getById(old.getAccountId());
+        JkCommissionAccount account = initialize(userId, roleCode, null);
+        BigDecimal before = account.getPendingSettleAmount();
+        if (before.compareTo(amount) < 0) throw new IllegalArgumentException("待结算佣金不足");
+        BigDecimal negative = account.getNegativeOffsetAmount() == null ? BigDecimal.ZERO : account.getNegativeOffsetAmount();
+        BigDecimal offset = negative.min(amount);
+        BigDecimal credited = amount.subtract(offset);
+        account.setPendingSettleAmount(before.subtract(amount))
+                .setSettledAmount(account.getSettledAmount().add(credited))
+                .setNegativeOffsetAmount(negative.subtract(offset))
+                .setUpdateTime(new Date());
+        optimisticUpdate(account);
+        writeFlow(account, null, "SETTLE", amount.negate(), before, account.getPendingSettleAmount(),
+                "COMMISSION_SETTLE", null, requestNo, key,
+                offset.signum() > 0 ? "结算佣金优先抵扣历史负向金额" : "待结算佣金转可提现资金");
+        return account;
     }
 
     @Override @Transactional public JkCommissionAccount reversePending(Long userId, String roleCode, BigDecimal amount, String requestNo, String key) { return reverse(userId, roleCode, amount, requestNo, key, false, "REVERSE_PENDING", "待结算佣金冲正"); }
     @Override @Transactional public JkCommissionAccount reverseSettled(Long userId, String roleCode, BigDecimal amount, String requestNo, String key) { return reverse(userId, roleCode, amount, requestNo, key, true, "REVERSE_SETTLED", "已结算佣金冲正"); }
     @Override @Transactional public JkCommissionAccount reverseFrozen(Long userId, String roleCode, BigDecimal amount, String requestNo, String key) {
         requirePositive(amount, "冲正金额非法"); JkCommissionFlow old = findFlow(key); if (old != null) return getById(old.getAccountId()); JkCommissionAccount account = initialize(userId, roleCode, null); BigDecimal before = account.getFrozenCommissionAmount(); if (before.compareTo(amount) < 0) throw new IllegalArgumentException("冻结佣金不足，需转负向待抵扣"); account.setFrozenCommissionAmount(before.subtract(amount)).setReversedAmount(account.getReversedAmount().add(amount)).setUpdateTime(new Date()); optimisticUpdate(account); writeFlow(account, null, "REVERSE_FROZEN", amount.negate(), before, account.getFrozenCommissionAmount(), "COMMISSION_REVERSE", null, requestNo, key, "冻结佣金冲正"); return account;
+    }
+
+    @Override
+    @Transactional
+    public JkCommissionAccount reverseSettledOrFrozen(Long userId, String roleCode, BigDecimal amount, String requestNo, String key) {
+        requirePositive(amount, "冲正金额非法");
+        JkCommissionFlow old = findFlow(key);
+        if (old != null) return getById(old.getAccountId());
+        JkCommissionAccount account = initialize(userId, roleCode, null);
+        BigDecimal settled = account.getSettledAmount();
+        BigDecimal frozen = account.getFrozenCommissionAmount();
+        BigDecimal fromSettled = settled.min(amount);
+        BigDecimal remaining = amount.subtract(fromSettled);
+        BigDecimal fromFrozen = frozen.min(remaining);
+        BigDecimal negative = remaining.subtract(fromFrozen);
+        BigDecimal before = settled.add(frozen);
+        account.setSettledAmount(settled.subtract(fromSettled))
+                .setFrozenCommissionAmount(frozen.subtract(fromFrozen))
+                .setNegativeOffsetAmount(account.getNegativeOffsetAmount().add(negative))
+                .setReversedAmount(account.getReversedAmount().add(amount))
+                .setUpdateTime(new Date());
+        optimisticUpdate(account);
+        writeFlow(account, null, "REVERSE_SETTLED_OR_FROZEN", amount.negate(), before,
+                account.getSettledAmount().add(account.getFrozenCommissionAmount()), "COMMISSION_REVERSE", null, requestNo, key,
+                negative.signum() > 0 ? "已结算收益不足，差额转负向待抵扣" : "已结算或冻结收益冲正");
+        return account;
     }
 
     @Override @Transactional public JkCommissionAccount freezeSettled(Long userId, String roleCode, BigDecimal amount, String sourceType, Long sourceId, String requestNo, String key, String reason) { return moveFreeze(userId, roleCode, amount, sourceType, sourceId, requestNo, key, reason, true); }

@@ -1,104 +1,216 @@
 {
                     "app": "Crmeb",
-                    "timestamp":"2026-07-17 09:02:21.258",
+                    "timestamp":"2026-07-24 09:02:50.794",
                     "level": "DEBUG",
-                    "thread": "SpringContextShutdownHook",
+                    "thread": "main",
+                    "class": "o.s.b.c.l.ClasspathLoggingApplicationListener",
+                    "message": "Application started with classpath: [file:/D:/sofewore/java/jdk/jre/lib/charsets.jar, file:/D:/sofewore/java/jdk/jre/lib/deploy.jar, file:/D:/sofewore/java/jdk/jre/lib/ext/access-bridge-64.jar, file:/D:/sofewore/java/jdk/jre/lib/ext/cldrdata.jar, file:/D:/sofewore/java/jdk/jre/lib/ext/dnsns.jar, file:/D:/sofewore/java/jdk/jre/lib/ext/jaccess.jar, file:/D:/sofewore/java/jdk/jre/lib/ext/jfxrt.jar, file:/D:/sofewore/java/jdk/jre/lib/ext/localedata.jar, file:/D:/sofewore/java/jdk/jre/lib/ext/nashorn.jar, file:/D:/sofewore/java/jdk/jre/lib/ext/sunec.jar, file:/D:/sofewore/java/jdk/jre/lib/ext/sunjce_provider.jar, file:/D:/sofewore/java/jdk/jre/lib/ext/sunmscapi.jar, file:/D:/sofewore/java/jdk/jre/lib/ext/sunpkcs11.jar, file:/D:/sofewore/java/jdk/jre/lib/ext/zipfs.jar, file:/D:/sofewore/java/jdk/jre/lib/javaws.jar, file:/D:/sofewore/java/jdk/jre/lib/jce.jar, file:/D:/sofewore/java/jdk/jre/lib/jfr.jar, file:/D:/sofewore/java/jdk/jre/lib/jfxswt.jar, file:/D:/sofewore/java/jdk/jre/lib/jsse.jar, file:/D:/sofewore/java/jdk/jre/lib/management-agent.jar, file:/D:/sofewore/java/jdk/jre/lib/plugin.jar, file:/D:/sofewore/java/jdk/jre/lib/resources.jar, file:/D:/sofewore/java/jdk/jre/lib/rt.jar, file:/F:/newWorkSpace/cream-jzk/crmeb/crmeb-admin/target/classes/, file:/F:/newWorkSpace/cream-jzk/crmeb/crmeb-service/target/classes/, file:/F:/newWorkSpace/cream-jzk/crmeb/crmeb-common/target/classes/, file:/D:/sofewore/Maven/maven-3.1.1/lib/javax/servlet/javax.servlet-api/4.0.1/javax.servlet-api-4.0.1.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/javax/servlet/jstl/1.2/jstl-1.2.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/org/apache/tomcat/embed/tomcat-embed-jasper/9.0.33/tomcat-embed-jasper-9.0.33.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/org/apache/tomcat/embed/tomcat-embed-core/9.0.33/tomcat-embed-core-9.0.33.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/org/apache/tomcat/tomcat-annotations-api/9.0.33/tomcat-annotations-api-9.0.33.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/org/apache/tomcat/embed/tomcat-embed-el/9.0.33/tomcat-embed-el-9.0.33.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/org/eclipse/jdt/ecj/3.18.0/ecj-3.18.0.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/org/apache/tomcat/tomcat-jsp-api/9.0.33/tomcat-jsp-api-9.0.33.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/org/apache/tomcat/tomcat-el-api/9.0.33/tomcat-el-api-9.0.33.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/org/apache/tomcat/tomcat-servlet-api/9.0.33/tomcat-servlet-api-9.0.33.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/com/alibaba/fastjson/1.2.83/fastjson-1.2.83.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/com/alibaba/druid/1.1.20/druid-1.1.20.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/mysql/mysql-connector-java/5.1.24/mysql-connector-java-5.1.24.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/org/projectlombok/lombok/1.18.12/lombok-1.18.12.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/com/baomidou/mybatis-plus-boot-starter/3.3.1/mybatis-plus-boot-starter-3.3.1.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/org/springframework/boot/spring-boot-starter-jdbc/2.2.6.RELEASE/spring-boot-starter-jdbc-2.2.6.RELEASE.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/com/zaxxer/HikariCP/3.4.2/HikariCP-3.4.2.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/org/springframework/spring-jdbc/5.2.5.RELEASE/spring-jdbc-5.2.5.RELEASE.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/org/springframework/boot/spring-boot-test/2.2.6.RELEASE/spring-boot-test-2.2.6.RELEASE.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/org/springframework/spring-test/5.2.5.RELEASE/spring-test-5.2.5.RELEASE.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/com/baomidou/mybatis-plus/3.3.1/mybatis-plus-3.3.1.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/com/baomidou/mybatis-plus-extension/3.3.1/mybatis-plus-extension-3.3.1.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/com/baomidou/mybatis-plus-core/3.3.1/mybatis-plus-core-3.3.1.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/com/baomidou/mybatis-plus-annotation/3.3.1/mybatis-plus-annotation-3.3.1.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/org/mybatis/mybatis/3.5.3/mybatis-3.5.3.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/org/mybatis/mybatis-spring/2.0.3/mybatis-spring-2.0.3.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/com/baomidou/mybatis-plus-generator/3.3.1/mybatis-plus-generator-3.3.1.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/io/swagger/swagger-annotations/1.5.21/swagger-annotations-1.5.21.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/io/springfox/springfox-swagger2/2.9.2/springfox-swagger2-2.9.2.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/io/springfox/springfox-spi/2.9.2/springfox-spi-2.9.2.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/io/springfox/springfox-core/2.9.2/springfox-core-2.9.2.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/net/bytebuddy/byte-buddy/1.10.8/byte-buddy-1.10.8.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/io/springfox/springfox-schema/2.9.2/springfox-schema-2.9.2.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/io/springfox/springfox-swagger-common/2.9.2/springfox-swagger-common-2.9.2.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/io/springfox/springfox-spring-web/2.9.2/springfox-spring-web-2.9.2.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/com/google/guava/guava/20.0/guava-20.0.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/com/fasterxml/classmate/1.5.1/classmate-1.5.1.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/org/springframework/plugin/spring-plugin-core/1.2.0.RELEASE/spring-plugin-core-1.2.0.RELEASE.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/org/springframework/plugin/spring-plugin-metadata/1.2.0.RELEASE/spring-plugin-metadata-1.2.0.RELEASE.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/org/mapstruct/mapstruct/1.2.0.Final/mapstruct-1.2.0.Final.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/io/swagger/swagger-models/1.5.21/swagger-models-1.5.21.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/com/fasterxml/jackson/core/jackson-annotations/2.10.3/jackson-annotations-2.10.3.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/com/github/xiaoymin/swagger-bootstrap-ui/1.9.3/swagger-bootstrap-ui-1.9.3.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/org/springframework/boot/spring-boot-autoconfigure/2.2.6.RELEASE/spring-boot-autoconfigure-2.2.6.RELEASE.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/ch/qos/logback/logback-classic/1.2.3/logback-classic-1.2.3.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/ch/qos/logback/logback-core/1.2.3/logback-core-1.2.3.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/net/logstash/logback/logstash-logback-encoder/5.3/logstash-logback-encoder-5.3.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/com/fasterxml/jackson/core/jackson-databind/2.10.3/jackson-databind-2.10.3.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/com/fasterxml/jackson/core/jackson-core/2.10.3/jackson-core-2.10.3.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/org/springframework/boot/spring-boot-starter-web/2.2.6.RELEASE/spring-boot-starter-web-2.2.6.RELEASE.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/org/springframework/boot/spring-boot-starter-json/2.2.6.RELEASE/spring-boot-starter-json-2.2.6.RELEASE.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/com/fasterxml/jackson/datatype/jackson-datatype-jdk8/2.10.3/jackson-datatype-jdk8-2.10.3.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/com/fasterxml/jackson/datatype/jackson-datatype-jsr310/2.10.3/jackson-datatype-jsr310-2.10.3.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/com/fasterxml/jackson/module/jackson-module-parameter-names/2.10.3/jackson-module-parameter-names-2.10.3.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/org/springframework/boot/spring-boot-starter-tomcat/2.2.6.RELEASE/spring-boot-starter-tomcat-2.2.6.RELEASE.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/org/apache/tomcat/embed/tomcat-embed-websocket/9.0.33/tomcat-embed-websocket-9.0.33.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/org/springframework/boot/spring-boot-starter-validation/2.2.6.RELEASE/spring-boot-starter-validation-2.2.6.RELEASE.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/jakarta/validation/jakarta.validation-api/2.0.2/jakarta.validation-api-2.0.2.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/org/hibernate/validator/hibernate-validator/6.0.18.Final/hibernate-validator-6.0.18.Final.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/org/jboss/logging/jboss-logging/3.4.1.Final/jboss-logging-3.4.1.Final.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/org/springframework/spring-web/5.2.5.RELEASE/spring-web-5.2.5.RELEASE.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/org/springframework/spring-webmvc/5.2.5.RELEASE/spring-webmvc-5.2.5.RELEASE.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/org/springframework/boot/spring-boot-starter-data-redis/2.2.0.RELEASE/spring-boot-starter-data-redis-2.2.0.RELEASE.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/org/springframework/data/spring-data-redis/2.2.6.RELEASE/spring-data-redis-2.2.6.RELEASE.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/org/springframework/data/spring-data-keyvalue/2.2.6.RELEASE/spring-data-keyvalue-2.2.6.RELEASE.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/org/springframework/spring-oxm/5.2.5.RELEASE/spring-oxm-5.2.5.RELEASE.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/io/lettuce/lettuce-core/5.2.2.RELEASE/lettuce-core-5.2.2.RELEASE.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/io/netty/netty-common/4.1.48.Final/netty-common-4.1.48.Final.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/io/netty/netty-handler/4.1.48.Final/netty-handler-4.1.48.Final.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/io/netty/netty-resolver/4.1.48.Final/netty-resolver-4.1.48.Final.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/io/netty/netty-buffer/4.1.48.Final/netty-buffer-4.1.48.Final.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/io/netty/netty-codec/4.1.48.Final/netty-codec-4.1.48.Final.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/io/netty/netty-transport/4.1.48.Final/netty-transport-4.1.48.Final.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/io/projectreactor/reactor-core/3.3.4.RELEASE/reactor-core-3.3.4.RELEASE.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/org/reactivestreams/reactive-streams/1.0.3/reactive-streams-1.0.3.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/redis/clients/jedis/3.1.0/jedis-3.1.0.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/org/apache/commons/commons-pool2/2.7.0/commons-pool2-2.7.0.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/com/github/pagehelper/pagehelper-spring-boot-starter/1.2.5/pagehelper-spring-boot-starter-1.2.5.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/org/mybatis/spring/boot/mybatis-spring-boot-starter/1.3.2/mybatis-spring-boot-starter-1.3.2.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/org/mybatis/spring/boot/mybatis-spring-boot-autoconfigure/1.3.2/mybatis-spring-boot-autoconfigure-1.3.2.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/com/github/pagehelper/pagehelper-spring-boot-autoconfigure/1.2.5/pagehelper-spring-boot-autoconfigure-1.2.5.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/com/github/pagehelper/pagehelper/5.1.4/pagehelper-5.1.4.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/com/github/jsqlparser/jsqlparser/1.0/jsqlparser-1.0.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/javax/validation/validation-api/1.1.0.Final/validation-api-1.1.0.Final.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/org/springframework/data/spring-data-commons/2.2.6.RELEASE/spring-data-commons-2.2.6.RELEASE.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/cn/hutool/hutool-all/4.5.7/hutool-all-4.5.7.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/org/springframework/boot/spring-boot-starter-actuator/2.2.6.RELEASE/spring-boot-starter-actuator-2.2.6.RELEASE.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/org/springframework/boot/spring-boot-actuator-autoconfigure/2.2.6.RELEASE/spring-boot-actuator-autoconfigure-2.2.6.RELEASE.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/org/springframework/boot/spring-boot-actuator/2.2.6.RELEASE/spring-boot-actuator-2.2.6.RELEASE.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/io/micrometer/micrometer-core/1.3.6/micrometer-core-1.3.6.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/org/hdrhistogram/HdrHistogram/2.1.11/HdrHistogram-2.1.11.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/org/latencyutils/LatencyUtils/2.0.3/LatencyUtils-2.0.3.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/org/apache/httpcomponents/httpclient/4.5.6/httpclient-4.5.6.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/org/apache/httpcomponents/httpcore/4.4.13/httpcore-4.4.13.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/commons-logging/commons-logging/1.2/commons-logging-1.2.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/commons-codec/commons-codec/1.13/commons-codec-1.13.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/org/springframework/boot/spring-boot-starter-aop/2.2.6.RELEASE/spring-boot-starter-aop-2.2.6.RELEASE.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/org/springframework/spring-aop/5.2.5.RELEASE/spring-aop-5.2.5.RELEASE.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/org/aspectj/aspectjweaver/1.9.5/aspectjweaver-1.9.5.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/org/apache/commons/commons-lang3/3.5/commons-lang3-3.5.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/org/apache/poi/poi/3.17/poi-3.17.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/org/apache/commons/commons-collections4/4.1/commons-collections4-4.1.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/org/apache/poi/poi-ooxml/3.17/poi-ooxml-3.17.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/org/apache/poi/poi-ooxml-schemas/3.17/poi-ooxml-schemas-3.17.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/org/apache/xmlbeans/xmlbeans/2.6.0/xmlbeans-2.6.0.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/com/github/virtuald/curvesapi/1.04/curvesapi-1.04.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/commons-fileupload/commons-fileupload/1.3.3/commons-fileupload-1.3.3.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/commons-io/commons-io/2.4/commons-io-2.4.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/net/coobird/thumbnailator/0.4.8/thumbnailator-0.4.8.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/com/aliyun/oss/aliyun-sdk-oss/3.5.0/aliyun-sdk-oss-3.5.0.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/org/jdom/jdom/1.1/jdom-1.1.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/org/codehaus/jettison/jettison/1.1/jettison-1.1.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/stax/stax-api/1.0.1/stax-api-1.0.1.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/com/aliyun/aliyun-java-sdk-core/3.4.0/aliyun-java-sdk-core-3.4.0.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/com/aliyun/aliyun-java-sdk-ram/3.0.0/aliyun-java-sdk-ram-3.0.0.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/com/aliyun/aliyun-java-sdk-sts/3.0.0/aliyun-java-sdk-sts-3.0.0.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/com/aliyun/aliyun-java-sdk-ecs/4.2.0/aliyun-java-sdk-ecs-4.2.0.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/com/qcloud/cos_api/5.6.22/cos_api-5.6.22.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/joda-time/joda-time/2.10.5/joda-time-2.10.5.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/org/bouncycastle/bcprov-jdk15on/1.64/bcprov-jdk15on-1.64.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/com/qiniu/qiniu-java-sdk/7.2.28/qiniu-java-sdk-7.2.28.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/com/squareup/okhttp3/okhttp/3.14.7/okhttp-3.14.7.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/com/squareup/okio/okio/1.17.2/okio-1.17.2.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/com/amazonaws/aws-java-sdk-s3/1.12.99/aws-java-sdk-s3-1.12.99.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/com/amazonaws/aws-java-sdk-kms/1.12.99/aws-java-sdk-kms-1.12.99.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/com/amazonaws/aws-java-sdk-core/1.12.99/aws-java-sdk-core-1.12.99.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/software/amazon/ion/ion-java/1.0.2/ion-java-1.0.2.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/com/fasterxml/jackson/dataformat/jackson-dataformat-cbor/2.10.3/jackson-dataformat-cbor-2.10.3.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/com/amazonaws/jmespath-java/1.12.99/jmespath-java-1.12.99.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/dom4j/dom4j/1.6.1/dom4j-1.6.1.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/xml-apis/xml-apis/1.0.b2/xml-apis-1.0.b2.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/com/thoughtworks/xstream/xstream/1.4.18/xstream-1.4.18.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/io/github/x-stream/mxparser/1.2.2/mxparser-1.2.2.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/xmlpull/xmlpull/1.1.3.1/xmlpull-1.1.3.1.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/com/vaadin/external/google/android-json/0.0.20131108.vaadin1/android-json-0.0.20131108.vaadin1.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/org/apache/httpcomponents/httpmime/4.5.2/httpmime-4.5.2.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/com/google/zxing/core/3.3.3/core-3.3.3.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/com/google/zxing/javase/3.3.3/javase-3.3.3.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/com/beust/jcommander/1.72/jcommander-1.72.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/com/github/jai-imageio/jai-imageio-core/1.4.0/jai-imageio-core-1.4.0.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/io/jsonwebtoken/jjwt/0.9.1/jjwt-0.9.1.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/com/auth0/jwks-rsa/0.9.0/jwks-rsa-0.9.0.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/com/alipay/sdk/alipay-sdk-java/4.15.20.ALL/alipay-sdk-java-4.15.20.ALL.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/org/springframework/boot/spring-boot-starter-security/2.2.6.RELEASE/spring-boot-starter-security-2.2.6.RELEASE.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/org/springframework/security/spring-security-config/5.2.2.RELEASE/spring-security-config-5.2.2.RELEASE.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/org/springframework/security/spring-security-core/5.2.2.RELEASE/spring-security-core-5.2.2.RELEASE.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/org/springframework/security/spring-security-web/5.2.2.RELEASE/spring-security-web-5.2.2.RELEASE.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/com/anji-plus/spring-boot-starter-captcha/1.3.0/spring-boot-starter-captcha-1.3.0.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/com/anji-plus/captcha/1.3.0/captcha-1.3.0.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/com/jayway/jsonpath/json-path/2.4.0/json-path-2.4.0.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/net/minidev/json-smart/2.3/json-smart-2.3.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/net/minidev/accessors-smart/1.2/accessors-smart-1.2.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/org/ow2/asm/asm/5.0.4/asm-5.0.4.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/com/google/code/gson/gson/2.8.6/gson-2.8.6.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/org/springframework/boot/spring-boot-starter-quartz/2.2.6.RELEASE/spring-boot-starter-quartz-2.2.6.RELEASE.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/org/springframework/boot/spring-boot-starter/2.2.6.RELEASE/spring-boot-starter-2.2.6.RELEASE.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/org/springframework/boot/spring-boot/2.2.6.RELEASE/spring-boot-2.2.6.RELEASE.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/org/springframework/boot/spring-boot-starter-logging/2.2.6.RELEASE/spring-boot-starter-logging-2.2.6.RELEASE.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/org/apache/logging/log4j/log4j-to-slf4j/2.12.1/log4j-to-slf4j-2.12.1.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/org/apache/logging/log4j/log4j-api/2.12.1/log4j-api-2.12.1.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/org/slf4j/jul-to-slf4j/1.7.30/jul-to-slf4j-1.7.30.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/jakarta/annotation/jakarta.annotation-api/1.3.5/jakarta.annotation-api-1.3.5.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/org/springframework/spring-core/5.2.5.RELEASE/spring-core-5.2.5.RELEASE.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/org/springframework/spring-jcl/5.2.5.RELEASE/spring-jcl-5.2.5.RELEASE.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/org/yaml/snakeyaml/1.25/snakeyaml-1.25.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/org/springframework/spring-context-support/5.2.5.RELEASE/spring-context-support-5.2.5.RELEASE.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/org/springframework/spring-beans/5.2.5.RELEASE/spring-beans-5.2.5.RELEASE.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/org/springframework/spring-context/5.2.5.RELEASE/spring-context-5.2.5.RELEASE.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/org/springframework/spring-expression/5.2.5.RELEASE/spring-expression-5.2.5.RELEASE.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/org/springframework/spring-tx/5.2.5.RELEASE/spring-tx-5.2.5.RELEASE.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/org/quartz-scheduler/quartz/2.3.2/quartz-2.3.2.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/com/mchange/mchange-commons-java/0.2.15/mchange-commons-java-0.2.15.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/com/github/oshi/oshi-core/5.8.6/oshi-core-5.8.6.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/org/slf4j/slf4j-api/1.7.30/slf4j-api-1.7.30.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/net/java/dev/jna/jna/5.13.0/jna-5.13.0.jar, file:/D:/sofewore/Maven/maven-3.1.1/lib/net/java/dev/jna/jna-platform/5.13.0/jna-platform-5.13.0.jar, file:/D:/sofewore/idea/IntelliJ%20IDEA%202024.1.2/lib/idea_rt.jar, file:/C:/Users/ccc/AppData/Local/JetBrains/IntelliJIdea2024.1/captureAgent/debugger-agent.jar]" }
+                    
+{
+                    "app": "Crmeb",
+                    "timestamp":"2026-07-24 09:02:50.940",
+                    "level": "DEBUG",
+                    "thread": "main",
+                    "class": "o.springframework.boot.SpringApplication",
+                    "message": "Loading source class com.zbkj.admin.CrmebAdminApplication" }
+                    
+{
+                    "app": "Crmeb",
+                    "timestamp":"2026-07-24 09:02:51.032",
+                    "level": "DEBUG",
+                    "thread": "main",
+                    "class": "o.s.b.c.c.ConfigFileApplicationListener",
+                    "message": "Activated activeProfiles dev" }
+                    
+{
+                    "app": "Crmeb",
+                    "timestamp":"2026-07-24 09:02:51.032",
+                    "level": "DEBUG",
+                    "thread": "main",
+                    "class": "o.s.b.c.c.ConfigFileApplicationListener",
+                    "message": "Loaded config file 'file:/F:/newWorkSpace/cream-jzk/crmeb/crmeb-admin/target/classes/application.yml' (classpath:/application.yml)" }
+                    
+{
+                    "app": "Crmeb",
+                    "timestamp":"2026-07-24 09:02:51.032",
+                    "level": "DEBUG",
+                    "thread": "main",
+                    "class": "o.s.b.c.c.ConfigFileApplicationListener",
+                    "message": "Profiles already activated, '[dev]' will not be applied" }
+                    
+{
+                    "app": "Crmeb",
+                    "timestamp":"2026-07-24 09:02:51.033",
+                    "level": "DEBUG",
+                    "thread": "main",
+                    "class": "o.s.b.c.c.ConfigFileApplicationListener",
+                    "message": "Loaded config file 'file:/F:/newWorkSpace/cream-jzk/crmeb/crmeb-admin/target/classes/application-dev.yml' (classpath:/application-dev.yml) for profile dev" }
+                    
+{
+                    "app": "Crmeb",
+                    "timestamp":"2026-07-24 09:02:51.034",
+                    "level": "DEBUG",
+                    "thread": "main",
                     "class": "o.s.b.w.s.c.AnnotationConfigServletWebServerApplicationContext",
-                    "message": "Closing org.springframework.boot.web.servlet.context.AnnotationConfigServletWebServerApplicationContext@6691490c, started on Thu Jul 16 18:04:20 CST 2026" }
+                    "message": "Refreshing org.springframework.boot.web.servlet.context.AnnotationConfigServletWebServerApplicationContext@2c88b9fc" }
                     
 {
                     "app": "Crmeb",
-                    "timestamp":"2026-07-17 09:02:21.357",
+                    "timestamp":"2026-07-24 09:02:55.562",
                     "level": "DEBUG",
-                    "thread": "SpringContextShutdownHook",
-                    "class": "o.s.b.a.endpoint.jmx.JmxEndpointExporter",
-                    "message": "Unregister endpoint with ObjectName 'org.springframework.boot:type=Endpoint,name=Beans' from the JMX domain" }
+                    "thread": "main",
+                    "class": "o.s.b.w.e.t.TomcatServletWebServerFactory",
+                    "message": "Code archive: D:\sofewore\Maven\maven-3.1.1\lib\org\springframework\boot\spring-boot\2.2.6.RELEASE\spring-boot-2.2.6.RELEASE.jar" }
                     
 {
                     "app": "Crmeb",
-                    "timestamp":"2026-07-17 09:02:21.358",
+                    "timestamp":"2026-07-24 09:02:55.562",
                     "level": "DEBUG",
-                    "thread": "SpringContextShutdownHook",
-                    "class": "o.s.b.a.endpoint.jmx.JmxEndpointExporter",
-                    "message": "Unregister endpoint with ObjectName 'org.springframework.boot:type=Endpoint,name=Caches' from the JMX domain" }
+                    "thread": "main",
+                    "class": "o.s.b.w.e.t.TomcatServletWebServerFactory",
+                    "message": "Code archive: D:\sofewore\Maven\maven-3.1.1\lib\org\springframework\boot\spring-boot\2.2.6.RELEASE\spring-boot-2.2.6.RELEASE.jar" }
                     
 {
                     "app": "Crmeb",
-                    "timestamp":"2026-07-17 09:02:21.359",
+                    "timestamp":"2026-07-24 09:02:55.562",
                     "level": "DEBUG",
-                    "thread": "SpringContextShutdownHook",
-                    "class": "o.s.b.a.endpoint.jmx.JmxEndpointExporter",
-                    "message": "Unregister endpoint with ObjectName 'org.springframework.boot:type=Endpoint,name=Health' from the JMX domain" }
+                    "thread": "main",
+                    "class": "o.s.b.w.e.t.TomcatServletWebServerFactory",
+                    "message": "None of the document roots [src/main/webapp, public, static] point to a directory and will be ignored." }
                     
 {
                     "app": "Crmeb",
-                    "timestamp":"2026-07-17 09:02:21.359",
+                    "timestamp":"2026-07-24 09:02:55.998",
                     "level": "DEBUG",
-                    "thread": "SpringContextShutdownHook",
-                    "class": "o.s.b.a.endpoint.jmx.JmxEndpointExporter",
-                    "message": "Unregister endpoint with ObjectName 'org.springframework.boot:type=Endpoint,name=Info' from the JMX domain" }
+                    "thread": "main",
+                    "class": "o.s.web.context.ContextLoader",
+                    "message": "Published root WebApplicationContext as ServletContext attribute with name [org.springframework.web.context.WebApplicationContext.ROOT]" }
                     
 {
                     "app": "Crmeb",
-                    "timestamp":"2026-07-17 09:02:21.359",
+                    "timestamp":"2026-07-24 09:02:57.040",
                     "level": "DEBUG",
-                    "thread": "SpringContextShutdownHook",
-                    "class": "o.s.b.a.endpoint.jmx.JmxEndpointExporter",
-                    "message": "Unregister endpoint with ObjectName 'org.springframework.boot:type=Endpoint,name=Conditions' from the JMX domain" }
+                    "thread": "main",
+                    "class": "o.s.b.w.s.ServletContextInitializerBeans",
+                    "message": "Mapping filters: filterRegistrationBean urls=[/*] order=-2147483647, springSecurityFilterChain urls=[/*] order=-100, filterRegistrationBean urls=[/*] order=2147483647, filterRegistrationBean urls=[/api/*] order=2147483647, characterEncodingFilter urls=[/*] order=-2147483648, formContentFilter urls=[/*] order=-9900, requestContextFilter urls=[/*] order=-105, corsFilter urls=[/*] order=2147483647, jwtAuthenticationTokenFilter urls=[/*] order=2147483647" }
                     
 {
                     "app": "Crmeb",
-                    "timestamp":"2026-07-17 09:02:21.359",
+                    "timestamp":"2026-07-24 09:02:57.040",
                     "level": "DEBUG",
-                    "thread": "SpringContextShutdownHook",
-                    "class": "o.s.b.a.endpoint.jmx.JmxEndpointExporter",
-                    "message": "Unregister endpoint with ObjectName 'org.springframework.boot:type=Endpoint,name=Configprops' from the JMX domain" }
+                    "thread": "main",
+                    "class": "o.s.b.w.s.ServletContextInitializerBeans",
+                    "message": "Mapping servlets: statViewServlet urls=[/druid/*], dispatcherServlet urls=[/]" }
                     
 {
                     "app": "Crmeb",
-                    "timestamp":"2026-07-17 09:02:21.359",
+                    "timestamp":"2026-07-24 09:02:57.073",
                     "level": "DEBUG",
-                    "thread": "SpringContextShutdownHook",
-                    "class": "o.s.b.a.endpoint.jmx.JmxEndpointExporter",
-                    "message": "Unregister endpoint with ObjectName 'org.springframework.boot:type=Endpoint,name=Env' from the JMX domain" }
+                    "thread": "main",
+                    "class": "o.s.b.a.m.w.servlet.WebMvcMetricsFilter",
+                    "message": "Filter 'webMvcMetricsFilter' configured for use" }
                     
 {
                     "app": "Crmeb",
-                    "timestamp":"2026-07-17 09:02:21.359",
+                    "timestamp":"2026-07-24 09:02:57.073",
                     "level": "DEBUG",
-                    "thread": "SpringContextShutdownHook",
-                    "class": "o.s.b.a.endpoint.jmx.JmxEndpointExporter",
-                    "message": "Unregister endpoint with ObjectName 'org.springframework.boot:type=Endpoint,name=Loggers' from the JMX domain" }
+                    "thread": "main",
+                    "class": "o.s.b.w.s.f.OrderedRequestContextFilter",
+                    "message": "Filter 'requestContextFilter' configured for use" }
                     
 {
                     "app": "Crmeb",
-                    "timestamp":"2026-07-17 09:02:21.359",
+                    "timestamp":"2026-07-24 09:02:57.074",
                     "level": "DEBUG",
-                    "thread": "SpringContextShutdownHook",
-                    "class": "o.s.b.a.endpoint.jmx.JmxEndpointExporter",
-                    "message": "Unregister endpoint with ObjectName 'org.springframework.boot:type=Endpoint,name=Threaddump' from the JMX domain" }
+                    "thread": "main",
+                    "class": "o.springframework.web.filter.CorsFilter",
+                    "message": "Filter 'corsFilter' configured for use" }
                     
 {
                     "app": "Crmeb",
-                    "timestamp":"2026-07-17 09:02:21.359",
+                    "timestamp":"2026-07-24 09:02:57.074",
                     "level": "DEBUG",
-                    "thread": "SpringContextShutdownHook",
-                    "class": "o.s.b.a.endpoint.jmx.JmxEndpointExporter",
-                    "message": "Unregister endpoint with ObjectName 'org.springframework.boot:type=Endpoint,name=Metrics' from the JMX domain" }
+                    "thread": "main",
+                    "class": "o.s.b.w.s.f.OrderedCharacterEncodingFilter",
+                    "message": "Filter 'characterEncodingFilter' configured for use" }
                     
 {
                     "app": "Crmeb",
-                    "timestamp":"2026-07-17 09:02:21.359",
+                    "timestamp":"2026-07-24 09:02:57.074",
                     "level": "DEBUG",
-                    "thread": "SpringContextShutdownHook",
-                    "class": "o.s.b.a.endpoint.jmx.JmxEndpointExporter",
-                    "message": "Unregister endpoint with ObjectName 'org.springframework.boot:type=Endpoint,name=Scheduledtasks' from the JMX domain" }
+                    "thread": "main",
+                    "class": "o.s.b.w.s.DelegatingFilterProxyRegistrationBean$1",
+                    "message": "Filter 'springSecurityFilterChain' configured for use" }
                     
 {
                     "app": "Crmeb",
-                    "timestamp":"2026-07-17 09:02:21.359",
+                    "timestamp":"2026-07-24 09:02:57.074",
                     "level": "DEBUG",
-                    "thread": "SpringContextShutdownHook",
-                    "class": "o.s.b.a.endpoint.jmx.JmxEndpointExporter",
-                    "message": "Unregister endpoint with ObjectName 'org.springframework.boot:type=Endpoint,name=Mappings' from the JMX domain" }
+                    "thread": "main",
+                    "class": "o.s.b.w.s.f.OrderedFormContentFilter",
+                    "message": "Filter 'formContentFilter' configured for use" }
+                    
+{
+                    "app": "Crmeb",
+                    "timestamp":"2026-07-24 09:03:08.376",
+                    "level": "DEBUG",
+                    "thread": "main",
+                    "class": "o.s.w.s.m.m.a.RequestMappingHandlerMapping",
+                    "message": "464 mappings in 'requestMappingHandlerMapping'" }
+                    
+{
+                    "app": "Crmeb",
+                    "timestamp":"2026-07-24 09:03:08.937",
+                    "level": "DEBUG",
+                    "thread": "main",
+                    "class": "o.s.b.a.SpringApplicationAdminMXBeanRegistrar$SpringApplicationAdmin",
+                    "message": "Application Admin MBean registered with name 'org.springframework.boot:type=Admin,name=SpringApplication'" }
+                    
+{
+                    "app": "Crmeb",
+                    "timestamp":"2026-07-24 09:03:08.948",
+                    "level": "DEBUG",
+                    "thread": "main",
+                    "class": "o.s.w.s.m.m.a.RequestMappingHandlerAdapter",
+                    "message": "ControllerAdvice beans: 0 @ModelAttribute, 0 @InitBinder, 1 RequestBodyAdvice, 2 ResponseBodyAdvice" }
+                    
+{
+                    "app": "Crmeb",
+                    "timestamp":"2026-07-24 09:03:09.019",
+                    "level": "DEBUG",
+                    "thread": "main",
+                    "class": "o.s.w.s.handler.SimpleUrlHandlerMapping",
+                    "message": "Patterns [/webjars/**, /**, /doc.html, /crmebimage/**, /uploadf/**] in 'resourceHandlerMapping'" }
+                    
+{
+                    "app": "Crmeb",
+                    "timestamp":"2026-07-24 09:03:09.033",
+                    "level": "DEBUG",
+                    "thread": "main",
+                    "class": "o.s.w.s.m.m.a.ExceptionHandlerExceptionResolver",
+                    "message": "ControllerAdvice beans: 1 @ExceptionHandler, 2 ResponseBodyAdvice" }
+                    
+{
+                    "app": "Crmeb",
+                    "timestamp":"2026-07-24 09:03:12.248",
+                    "level": "DEBUG",
+                    "thread": "RMI TCP Connection(10)-192.168.110.144",
+                    "class": "o.s.web.servlet.DispatcherServlet",
+                    "message": "Detected StandardServletMultipartResolver" }
+                    
+{
+                    "app": "Crmeb",
+                    "timestamp":"2026-07-24 09:03:12.289",
+                    "level": "DEBUG",
+                    "thread": "RMI TCP Connection(10)-192.168.110.144",
+                    "class": "o.s.web.servlet.DispatcherServlet",
+                    "message": "enableLoggingRequestDetails='false': request parameters and headers will be masked to prevent unsafe logging of potentially sensitive data" }
+                    
+{
+                    "app": "Crmeb",
+                    "timestamp":"2026-07-24 09:03:13.416",
+                    "level": "DEBUG",
+                    "thread": "RMI TCP Connection(13)-192.168.110.144",
+                    "class": "o.springframework.jdbc.core.JdbcTemplate",
+                    "message": "Executing SQL query [/* ping */ SELECT 1]" }
                     

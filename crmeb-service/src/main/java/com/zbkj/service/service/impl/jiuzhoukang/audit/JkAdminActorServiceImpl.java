@@ -40,13 +40,33 @@ public class JkAdminActorServiceImpl implements JkAdminActorService {
     }
 
     @Override
+//    public boolean isPlatformSuperAdmin(SystemAdmin admin) {
+//        if (admin == null) {
+//            return false;
+//        }
+//        if (admin.getRoles() != null && admin.getRoles().contains("1")) {
+//            return true;
+//        }
+//        return admin.getLevel() != null && admin.getLevel() == 1;
+//    }
     public boolean isPlatformSuperAdmin(SystemAdmin admin) {
         if (admin == null) {
             return false;
         }
-        if (admin.getRoles() != null && admin.getRoles().contains("1")) {
-            return true;
+
+        // CRMEB 原系统中，角色 ID=1 为超级管理员。
+        // 当前项目同时保留历史 level=0 超管账号兼容。
+        boolean hasSuperAdminRole = false;
+        if (admin.getRoles() != null && !admin.getRoles().trim().isEmpty()) {
+            String[] roleIds = admin.getRoles().split(",");
+            for (String roleId : roleIds) {
+                if ("1".equals(roleId.trim())) {
+                    hasSuperAdminRole = true;
+                    break;
+                }
+            }
         }
-        return admin.getLevel() != null && admin.getLevel() == 1;
+
+        return hasSuperAdminRole || Integer.valueOf(0).equals(admin.getLevel());
     }
 }

@@ -28,6 +28,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -114,6 +115,32 @@ public class StockAccountServiceImpl extends ServiceImpl<JkStockAccountDao, JkSt
         List<JkStockFlowResponse> responses = stockFlowDao.selectList(lqw).stream().map(this::toFlowResponse).collect(Collectors.toList());
         displayEnrichmentSupport.enrichStockFlows(responses);
         return responses;
+    }
+
+    @Override
+    public JkStockAccount initializeBusinessAccount(Long userId, String roleCode, String regionCode, String ownerName) {
+        if (userId == null || StrUtil.isBlank(roleCode)) {
+            throw new IllegalArgumentException("库存账户初始化参数不完整");
+        }
+        String accountType;
+        if (JkBizConstants.ROLE_COUNTY_AGENT.equals(roleCode)) accountType = JkBizConstants.STOCK_ACCOUNT_COUNTY_AGENT;
+        else if (JkBizConstants.ROLE_PARTNER.equals(roleCode)) accountType = JkBizConstants.STOCK_ACCOUNT_PARTNER;
+        else if (JkBizConstants.ROLE_MAKER.equals(roleCode)) accountType = JkBizConstants.STOCK_ACCOUNT_MAKER;
+        else return null;
+        JkStockAccount existing = getOne(new LambdaQueryWrapper<JkStockAccount>()
+                .eq(JkStockAccount::getAccountType, accountType)
+                .eq(JkStockAccount::getOwnerUserId, userId)
+                .eq(JkStockAccount::getIsDeleted, false)
+                .last("limit 1"));
+        if (existing != null) return existing;
+        Date now = DateUtil.date();
+        JkStockAccount account = new JkStockAccount()
+                .setAccountNo("SA" + com.baomidou.mybatisplus.core.toolkit.IdWorker.getIdStr())
+                .setAccountType(accountType).setRoleCode(roleCode).setRegionCode(regionCode)
+                .setOwnerUserId(userId).setOwnerName(StrUtil.blankToDefault(ownerName, roleCode + "-" + userId))
+                .setStatus(true).setIsDeleted(false).setVersion(0).setCreateTime(now).setUpdateTime(now);
+        save(account);
+        return account;
     }
 
     @Override

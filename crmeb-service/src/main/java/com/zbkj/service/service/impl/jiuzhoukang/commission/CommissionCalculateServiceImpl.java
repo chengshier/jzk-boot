@@ -22,6 +22,11 @@ import java.util.Date;
 import java.util.List;
 import java.util.UUID;
 
+/**
+ * 九州康佣金生成服务。
+ * <p>只接受已经固化的业务来源和实付金额，不负责推断订单归属；同一来源、明细、接收人通过幂等键只生成一次。
+ * 新佣金先进入待结算并记录冻结结束时间。</p>
+ */
 @Service
 public class CommissionCalculateServiceImpl implements CommissionCalculateService {
     @Autowired private JkCommissionRecordDao recordDao;

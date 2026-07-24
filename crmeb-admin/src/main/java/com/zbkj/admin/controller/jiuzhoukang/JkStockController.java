@@ -33,7 +33,7 @@ public class JkStockController {
     private StockAccountService stockAccountService;
 
     @PreAuthorize("hasAuthority('" + JkPermissionCodes.ADMIN_STOCK_ACCOUNT_LIST + "')")
-    @JkBizPermission(value = JkBizPermissionCodes.STOCK_VIEW_SELF, checkDataScope = false)
+    @JkBizPermission(value = JkBizPermissionCodes.STOCK_VIEW_ALL, checkDataScope = false)
     @GetMapping("/account/list")
     @ApiOperation("库存账户列表")
     public CommonResult<CommonPage<JkStockAccountResponse>> accountList(@Validated JkStockAccountSearchRequest request,
@@ -43,7 +43,7 @@ public class JkStockController {
     }
 
     @PreAuthorize("hasAuthority('" + JkPermissionCodes.ADMIN_STOCK_ITEM_LIST + "')")
-    @JkBizPermission(value = JkBizPermissionCodes.STOCK_VIEW_SELF, checkDataScope = false)
+    @JkBizPermission(value = JkBizPermissionCodes.STOCK_VIEW_ALL, checkDataScope = false)
     @GetMapping("/item/list")
     @ApiOperation("库存明细列表")
     public CommonResult<CommonPage<JkStockItemResponse>> itemList(@Validated JkStockItemSearchRequest request,
@@ -53,7 +53,7 @@ public class JkStockController {
     }
 
     @PreAuthorize("hasAuthority('" + JkPermissionCodes.ADMIN_STOCK_FLOW_LIST + "')")
-    @JkBizPermission(value = JkBizPermissionCodes.STOCK_FLOW_VIEW, checkDataScope = false)
+    @JkBizPermission(value = JkBizPermissionCodes.STOCK_VIEW_ALL, checkDataScope = false)
     @GetMapping("/flow/list")
     @ApiOperation("库存流水列表")
     public CommonResult<CommonPage<JkStockFlowResponse>> flowList(@Validated JkStockFlowSearchRequest request,

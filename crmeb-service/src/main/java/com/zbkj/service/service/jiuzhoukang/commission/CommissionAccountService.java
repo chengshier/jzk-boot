@@ -8,6 +8,7 @@ public interface CommissionAccountService {
  JkCommissionAccount reversePending(Long userId, String roleCode, BigDecimal amount, String requestNo, String idempotencyKey);
  JkCommissionAccount reverseSettled(Long userId, String roleCode, BigDecimal amount, String requestNo, String idempotencyKey);
  JkCommissionAccount reverseFrozen(Long userId, String roleCode, BigDecimal amount, String requestNo, String idempotencyKey);
+ JkCommissionAccount reverseSettledOrFrozen(Long userId, String roleCode, BigDecimal amount, String requestNo, String idempotencyKey);
  JkCommissionAccount freezeSettled(Long userId, String roleCode, BigDecimal amount, String sourceType, Long sourceId, String requestNo, String idempotencyKey, String reason);
  JkCommissionAccount releaseFrozen(Long userId, String roleCode, BigDecimal amount, String sourceType, Long sourceId, String requestNo, String idempotencyKey, String reason);
 }

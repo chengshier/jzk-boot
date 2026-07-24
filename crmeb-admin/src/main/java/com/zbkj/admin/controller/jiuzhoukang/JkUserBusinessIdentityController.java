@@ -2,6 +2,7 @@ package com.zbkj.admin.controller.jiuzhoukang;
 
 import com.zbkj.common.annotation.jiuzhoukang.JkBizPermission;
 import com.zbkj.common.constants.jiuzhoukang.JkBizPermissionCodes;
+import com.zbkj.common.constants.jiuzhoukang.JkPermissionCodes;
 import com.zbkj.common.page.CommonPage;
 import com.zbkj.common.request.PageParamRequest;
 import com.zbkj.common.request.jiuzhoukang.JkIdentityStatusOperateRequest;
@@ -30,7 +31,7 @@ public class JkUserBusinessIdentityController {
     @Autowired
     private JkUserBusinessRoleService userBusinessRoleService;
 
-    @PreAuthorize("hasAuthority('admin:jk:user:business:role:list')")
+    @PreAuthorize("hasAuthority('" + JkPermissionCodes.ADMIN_USER_BUSINESS_ROLE_LIST + "')")
     @JkBizPermission(checkDataScope = true)
     @ApiOperation("用户业务身份列表")
     @GetMapping("/user-role/list")
@@ -40,7 +41,7 @@ public class JkUserBusinessIdentityController {
         return CommonResult.success(CommonPage.restPage(rows));
     }
 
-    @PreAuthorize("hasAuthority('admin:jk:identity:freeze')")
+    @PreAuthorize("hasAuthority('" + JkPermissionCodes.ADMIN_IDENTITY_FREEZE + "')")
     @JkBizPermission(value = JkBizPermissionCodes.IDENTITY_FREEZE, checkDataScope = true)
     @ApiOperation("冻结身份")
     @PostMapping("/freeze")
@@ -48,7 +49,7 @@ public class JkUserBusinessIdentityController {
         return CommonResult.success(userBusinessRoleService.freeze(request.getUserBusinessRoleId(), request.getReason()));
     }
 
-    @PreAuthorize("hasAuthority('admin:jk:identity:unfreeze')")
+    @PreAuthorize("hasAuthority('" + JkPermissionCodes.ADMIN_IDENTITY_UNFREEZE + "')")
     @JkBizPermission(value = JkBizPermissionCodes.IDENTITY_UNFREEZE, checkDataScope = true)
     @ApiOperation("解冻身份")
     @PostMapping("/unfreeze")
@@ -56,7 +57,7 @@ public class JkUserBusinessIdentityController {
         return CommonResult.success(userBusinessRoleService.unfreeze(request.getUserBusinessRoleId(), request.getReason()));
     }
 
-    @PreAuthorize("hasAuthority('admin:jk:identity:cancel')")
+    @PreAuthorize("hasAuthority('" + JkPermissionCodes.ADMIN_IDENTITY_CANCEL + "')")
     @JkBizPermission(value = JkBizPermissionCodes.IDENTITY_CANCEL, checkDataScope = true)
     @ApiOperation("取消身份")
     @PostMapping("/cancel")

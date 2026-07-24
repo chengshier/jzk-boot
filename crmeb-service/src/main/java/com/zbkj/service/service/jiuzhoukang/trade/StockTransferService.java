@@ -17,6 +17,7 @@ public interface StockTransferService {
     JkStockTransfer confirmPayment(Long countyUserId, JkPaymentAuditRequest request);
     JkStockTransfer dispatch(Long countyUserId, JkBusinessActionRequest request);
     JkStockTransfer receive(Long userId, JkBusinessActionRequest request);
+    JkStockTransfer cancel(Long userId, JkBusinessActionRequest request);
     JkStockTransfer close(Long countyUserId, JkBusinessActionRequest request);
     PageInfo<JkStockTransfer> getFrontList(Long userId, JkTradeDocumentSearchRequest request, PageParamRequest pageParamRequest);
     PageInfo<JkStockTransfer> getAdminList(Long countyUserId, JkTradeDocumentSearchRequest request, PageParamRequest pageParamRequest);

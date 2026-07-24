@@ -10,8 +10,10 @@ import com.zbkj.common.request.jiuzhoukang.JkAuditLogSearchRequest;
 import com.zbkj.common.response.jiuzhoukang.JkAuditLogResponse;
 import com.zbkj.service.dao.jiuzhoukang.JkAuditLogDao;
 import com.zbkj.service.service.jiuzhoukang.audit.JkAuditLogService;
+import com.zbkj.service.service.jiuzhoukang.scope.JkAdminDataScopeService;
 import com.zbkj.service.service.jiuzhoukang.support.JkDictLabelHelper;
 import org.springframework.beans.BeanUtils;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.Collections;
@@ -20,6 +22,9 @@ import java.util.stream.Collectors;
 
 @Service
 public class JkAuditLogServiceImpl extends ServiceImpl<JkAuditLogDao, JkAuditLog> implements JkAuditLogService {
+
+    @Autowired
+    private JkAdminDataScopeService adminDataScopeService;
 
     @Override
     public void saveAuditLog(JkAuditLog auditLog) {
@@ -31,6 +36,7 @@ public class JkAuditLogServiceImpl extends ServiceImpl<JkAuditLogDao, JkAuditLog
         PageHelper.startPage(pageParamRequest.getPage(), pageParamRequest.getLimit());
         LambdaQueryWrapper<JkAuditLog> lqw = new LambdaQueryWrapper<>();
         lqw.eq(JkAuditLog::getIsDeleted, false);
+        adminDataScopeService.applyAuditLogScope(lqw);
         if (request != null && StrUtil.isNotBlank(request.getBusinessType())) {
             lqw.eq(JkAuditLog::getBusinessType, request.getBusinessType());
         }

@@ -33,10 +33,12 @@ import com.zbkj.service.dao.jiuzhoukang.JkStockTransferItemDao;
 import com.zbkj.service.service.StoreProductAttrValueService;
 import com.zbkj.service.service.StoreProductService;
 import com.zbkj.service.service.jiuzhoukang.audit.JkAuditLogService;
+import com.zbkj.service.service.jiuzhoukang.commission.CommissionTriggerService;
 import com.zbkj.service.service.jiuzhoukang.context.JkUserContext;
 import com.zbkj.service.service.jiuzhoukang.context.JkUserContextService;
 import com.zbkj.service.service.jiuzhoukang.price.PriceCalculateService;
 import com.zbkj.service.service.jiuzhoukang.stock.StockFlowService;
+import com.zbkj.service.service.jiuzhoukang.support.JkAfterCommitExecutor;
 import com.zbkj.service.service.jiuzhoukang.support.JkDisplayEnrichmentSupport;
 import com.zbkj.service.service.jiuzhoukang.trade.JkTradeStatusSupport;
 import com.zbkj.service.service.jiuzhoukang.trade.StockTransferService;
@@ -48,6 +50,11 @@ import java.math.BigDecimal;
 import java.util.Date;
 import java.util.List;
 
+/**
+ * 创客/合伙人与所属区县代之间的库存调拨状态机。
+ * <p>本服务同时校验身份、所属区县代、区域和状态，库存动作全部委托 StockFlowService。
+ * 区县代只能处理自己的下级，平台后台的全量管理使用独立平台权限。</p>
+ */
 @Service
 public class StockTransferServiceImpl implements StockTransferService {
     private static final String BUSINESS_TYPE = "STOCK_TRANSFER";
@@ -74,6 +81,10 @@ public class StockTransferServiceImpl implements StockTransferService {
     private JkAuditLogService auditLogService;
     @Autowired
     private JkDisplayEnrichmentSupport displayEnrichmentSupport;
+    @Autowired
+    private CommissionTriggerService commissionTriggerService;
+    @Autowired
+    private JkAfterCommitExecutor afterCommitExecutor;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -87,6 +98,7 @@ public class StockTransferServiceImpl implements StockTransferService {
             }
             return exists;
         }
+        validateNoDuplicateItems(request.getItems());
         JkUserContext context = contextService.getFrontContext(userId);
         validApplicant(context);
         JkStockAccount from = account(JkBizConstants.STOCK_ACCOUNT_COUNTY_AGENT, context.getBelongCountyAgentId());
@@ -314,6 +326,9 @@ public class StockTransferServiceImpl implements StockTransferService {
         return enrichDisplay(transfer);
     }
 
+    /**
+     * 申请人确认收货后，将区县代冻结库存出库并给下级入库；重复确认通过状态 CAS 和库存幂等双重拦截。
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public JkStockTransfer receive(Long userId, JkBusinessActionRequest request) {
@@ -344,6 +359,31 @@ public class StockTransferServiceImpl implements StockTransferService {
                 .setReceiveStatus("STOCK_IN")
                 .setUpdateUserId(userId);
         log(transfer, userId, "TRANSFERRED", "STOCK_IN", "RECEIVE", request.getRemark(), null, "FRONT");
+        final Long transferId = transfer.getId();
+        final String transferNo = transfer.getTransferNo();
+        afterCommitExecutor.execute("STOCK_TRANSFER_COMPLETED", transferId, transferNo,
+                "创客/合伙人确认收货并完成库存调拨入库",
+                () -> commissionTriggerService.onStockTransferCompleted(transferId, transferNo, "STOCK_TRANSFER_COMPLETED:" + transferId));
+        return enrichDisplay(transfer);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public JkStockTransfer cancel(Long userId, JkBusinessActionRequest request) {
+        JkStockTransfer transfer = one(request.getBusinessId());
+        if (!userId.equals(transfer.getUserId())) throw new CrmebException("无权取消该调拨单");
+        String before = transfer.getStatus();
+        if (!("SUBMITTED".equals(before) || "AUDIT_REJECTED".equals(before) || "PAYMENT_REJECTED".equals(before))) {
+            throw new CrmebException("当前状态不能由申请人直接取消；已审核或已提交付款的单据请联系所属区县代关闭");
+        }
+        int updated = transferDao.update(null, new UpdateWrapper<JkStockTransfer>()
+                .eq("id", transfer.getId()).in("status", java.util.Arrays.asList("SUBMITTED", "AUDIT_REJECTED", "PAYMENT_REJECTED"))
+                .eq("is_deleted", false).set("status", "CANCELLED").set("cancel_reason", request.getRemark())
+                .set("update_user_id", userId).set("update_time", new Date()));
+        if (updated != 1) throw new CrmebException("当前状态不能取消");
+        rejectCurrentVoucher(transfer.getId(), userId, request.getRemark());
+        transfer.setStatus("CANCELLED").setCancelReason(request.getRemark()).setUpdateUserId(userId);
+        log(transfer, userId, before, "CANCELLED", "CANCEL", request.getRemark(), null, "FRONT");
         return enrichDisplay(transfer);
     }
 
@@ -493,6 +533,7 @@ public class StockTransferServiceImpl implements StockTransferService {
                 .setSkuId(item.getSkuId())
                 .setSkuCode(item.getSkuCode())
                 .setQuantity(item.getQuantity())
+                .setUnitCost(item.getUnitPrice())
                 .setOperatorUserId(userId)
                 .setRemark(remark);
     }
@@ -575,5 +616,17 @@ public class StockTransferServiceImpl implements StockTransferService {
                 .setCreateUserId(userId)
                 .setUpdateUserId(userId));
     }
+    private void validateNoDuplicateItems(List<JkTradeLineRequest> items) {
+        if (items == null || items.isEmpty()) throw new CrmebException("至少选择一条商品明细");
+        java.util.Set<String> keys = new java.util.HashSet<>();
+        for (JkTradeLineRequest item : items) {
+            if (item == null || item.getProductId() == null || item.getQuantity() == null || item.getQuantity() <= 0) {
+                throw new CrmebException("商品、规格和数量参数不完整");
+            }
+            String key = item.getProductId() + ":" + (item.getSkuId() == null ? 0 : item.getSkuId());
+            if (!keys.add(key)) throw new CrmebException("同一商品规格不能重复提交，请合并数量后重试");
+        }
+    }
+
 }
 

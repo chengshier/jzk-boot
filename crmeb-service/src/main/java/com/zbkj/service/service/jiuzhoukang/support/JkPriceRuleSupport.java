@@ -19,7 +19,9 @@ public class JkPriceRuleSupport {
         RuleCandidate selected = safeCandidates.stream()
                 .filter(item -> item != null && Boolean.TRUE.equals(item.getStatus()))
                 .filter(item -> isInEffectiveWindow(item, now))
-                .sorted(Comparator.comparingInt(JkPriceRuleSupport::priority).thenComparing(RuleCandidate::getRuleVersion, Comparator.nullsLast(Comparator.reverseOrder())))
+                .sorted(Comparator.comparingInt(JkPriceRuleSupport::priority)
+                        .thenComparing(item -> Boolean.TRUE.equals(item.getSkuSpecific()) ? 0 : 1)
+                        .thenComparing(RuleCandidate::getRuleVersion, Comparator.nullsLast(Comparator.reverseOrder())))
                 .findFirst()
                 .orElse(null);
         if (selected != null) {
@@ -91,6 +93,7 @@ public class JkPriceRuleSupport {
         private Date effectiveTime;
         private Date expireTime;
         private Boolean status;
+        private Boolean skuSpecific;
 
         public Long getRuleId() {
             return ruleId;
@@ -170,6 +173,15 @@ public class JkPriceRuleSupport {
 
         public RuleCandidate setStatus(Boolean status) {
             this.status = status;
+            return this;
+        }
+
+        public Boolean getSkuSpecific() {
+            return skuSpecific;
+        }
+
+        public RuleCandidate setSkuSpecific(Boolean skuSpecific) {
+            this.skuSpecific = skuSpecific;
             return this;
         }
     }

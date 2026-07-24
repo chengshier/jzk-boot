@@ -1,6 +1,8 @@
 package com.zbkj.admin.controller.jiuzhoukang;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.zbkj.common.annotation.jiuzhoukang.JkBizPermission;
+import com.zbkj.common.constants.jiuzhoukang.JkBizPermissionCodes;
 import com.zbkj.common.constants.jiuzhoukang.JkPermissionCodes;
 import com.zbkj.common.model.jiuzhoukang.*;
 import com.zbkj.common.request.jiuzhoukang.JkWithdrawAuditRequest;
@@ -10,6 +12,8 @@ import com.zbkj.common.result.CommonResult;
 import com.zbkj.service.dao.jiuzhoukang.*;
 import com.zbkj.service.service.jiuzhoukang.audit.JkAdminActorService;
 import com.zbkj.service.service.jiuzhoukang.commission.WithdrawService;
+import com.zbkj.service.service.jiuzhoukang.context.JkUserContext;
+import com.zbkj.service.service.jiuzhoukang.context.JkUserContextService;
 import com.zbkj.service.service.jiuzhoukang.commission.CommissionSettleService;
 import com.zbkj.service.service.jiuzhoukang.commission.CommissionReverseService;
 import com.zbkj.service.service.jiuzhoukang.support.JkDisplayEnrichmentSupport;
@@ -39,6 +43,8 @@ public class JkWithdrawAdminController {
     @Autowired
     private JkCommissionRecordDao recordDao;
     @Autowired
+    private JkCommissionFlowDao commissionFlowDao;
+    @Autowired
     private JkCommissionAccountDao commissionAccountDao;
     @Autowired
     private JkFundAccountDao fundAccountDao;
@@ -48,14 +54,18 @@ public class JkWithdrawAdminController {
     private JkCommissionReverseDao reverseDao;
     @Autowired
     private JkDisplayEnrichmentSupport displayEnrichmentSupport;
+    @Autowired
+    private JkUserContextService userContextService;
 
     @GetMapping("/withdraw/list")
     @PreAuthorize("hasAuthority('" + JkPermissionCodes.ADMIN_WITHDRAW_LIST + "')")
+    @JkBizPermission(value = JkBizPermissionCodes.WITHDRAW_VIEW_SELF, checkDataScope = true)
     public CommonResult<List<JkWithdrawApply>> withdrawList(@RequestParam(required = false) String status, @RequestParam(required = false) String roleCode, @RequestParam(required = false) Long userId) {
         LambdaQueryWrapper<JkWithdrawApply> q = new LambdaQueryWrapper<JkWithdrawApply>().eq(JkWithdrawApply::getIsDeleted, false).orderByDesc(JkWithdrawApply::getId);
         if (status != null && !status.trim().isEmpty()) q.eq(JkWithdrawApply::getStatus, status);
         if (roleCode != null && !roleCode.trim().isEmpty()) q.eq(JkWithdrawApply::getRoleCode, roleCode);
-        if (userId != null) q.eq(JkWithdrawApply::getUserId, userId);
+        Long scopedUserId = scopedUserId(userId);
+        if (scopedUserId != null) q.eq(JkWithdrawApply::getUserId, scopedUserId);
         List<JkWithdrawApply> list = withdrawDao.selectList(q);
         displayEnrichmentSupport.enrichWithdrawApplies(list);
         return CommonResult.success(list);
@@ -63,43 +73,70 @@ public class JkWithdrawAdminController {
 
     @GetMapping("/withdraw/detail/{id}")
     @PreAuthorize("hasAuthority('" + JkPermissionCodes.ADMIN_WITHDRAW_LIST + "')")
+    @JkBizPermission(value = JkBizPermissionCodes.WITHDRAW_VIEW_SELF, checkDataScope = true)
     public CommonResult<JkWithdrawApply> withdrawDetail(@PathVariable Long id) {
         JkWithdrawApply detail = withdrawDao.selectById(id);
+        assertOwnOrPlatform(detail == null ? null : detail.getUserId());
         displayEnrichmentSupport.enrichWithdrawApplies(Collections.singletonList(detail));
         return CommonResult.success(detail);
     }
 
     @PostMapping("/withdraw/audit")
     @PreAuthorize("hasAuthority('" + JkPermissionCodes.ADMIN_WITHDRAW_AUDIT + "')")
+    @JkBizPermission(value = JkBizPermissionCodes.WITHDRAW_AUDIT, checkDataScope = false)
     public CommonResult<JkWithdrawApply> audit(@RequestBody JkWithdrawAuditRequest r) {
         return CommonResult.success(withdrawService.audit(r.getId(), operator(), Boolean.TRUE.equals(r.getApproved()), r.getRequestNo(), r.getRemark()));
     }
 
     @PostMapping("/withdraw/confirm-paid")
     @PreAuthorize("hasAuthority('" + JkPermissionCodes.ADMIN_WITHDRAW_CONFIRM_PAID + "')")
+    @JkBizPermission(value = JkBizPermissionCodes.WITHDRAW_CONFIRM_PAID, checkDataScope = false)
     public CommonResult<JkWithdrawApply> paid(@RequestBody JkWithdrawAuditRequest r) {
         return CommonResult.success(withdrawService.confirmPaid(r.getId(), operator(), r.getRequestNo(), r.getRemark()));
     }
 
     @GetMapping("/commission/record/list")
     @PreAuthorize("hasAuthority('" + JkPermissionCodes.ADMIN_COMMISSION_RECORD_LIST + "')")
+    @JkBizPermission(value = JkBizPermissionCodes.COMMISSION_RECORD_VIEW, checkDataScope = true)
     public CommonResult<List<JkCommissionRecord>> records(@RequestParam(required = false) String status, @RequestParam(required = false) String sourceType, @RequestParam(required = false) String receiverRoleCode, @RequestParam(required = false) Long receiverUserId) {
         LambdaQueryWrapper<JkCommissionRecord> q = new LambdaQueryWrapper<JkCommissionRecord>().eq(JkCommissionRecord::getIsDeleted, false).orderByDesc(JkCommissionRecord::getId);
         if (status != null && !status.trim().isEmpty()) q.eq(JkCommissionRecord::getStatus, status);
         if (sourceType != null && !sourceType.trim().isEmpty()) q.eq(JkCommissionRecord::getSourceType, sourceType);
         if (receiverRoleCode != null && !receiverRoleCode.trim().isEmpty()) q.eq(JkCommissionRecord::getReceiverRoleCode, receiverRoleCode);
-        if (receiverUserId != null) q.eq(JkCommissionRecord::getReceiverUserId, receiverUserId);
+        Long scopedReceiverUserId = scopedUserId(receiverUserId);
+        if (scopedReceiverUserId != null) q.eq(JkCommissionRecord::getReceiverUserId, scopedReceiverUserId);
         List<JkCommissionRecord> list = recordDao.selectList(q);
         displayEnrichmentSupport.enrichCommissionRecords(list);
         return CommonResult.success(list);
     }
 
+    @GetMapping("/commission/flow/list")
+    @PreAuthorize("hasAuthority('" + JkPermissionCodes.ADMIN_COMMISSION_FLOW_LIST + "')")
+    @JkBizPermission(value = JkBizPermissionCodes.COMMISSION_ACCOUNT_VIEW, checkDataScope = true)
+    public CommonResult<List<JkCommissionFlow>> commissionFlows(@RequestParam(required = false) String flowType,
+                                                                  @RequestParam(required = false) String requestNo) {
+        LambdaQueryWrapper<JkCommissionFlow> q = new LambdaQueryWrapper<JkCommissionFlow>().orderByDesc(JkCommissionFlow::getId);
+        if (flowType != null && !flowType.trim().isEmpty()) q.eq(JkCommissionFlow::getFlowType, flowType.trim());
+        if (requestNo != null && !requestNo.trim().isEmpty()) q.eq(JkCommissionFlow::getRequestNo, requestNo.trim());
+        JkUserContext context = userContextService.getAdminContext();
+        if (!isPlatformAll(context)) {
+            List<JkCommissionAccount> accounts = commissionAccountDao.selectList(new LambdaQueryWrapper<JkCommissionAccount>()
+                    .eq(JkCommissionAccount::getUserId, context.getUserId()).eq(JkCommissionAccount::getIsDeleted, false));
+            List<Long> accountIds = accounts.stream().map(JkCommissionAccount::getId).collect(java.util.stream.Collectors.toList());
+            if (accountIds.isEmpty()) return CommonResult.success(Collections.<JkCommissionFlow>emptyList());
+            q.in(JkCommissionFlow::getAccountId, accountIds);
+        }
+        return CommonResult.success(commissionFlowDao.selectList(q));
+    }
+
     @GetMapping("/commission/account/list")
     @PreAuthorize("hasAuthority('" + JkPermissionCodes.ADMIN_COMMISSION_ACCOUNT_LIST + "')")
+    @JkBizPermission(value = JkBizPermissionCodes.COMMISSION_ACCOUNT_VIEW, checkDataScope = true)
     public CommonResult<List<JkCommissionAccount>> commissionAccounts(@RequestParam(required = false) String roleCode, @RequestParam(required = false) Long userId) {
         LambdaQueryWrapper<JkCommissionAccount> q = new LambdaQueryWrapper<JkCommissionAccount>().eq(JkCommissionAccount::getIsDeleted, false).orderByDesc(JkCommissionAccount::getId);
         if (roleCode != null && !roleCode.trim().isEmpty()) q.eq(JkCommissionAccount::getRoleCode, roleCode);
-        if (userId != null) q.eq(JkCommissionAccount::getUserId, userId);
+        Long scopedUserId = scopedUserId(userId);
+        if (scopedUserId != null) q.eq(JkCommissionAccount::getUserId, scopedUserId);
         List<JkCommissionAccount> list = commissionAccountDao.selectList(q);
         displayEnrichmentSupport.enrichCommissionAccounts(list);
         return CommonResult.success(list);
@@ -107,10 +144,12 @@ public class JkWithdrawAdminController {
 
     @GetMapping("/fund/account/list")
     @PreAuthorize("hasAuthority('" + JkPermissionCodes.ADMIN_FUND_ACCOUNT_LIST + "')")
+    @JkBizPermission(value = JkBizPermissionCodes.FUND_ACCOUNT_VIEW, checkDataScope = true)
     public CommonResult<List<JkFundAccount>> fundAccounts(@RequestParam(required = false) String roleCode, @RequestParam(required = false) Long userId) {
         LambdaQueryWrapper<JkFundAccount> q = new LambdaQueryWrapper<JkFundAccount>().eq(JkFundAccount::getIsDeleted, false).orderByDesc(JkFundAccount::getId);
         if (roleCode != null && !roleCode.trim().isEmpty()) q.eq(JkFundAccount::getRoleCode, roleCode);
-        if (userId != null) q.eq(JkFundAccount::getUserId, userId);
+        Long scopedUserId = scopedUserId(userId);
+        if (scopedUserId != null) q.eq(JkFundAccount::getUserId, scopedUserId);
         List<JkFundAccount> list = fundAccountDao.selectList(q);
         displayEnrichmentSupport.enrichFundAccounts(list);
         return CommonResult.success(list);
@@ -118,6 +157,7 @@ public class JkWithdrawAdminController {
 
     @GetMapping("/fund/flow/list")
     @PreAuthorize("hasAuthority('" + JkPermissionCodes.ADMIN_FUND_FLOW_LIST + "')")
+    @JkBizPermission(value = JkBizPermissionCodes.FUND_FLOW_VIEW, checkDataScope = true)
     public CommonResult<List<JkFundFlow>> fundFlows(@RequestParam(required = false) String flowType, @RequestParam(required = false) String requestNo) {
         LambdaQueryWrapper<JkFundFlow> q = new LambdaQueryWrapper<JkFundFlow>().orderByDesc(JkFundFlow::getId);
         if (flowType != null && !flowType.trim().isEmpty()) {
@@ -129,6 +169,14 @@ public class JkWithdrawAdminController {
             }
         }
         if (requestNo != null && !requestNo.trim().isEmpty()) q.eq(JkFundFlow::getRequestNo, requestNo);
+        JkUserContext scopeContext = userContextService.getAdminContext();
+        if (!isPlatformAll(scopeContext)) {
+            List<JkFundAccount> ownAccounts = fundAccountDao.selectList(new LambdaQueryWrapper<JkFundAccount>()
+                    .eq(JkFundAccount::getUserId, scopeContext.getUserId()).eq(JkFundAccount::getIsDeleted, false));
+            List<Long> ownAccountIds = ownAccounts.stream().map(JkFundAccount::getId).collect(java.util.stream.Collectors.toList());
+            if (ownAccountIds.isEmpty()) return CommonResult.success(Collections.<JkFundFlow>emptyList());
+            q.in(JkFundFlow::getAccountId, ownAccountIds);
+        }
         List<JkFundFlow> list = fundFlowDao.selectList(q);
         Set<Long> accountIds = list.stream().map(JkFundFlow::getAccountId).filter(Objects::nonNull).collect(java.util.stream.Collectors.toSet());
         Map<Long, JkFundAccount> accountMap = accountIds.isEmpty() ? Collections.emptyMap() : fundAccountDao.selectBatchIds(accountIds).stream()
@@ -146,6 +194,7 @@ public class JkWithdrawAdminController {
 
     @GetMapping("/commission/settle/task/list")
     @PreAuthorize("hasAuthority('" + JkPermissionCodes.ADMIN_COMMISSION_SETTLE_LIST + "')")
+    @JkBizPermission(value = JkBizPermissionCodes.COMMISSION_SETTLE_VIEW, checkDataScope = false)
     public CommonResult<List<JkCommissionSettleTask>> settleTasks() {
         List<JkCommissionSettleTask> list = settleTaskDao.selectList(new LambdaQueryWrapper<JkCommissionSettleTask>().orderByDesc(JkCommissionSettleTask::getId));
         displayEnrichmentSupport.enrichCommissionSettleTasks(list);
@@ -154,12 +203,14 @@ public class JkWithdrawAdminController {
 
     @PostMapping("/commission/settle/manual")
     @PreAuthorize("hasAuthority('" + JkPermissionCodes.ADMIN_COMMISSION_SETTLE_MANUAL + "')")
+    @JkBizPermission(value = JkBizPermissionCodes.COMMISSION_SETTLE_MANAGE, checkDataScope = false)
     public CommonResult<JkCommissionSettleTask> settle(@RequestBody JkCommissionSettleRequest r) {
         return CommonResult.success(settleService.settleRecords(r.getCommissionRecordIds(), operator(), r.getRequestNo(), r.getRemark()));
     }
 
     @PostMapping("/commission/reverse/manual")
     @PreAuthorize("hasAuthority('" + JkPermissionCodes.ADMIN_COMMISSION_REVERSE_MANUAL + "')")
+    @JkBizPermission(value = JkBizPermissionCodes.COMMISSION_REVERSE_MANAGE, checkDataScope = false)
     public CommonResult<JkCommissionReverse> reverse(@RequestBody JkCommissionReverseRequest r) {
         JkCommissionRecord record = recordDao.selectById(r.getCommissionRecordId());
         if (record == null) throw new IllegalArgumentException("佣金记录不存在");
@@ -170,6 +221,7 @@ public class JkWithdrawAdminController {
 
     @GetMapping("/commission/reverse/list")
     @PreAuthorize("hasAuthority('" + JkPermissionCodes.ADMIN_COMMISSION_REVERSE_LIST + "')")
+    @JkBizPermission(value = JkBizPermissionCodes.COMMISSION_REVERSE_VIEW, checkDataScope = false)
     public CommonResult<List<JkCommissionReverse>> reverses() {
         List<JkCommissionReverse> list = reverseDao.selectList(new LambdaQueryWrapper<JkCommissionReverse>().orderByDesc(JkCommissionReverse::getId));
         Set<Long> recordIds = list.stream().map(JkCommissionReverse::getOriginalCommissionRecordId).filter(Objects::nonNull).collect(java.util.stream.Collectors.toSet());
@@ -179,9 +231,32 @@ public class JkWithdrawAdminController {
         return CommonResult.success(list);
     }
 
+    private Long scopedUserId(Long requestedUserId) {
+        JkUserContext context = userContextService.getAdminContext();
+        if (isPlatformAll(context)) return requestedUserId;
+        if (requestedUserId != null && !requestedUserId.equals(context.getUserId())) {
+            throw new IllegalArgumentException("无权查询其他业务用户数据");
+        }
+        return context.getUserId();
+    }
+
+    private void assertOwnOrPlatform(Long targetUserId) {
+        JkUserContext context = userContextService.getAdminContext();
+        if (!isPlatformAll(context) && (targetUserId == null || !targetUserId.equals(context.getUserId()))) {
+            throw new IllegalArgumentException("无权访问该业务数据");
+        }
+    }
+
+    private boolean isPlatformAll(JkUserContext context) {
+        return context != null && context.getPermissions() != null && context.getPermissions().contains("platform.all");
+    }
+
     private Long operator() {
         Long id = adminActorService.getLinkedFrontUserId(adminActorService.getCurrentAdmin());
-        if (id == null) throw new IllegalStateException("后台管理员未绑定业务用户");
-        return id;
+        if (id != null) return id;
+        if (adminActorService.isPlatformSuperAdmin(adminActorService.getCurrentAdmin())) {
+            return -Long.valueOf(adminActorService.getCurrentAdmin().getId());
+        }
+        throw new IllegalStateException("后台管理员未绑定业务用户");
     }
 }

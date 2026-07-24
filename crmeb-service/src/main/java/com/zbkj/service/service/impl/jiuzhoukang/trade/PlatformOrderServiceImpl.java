@@ -32,10 +32,12 @@ import com.zbkj.service.service.StoreProductAttrValueService;
 import com.zbkj.service.service.StoreProductService;
 import com.zbkj.service.service.impl.jiuzhoukang.audit.JkAuditLogServiceImpl;
 import com.zbkj.service.service.jiuzhoukang.audit.JkAuditLogService;
+import com.zbkj.service.service.jiuzhoukang.commission.CommissionTriggerService;
 import com.zbkj.service.service.jiuzhoukang.context.JkUserContext;
 import com.zbkj.service.service.jiuzhoukang.context.JkUserContextService;
 import com.zbkj.service.service.jiuzhoukang.price.PriceCalculateService;
 import com.zbkj.service.service.jiuzhoukang.stock.StockFlowService;
+import com.zbkj.service.service.jiuzhoukang.support.JkAfterCommitExecutor;
 import com.zbkj.service.service.jiuzhoukang.support.JkDisplayEnrichmentSupport;
 import com.zbkj.service.service.jiuzhoukang.trade.JkTradeStatusSupport;
 import com.zbkj.service.service.jiuzhoukang.trade.PlatformOrderService;
@@ -53,6 +55,11 @@ import java.math.BigDecimal;
 import java.util.Date;
 import java.util.List;
 
+/**
+ * 区县代向平台订货的状态机服务。
+ * <p>负责后端重算价格、付款凭证审核、平台库存冻结/出库、区县代入库和事务后业绩事件。
+ * 每个动作都必须校验当前状态，不能由 Controller 或页面直接修改状态字段。</p>
+ */
 @Service
 public class PlatformOrderServiceImpl implements PlatformOrderService {
     private static final String BUSINESS_TYPE = "PLATFORM_ORDER";
@@ -79,6 +86,10 @@ public class PlatformOrderServiceImpl implements PlatformOrderService {
     private JkAuditLogService auditLogService;
     @Autowired
     private JkDisplayEnrichmentSupport displayEnrichmentSupport;
+    @Autowired
+    private CommissionTriggerService commissionTriggerService;
+    @Autowired
+    private JkAfterCommitExecutor afterCommitExecutor;
     @Autowired(required = false)
     private PlatformTransactionManager transactionManager;
 
@@ -94,6 +105,7 @@ public class PlatformOrderServiceImpl implements PlatformOrderService {
             }
             return exists;
         }
+        validateNoDuplicateItems(request.getItems());
         JkUserContext context = userContextService.getFrontContext(userId);
         assertCountyAgent(context);
         JkStockAccount platform = findAccount(JkBizConstants.STOCK_ACCOUNT_PLATFORM, null);
@@ -269,6 +281,9 @@ public class PlatformOrderServiceImpl implements PlatformOrderService {
         return enrichDisplay(order);
     }
 
+    /**
+     * 收货是平台订货的最终库存节点：先完成状态 CAS 和区县代入库，事务提交后再触发业绩事件。
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public JkPlatformOrder receive(Long userId, JkBusinessActionRequest request) {
@@ -279,15 +294,42 @@ public class PlatformOrderServiceImpl implements PlatformOrderService {
         if (!"SHIPPED".equals(order.getStatus())) {
             throw new CrmebException("当前状态不能确认收货");
         }
+        int updated = orderDao.update(null, new UpdateWrapper<JkPlatformOrder>()
+                .eq("id", order.getId()).eq("status", "SHIPPED").eq("is_deleted", false)
+                .set("status", "STOCK_IN").set("receive_status", "STOCK_IN")
+                .set("update_user_id", userId).set("update_time", new Date()));
+        if (updated != 1) throw new CrmebException("当前状态不能确认收货");
         JkStockAccount county = findAccount(JkBizConstants.STOCK_ACCOUNT_COUNTY_AGENT, userId);
         for (JkPlatformOrderItem item : listItems(order.getId())) {
             stockFlowService.inboundStock(buildAction(order, county.getId(), item, userId, "区县代订货确认收货入库"));
         }
-        order.setStatus("STOCK_IN")
-                .setReceiveStatus("STOCK_IN")
-                .setUpdateUserId(userId);
-        orderDao.updateById(order);
+        order.setStatus("STOCK_IN").setReceiveStatus("STOCK_IN").setUpdateUserId(userId);
         log(order, userId, "SHIPPED", "STOCK_IN", "RECEIVE", request.getRemark(), null, "FRONT");
+        final Long orderId = order.getId();
+        final String orderNo = order.getPlatformOrderNo();
+        afterCommitExecutor.execute("PLATFORM_ORDER_STOCK_IN", orderId, orderNo,
+                "平台订货确认收货并完成区县代库存入库",
+                () -> commissionTriggerService.onPlatformOrderStockIn(orderId, orderNo, "PLATFORM_ORDER_STOCK_IN:" + orderId));
+        return enrichDisplay(order);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public JkPlatformOrder cancel(Long userId, JkBusinessActionRequest request) {
+        JkPlatformOrder order = requireOrder(request.getBusinessId());
+        if (!userId.equals(order.getUserId())) throw new CrmebException("无权取消该订货单");
+        String before = order.getStatus();
+        if (!("CREATED".equals(before) || "PAYMENT_REJECTED".equals(before))) {
+            throw new CrmebException("当前状态不能由申请人直接取消；已提交付款凭证的单据请联系平台关闭");
+        }
+        int updated = orderDao.update(null, new UpdateWrapper<JkPlatformOrder>()
+                .eq("id", order.getId()).in("status", java.util.Arrays.asList("CREATED", "PAYMENT_REJECTED"))
+                .eq("is_deleted", false).set("status", "CANCELLED").set("cancel_reason", request.getRemark())
+                .set("update_user_id", userId).set("update_time", new Date()));
+        if (updated != 1) throw new CrmebException("当前状态不能取消");
+        rejectCurrentVoucher(order.getId(), userId, request.getRemark());
+        order.setStatus("CANCELLED").setCancelReason(request.getRemark()).setUpdateUserId(userId);
+        log(order, userId, before, "CANCELLED", "CANCEL", request.getRemark(), null, "FRONT");
         return enrichDisplay(order);
     }
 
@@ -491,6 +533,7 @@ public class PlatformOrderServiceImpl implements PlatformOrderService {
                 .setSkuId(item.getSkuId())
                 .setSkuCode(item.getSkuCode())
                 .setQuantity(item.getQuantity())
+                .setUnitCost(item.getUnitPrice())
                 .setOperatorUserId(operatorUserId)
                 .setRemark(remark);
     }
@@ -594,6 +637,18 @@ public class PlatformOrderServiceImpl implements PlatformOrderService {
                 .setCreateUserId(userId)
                 .setUpdateUserId(userId));
     }
+    private void validateNoDuplicateItems(List<JkTradeLineRequest> items) {
+        if (items == null || items.isEmpty()) throw new CrmebException("至少选择一条商品明细");
+        java.util.Set<String> keys = new java.util.HashSet<>();
+        for (JkTradeLineRequest item : items) {
+            if (item == null || item.getProductId() == null || item.getQuantity() == null || item.getQuantity() <= 0) {
+                throw new CrmebException("商品、规格和数量参数不完整");
+            }
+            String key = item.getProductId() + ":" + (item.getSkuId() == null ? 0 : item.getSkuId());
+            if (!keys.add(key)) throw new CrmebException("同一商品规格不能重复提交，请合并数量后重试");
+        }
+    }
+
 }
 
 

@@ -5,7 +5,9 @@ import com.zbkj.common.constants.jiuzhoukang.JkBizConstants;
 import com.zbkj.common.model.jiuzhoukang.JkProductPriceRule;
 import com.zbkj.common.model.product.StoreProduct;
 import com.zbkj.common.model.product.StoreProductAttrValue;
+import com.zbkj.common.model.user.User;
 import com.zbkj.common.response.jiuzhoukang.JkProductTradeViewResponse;
+import com.zbkj.service.service.UserService;
 import com.zbkj.service.service.jiuzhoukang.context.JkUserContext;
 import com.zbkj.service.service.jiuzhoukang.price.JkPriceRuleService;
 import com.zbkj.service.service.jiuzhoukang.price.PriceCalculateService;
@@ -19,11 +21,19 @@ import java.util.Date;
 import java.util.List;
 import java.util.stream.Collectors;
 
+/**
+ * 九州康统一价格裁决服务。
+ * <p>前端展示、订货和调拨均应复用本服务；优先级为指定用户、区域+角色、角色、通用规则，
+ * 同一适用层级内 SKU 精确规则优先于商品级规则。最终成交价仍由后端重新计算。</p>
+ */
 @Service
 public class PriceCalculateServiceImpl implements PriceCalculateService {
 
     @Autowired
     private JkPriceRuleService priceRuleService;
+
+    @Autowired
+    private UserService userService;
 
     @Override
     public JkProductTradeViewResponse.PriceInfo calculatePrice(StoreProduct product, StoreProductAttrValue sku, JkUserContext context) {
@@ -37,7 +47,7 @@ public class PriceCalculateServiceImpl implements PriceCalculateService {
         JkPriceRuleSupport.ResolvedPrice resolvedPrice = JkPriceRuleSupport.resolvePrice(
                 candidates,
                 new Date(),
-                product.getVipPrice(),
+                resolveMemberPrice(product, context),
                 retailBasePrice
         );
         JkProductTradeViewResponse.PriceInfo priceInfo = new JkProductTradeViewResponse.PriceInfo();
@@ -73,7 +83,20 @@ public class PriceCalculateServiceImpl implements PriceCalculateService {
                 .setEffectiveTime(item.getEffectiveTime())
                 .setExpireTime(item.getExpireTime())
                 .setStatus(item.getStatus())
+                .setSkuSpecific(item.getSkuId() != null)
                 .setMatchLevel(resolveMatchLevel(item));
+    }
+
+
+    private BigDecimal resolveMemberPrice(StoreProduct product, JkUserContext context) {
+        if (context == null || context.getUserId() == null || product == null) {
+            return null;
+        }
+        User user = userService.getById(context.getUserId());
+        if (user == null || user.getLevel() == null || user.getLevel() <= 0) {
+            return null;
+        }
+        return product.getVipPrice();
     }
 
     private String resolveMatchLevel(JkProductPriceRule item) {

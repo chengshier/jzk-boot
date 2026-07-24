@@ -51,8 +51,17 @@ public class UserDetailServiceImpl implements UserDetailsService {
     public UserDetails createLoginUser(SystemAdmin user) {
         List<Integer> roles = Stream.of(user.getRoles().split(",")).map(Integer::valueOf).collect(Collectors.toList());
         List<SystemMenu> menuList;
-        if (roles.contains(1)) {// 超级管理员
-            // 获取全部权限
+//        if (roles.contains(1)) {// 超级管理员
+//            // 获取全部权限
+//            menuList = systemMenuService.getAllPermissions();
+//        } else {
+//            menuList = systemMenuService.findPermissionByUserId(user.getId());
+//        }
+        boolean isSuperAdmin = roles.contains(1)
+                || Integer.valueOf(0).equals(user.getLevel());
+
+        if (isSuperAdmin) {
+            // 超级管理员加载全部菜单、按钮和接口权限
             menuList = systemMenuService.getAllPermissions();
         } else {
             menuList = systemMenuService.findPermissionByUserId(user.getId());

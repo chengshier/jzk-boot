@@ -44,7 +44,6 @@ public class JkBizConstants {
 
     public static final String REDIS_CONTEXT_KEY_PREFIX = "jk:permission:context:";
 
-    public static final String PERMISSION_PRODUCT_TRADE_VIEW = "product.trade.view";
     public static final String PERMISSION_PRICE_RULE_CONFIG = "price.rule.config";
     public static final String PERMISSION_STOCK_VIEW_SELF = "stock.view.self";
     public static final String PERMISSION_STOCK_VIEW_REGION = "stock.view.region";

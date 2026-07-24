@@ -8,6 +8,11 @@ import org.aspectj.lang.annotation.Aspect;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+/**
+ * 九州康业务权限切面。
+ * <p>它是 CRMEB 登录认证之后的第二层业务校验，只判断业务权限和基础数据范围。
+ * 涉及具体用户、区域或业务单据的行级权限，仍必须由对应 Service 按目标数据再次校验。</p>
+ */
 @Aspect
 @Component
 public class JkBizPermissionAspect {

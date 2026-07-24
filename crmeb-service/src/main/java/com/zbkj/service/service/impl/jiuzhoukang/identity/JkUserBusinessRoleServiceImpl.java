@@ -25,9 +25,11 @@ import com.zbkj.service.service.jiuzhoukang.identity.JkIdentityApplyService;
 import com.zbkj.service.service.jiuzhoukang.identity.JkUserBusinessRoleService;
 import com.zbkj.service.service.jiuzhoukang.permission.JkBusinessRoleService;
 import com.zbkj.service.service.jiuzhoukang.permission.JkPermissionCacheVersionService;
+import com.zbkj.service.service.jiuzhoukang.scope.JkAdminDataScopeService;
 import com.zbkj.service.service.jiuzhoukang.support.JkDisplayEnrichmentSupport;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Collections;
 import java.util.List;
@@ -53,6 +55,8 @@ public class JkUserBusinessRoleServiceImpl extends ServiceImpl<JkUserBusinessRol
     private CommissionTriggerService commissionTriggerService;
     @Autowired
     private JkDisplayEnrichmentSupport displayEnrichmentSupport;
+    @Autowired
+    private JkAdminDataScopeService adminDataScopeService;
 
     @Override
     public List<JkUserBusinessRole> getUserRoles(Long userId) {
@@ -68,6 +72,7 @@ public class JkUserBusinessRoleServiceImpl extends ServiceImpl<JkUserBusinessRol
         PageHelper.startPage(pageParamRequest.getPage(), pageParamRequest.getLimit());
         LambdaQueryWrapper<JkUserBusinessRole> lqw = new LambdaQueryWrapper<>();
         lqw.eq(JkUserBusinessRole::getIsDeleted, false);
+        adminDataScopeService.applyUserBusinessRoleScope(lqw);
         if (request != null && StrUtil.isNotBlank(request.getRoleCode())) {
             lqw.eq(JkUserBusinessRole::getRoleCode, request.getRoleCode());
         }
@@ -111,18 +116,22 @@ public class JkUserBusinessRoleServiceImpl extends ServiceImpl<JkUserBusinessRol
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public Boolean freeze(Long userBusinessRoleId, String reason) {
         return updateIdentityStatus(userBusinessRoleId, JkBizConstants.AUDIT_STATUS_FROZEN, true, reason, JkBizConstants.AUDIT_ACTION_FREEZE);
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public Boolean unfreeze(Long userBusinessRoleId, String reason) {
         return updateIdentityStatus(userBusinessRoleId, JkBizConstants.AUDIT_STATUS_EFFECTIVE, false, reason, JkBizConstants.AUDIT_ACTION_UNFREEZE);
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public Boolean cancel(Long userBusinessRoleId, String reason) {
         JkUserBusinessRole role = getRequiredRole(userBusinessRoleId);
+        adminDataScopeService.assertCanManageUserBusinessRole(role);
         SystemAdmin admin = adminActorService.getCurrentAdmin();
         String beforeStatus = role.getAuditStatus();
         role.setAuditStatus(JkBizConstants.AUDIT_STATUS_CANCELLED);
@@ -134,11 +143,13 @@ public class JkUserBusinessRoleServiceImpl extends ServiceImpl<JkUserBusinessRol
         boolean result = updateById(role);
         saveIdentityAuditLog(role, admin, JkBizConstants.AUDIT_ACTION_CANCEL, beforeStatus, JkBizConstants.AUDIT_STATUS_CANCELLED, reason);
         permissionCacheVersionService.refreshUserCacheVersion(role.getUserId(), JkBizConstants.CACHE_CHANGE_IDENTITY_STATUS, "identity cancel", Long.valueOf(admin.getId()));
+        if (result) commissionTriggerService.onIdentityFrozen(role.getUserId(), "IDENTITY_CANCEL:" + role.getId() + ":" + role.getUpdateTime().getTime());
         return result;
     }
 
     private Boolean updateIdentityStatus(Long id, String auditStatus, boolean freezeStatus, String reason, String auditAction) {
         JkUserBusinessRole role = getRequiredRole(id);
+        adminDataScopeService.assertCanManageUserBusinessRole(role);
         SystemAdmin admin = adminActorService.getCurrentAdmin();
         String beforeStatus = role.getAuditStatus();
         role.setAuditStatus(auditStatus);
@@ -151,6 +162,7 @@ public class JkUserBusinessRoleServiceImpl extends ServiceImpl<JkUserBusinessRol
         saveIdentityAuditLog(role, admin, auditAction, beforeStatus, auditStatus, reason);
         permissionCacheVersionService.refreshUserCacheVersion(role.getUserId(), JkBizConstants.CACHE_CHANGE_IDENTITY_STATUS, reason, Long.valueOf(admin.getId()));
         if (result && freezeStatus) commissionTriggerService.onIdentityFrozen(role.getUserId(), "IDENTITY_FREEZE:" + role.getId() + ":" + role.getUpdateTime().getTime());
+        if (result && !freezeStatus) commissionTriggerService.onIdentityUnfrozen(role.getUserId(), "IDENTITY_UNFREEZE:" + role.getId() + ":" + role.getUpdateTime().getTime());
         return result;
     }
 

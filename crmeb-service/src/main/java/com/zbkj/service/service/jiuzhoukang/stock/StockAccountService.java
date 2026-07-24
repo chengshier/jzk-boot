@@ -18,5 +18,6 @@ public interface StockAccountService extends IService<JkStockAccount> {
     List<JkStockAccountResponse> getAdminAccountList(JkStockAccountSearchRequest request, PageParamRequest pageParamRequest);
     List<JkStockItemResponse> getAdminItemList(JkStockItemSearchRequest request, PageParamRequest pageParamRequest);
     List<JkStockFlowResponse> getAdminFlowList(JkStockFlowSearchRequest request, PageParamRequest pageParamRequest);
+    JkStockAccount initializeBusinessAccount(Long userId, String roleCode, String regionCode, String ownerName);
     List<JkStockVisibilitySupport.StockBucket> getVisibleBuckets(Integer productId, Integer skuId, JkUserContext context, String tradeIdentity);
 }

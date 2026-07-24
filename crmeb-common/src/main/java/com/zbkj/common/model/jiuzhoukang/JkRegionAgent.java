@@ -20,6 +20,9 @@ public class JkRegionAgent implements Serializable {
     private String regionCode;
     private Long countyAgentUserId;
     private String bindStatus;
+    private Date effectiveTime;
+    private Date expireTime;
+    private String changeReason;
     private String remark;
     private Boolean status;
     private Boolean isDeleted;

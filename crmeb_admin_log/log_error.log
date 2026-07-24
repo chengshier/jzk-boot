@@ -1,6 +1,6 @@
 {
                     "app": "Crmeb",
-                    "timestamp":"2026-07-17 00:00:00.085",
+                    "timestamp":"2026-07-24 09:03:11.608",
                     "level": "ERROR",
                     "thread": "task-executor-14",
                     "class": "c.z.s.service.impl.OrderTaskServiceImpl",
@@ -8,89 +8,17 @@
                     
 {
                     "app": "Crmeb",
-                    "timestamp":"2026-07-17 00:00:00.092",
+                    "timestamp":"2026-07-24 09:03:11.640",
                     "level": "ERROR",
-                    "thread": "task-executor-1",
+                    "thread": "task-executor-15",
                     "class": "c.z.s.s.impl.StoreBargainServiceImpl",
                     "message": "砍价活动结束后更新用户状态定时任务——————失败" }
                     
 {
                     "app": "Crmeb",
-                    "timestamp":"2026-07-17 00:00:00.106",
-                    "level": "ERROR",
-                    "thread": "task-executor-1",
-                    "class": "c.z.a.task.bargain.BargainStopChangeTask",
-                    "message": "BargainStopChangeTask | msg : 砍价活动结束后更新用户状态失败" }
-                    
-{
-                    "app": "Crmeb",
-                    "timestamp":"2026-07-17 01:00:00.059",
-                    "level": "ERROR",
-                    "thread": "task-executor-7",
-                    "class": "c.z.s.service.impl.OrderTaskServiceImpl",
-                    "message": "订单自动完成：订单记录最后一条不是收货状态，orderId = 35" }
-                    
-{
-                    "app": "Crmeb",
-                    "timestamp":"2026-07-17 02:00:00.062",
-                    "level": "ERROR",
-                    "thread": "task-executor-11",
-                    "class": "c.z.s.service.impl.OrderTaskServiceImpl",
-                    "message": "订单自动完成：订单记录最后一条不是收货状态，orderId = 35" }
-                    
-{
-                    "app": "Crmeb",
-                    "timestamp":"2026-07-17 03:00:00.059",
-                    "level": "ERROR",
-                    "thread": "task-executor-9",
-                    "class": "c.z.s.service.impl.OrderTaskServiceImpl",
-                    "message": "订单自动完成：订单记录最后一条不是收货状态，orderId = 35" }
-                    
-{
-                    "app": "Crmeb",
-                    "timestamp":"2026-07-17 04:00:00.063",
-                    "level": "ERROR",
-                    "thread": "task-executor-17",
-                    "class": "c.z.s.service.impl.OrderTaskServiceImpl",
-                    "message": "订单自动完成：订单记录最后一条不是收货状态，orderId = 35" }
-                    
-{
-                    "app": "Crmeb",
-                    "timestamp":"2026-07-17 05:00:00.063",
-                    "level": "ERROR",
-                    "thread": "task-executor-13",
-                    "class": "c.z.s.service.impl.OrderTaskServiceImpl",
-                    "message": "订单自动完成：订单记录最后一条不是收货状态，orderId = 35" }
-                    
-{
-                    "app": "Crmeb",
-                    "timestamp":"2026-07-17 06:00:00.069",
-                    "level": "ERROR",
-                    "thread": "task-executor-12",
-                    "class": "c.z.s.service.impl.OrderTaskServiceImpl",
-                    "message": "订单自动完成：订单记录最后一条不是收货状态，orderId = 35" }
-                    
-{
-                    "app": "Crmeb",
-                    "timestamp":"2026-07-17 07:00:00.066",
-                    "level": "ERROR",
-                    "thread": "task-executor-6",
-                    "class": "c.z.s.service.impl.OrderTaskServiceImpl",
-                    "message": "订单自动完成：订单记录最后一条不是收货状态，orderId = 35" }
-                    
-{
-                    "app": "Crmeb",
-                    "timestamp":"2026-07-17 08:00:00.069",
-                    "level": "ERROR",
-                    "thread": "task-executor-19",
-                    "class": "c.z.s.service.impl.OrderTaskServiceImpl",
-                    "message": "订单自动完成：订单记录最后一条不是收货状态，orderId = 35" }
-                    
-{
-                    "app": "Crmeb",
-                    "timestamp":"2026-07-17 09:00:00.105",
+                    "timestamp":"2026-07-24 09:03:11.645",
                     "level": "ERROR",
                     "thread": "task-executor-15",
-                    "class": "c.z.s.service.impl.OrderTaskServiceImpl",
-                    "message": "订单自动完成：订单记录最后一条不是收货状态，orderId = 35" }
+                    "class": "c.z.a.task.bargain.BargainStopChangeTask",
+                    "message": "BargainStopChangeTask | msg : 砍价活动结束后更新用户状态失败" }
                     

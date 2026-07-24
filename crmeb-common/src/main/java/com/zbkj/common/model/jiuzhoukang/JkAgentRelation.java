@@ -21,6 +21,12 @@ public class JkAgentRelation implements Serializable {
     private Long parentUserId;
     private Long rootUserId;
     private String relationType;
+    private String bindSource;
+    private String sourceCode;
+    private Date effectiveTime;
+    private Date expireTime;
+    private Long replacedRelationId;
+    private String changeReason;
     private String remark;
     private Boolean status;
     private Boolean isDeleted;

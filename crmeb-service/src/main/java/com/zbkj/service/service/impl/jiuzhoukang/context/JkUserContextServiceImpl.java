@@ -5,6 +5,7 @@ import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.zbkj.common.constants.jiuzhoukang.JkBizConstants;
+import com.zbkj.common.constants.jiuzhoukang.JkBizPermissionCodes;
 import com.zbkj.common.exception.jiuzhoukang.JkBizException;
 import com.zbkj.common.exception.jiuzhoukang.JkForbiddenException;
 import com.zbkj.common.model.jiuzhoukang.JkBusinessRole;
@@ -37,6 +38,11 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
+/**
+ * 九州康业务上下文装配入口。
+ * <p>后台菜单权限仍由 CRMEB Spring Security 负责；本类只负责业务身份、业务权限、区域和数据范围。
+ * 任何需要区分普通用户、创客、合伙人、区县代或平台管理员的 Service，都应读取本上下文，不能自行拼角色判断。</p>
+ */
 @Service
 public class JkUserContextServiceImpl implements JkUserContextService {
 
@@ -203,8 +209,8 @@ public class JkUserContextServiceImpl implements JkUserContextService {
             }
         }
         List<String> result = permissions.stream().distinct().collect(Collectors.toList());
-        if (!result.contains(JkBizConstants.PERMISSION_PRODUCT_TRADE_VIEW)) {
-            result.add(JkBizConstants.PERMISSION_PRODUCT_TRADE_VIEW);
+        if (!result.contains(JkBizPermissionCodes.PRODUCT_TRADE_VIEW)) {
+            result.add(JkBizPermissionCodes.PRODUCT_TRADE_VIEW);
         }
         return result;
     }
@@ -223,7 +229,7 @@ public class JkUserContextServiceImpl implements JkUserContextService {
         context.setRoles(Collections.singletonList(JkBizConstants.ROLE_NORMAL_USER));
         List<String> permissions = new ArrayList<>();
         permissions.add("identity.apply.submit");
-        permissions.add(JkBizConstants.PERMISSION_PRODUCT_TRADE_VIEW);
+        permissions.add(JkBizPermissionCodes.PRODUCT_TRADE_VIEW);
         context.setPermissions(permissions);
         context.setDataScopes(Collections.emptyList());
         context.setCanApplyRoles(JkPermissionContextSupport.resolveFrontApplyRoleCodes(enabledRoles));
@@ -264,5 +270,3 @@ public class JkUserContextServiceImpl implements JkUserContextService {
         return ObjectUtil.isNotNull(enabledRoleMap.get(roleCode)) ? enabledRoleMap.get(roleCode).getRoleName() : roleCode;
     }
 }
-
-

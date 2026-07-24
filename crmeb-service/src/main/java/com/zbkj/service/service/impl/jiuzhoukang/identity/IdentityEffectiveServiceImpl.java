@@ -7,7 +7,12 @@ import com.zbkj.common.model.jiuzhoukang.JkAuditLog;
 import com.zbkj.common.model.jiuzhoukang.JkBusinessRole;
 import com.zbkj.common.model.jiuzhoukang.JkIdentityApply;
 import com.zbkj.common.model.jiuzhoukang.JkUserBusinessRole;
+import com.zbkj.common.model.user.User;
+import com.zbkj.service.service.UserService;
 import com.zbkj.service.service.jiuzhoukang.audit.JkAuditLogService;
+import com.zbkj.service.service.jiuzhoukang.commission.CommissionAccountService;
+import com.zbkj.service.service.jiuzhoukang.commission.FundAccountService;
+import com.zbkj.service.service.jiuzhoukang.stock.StockAccountService;
 import com.zbkj.service.service.jiuzhoukang.identity.IdentityEffectiveService;
 import com.zbkj.service.service.jiuzhoukang.identity.JkUserBusinessRoleService;
 import com.zbkj.service.service.jiuzhoukang.permission.JkBusinessRoleService;
@@ -19,6 +24,11 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
+/**
+ * 身份审核通过后的统一生效编排。
+ * <p>角色绑定、数据范围、库存/佣金/资金账户初始化和权限缓存刷新必须处于同一事务，
+ * 避免出现“页面显示身份已生效，但账户或权限尚未建立”的半完成状态。</p>
+ */
 @Service
 public class IdentityEffectiveServiceImpl implements IdentityEffectiveService {
 
@@ -32,6 +42,14 @@ public class IdentityEffectiveServiceImpl implements IdentityEffectiveService {
     private JkAuditLogService auditLogService;
     @Autowired
     private JkPermissionCacheVersionService permissionCacheVersionService;
+    @Autowired
+    private StockAccountService stockAccountService;
+    @Autowired
+    private CommissionAccountService commissionAccountService;
+    @Autowired
+    private FundAccountService fundAccountService;
+    @Autowired
+    private UserService userService;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -72,9 +90,7 @@ public class IdentityEffectiveServiceImpl implements IdentityEffectiveService {
         }
         List<String> permissionCodes = businessRoleService.getPermissionCodes(role.getId());
         userDataScopeService.rebuildUserScopes(apply.getUserId(), apply.getRegionCode(), apply.getBelongCountyAgentId(), permissionCodes, auditUserId);
-        initStockAccountPlaceholder(apply.getUserId(), role.getRoleCode());
-        initCommissionAccountPlaceholder(apply.getUserId(), role.getRoleCode());
-        initPromotionCodePlaceholder(apply.getUserId(), role.getRoleCode());
+        initBusinessAccounts(apply.getUserId(), role.getRoleCode(), apply.getRegionCode());
         permissionCacheVersionService.refreshUserCacheVersion(apply.getUserId(), JkBizConstants.CACHE_CHANGE_USER_ROLE, "identity effective", auditUserId);
 
         JkAuditLog auditLog = new JkAuditLog();
@@ -99,18 +115,12 @@ public class IdentityEffectiveServiceImpl implements IdentityEffectiveService {
         auditLogService.saveAuditLog(auditLog);
     }
 
-    @Override
-    public void initStockAccountPlaceholder(Long userId, String roleCode) {
-        // 阶段一占位：未进入真实库存账户业务闭环
+    private void initBusinessAccounts(Long userId, String roleCode, String regionCode) {
+        User user = userService.getById(userId.intValue());
+        String ownerName = user == null ? null : (user.getRealName() == null || user.getRealName().trim().isEmpty() ? user.getNickname() : user.getRealName());
+        stockAccountService.initializeBusinessAccount(userId, roleCode, regionCode, ownerName);
+        commissionAccountService.initialize(userId, roleCode, regionCode);
+        fundAccountService.initialize(userId, roleCode, regionCode);
     }
 
-    @Override
-    public void initCommissionAccountPlaceholder(Long userId, String roleCode) {
-        // 阶段一占位：未进入真实佣金账户业务闭环
-    }
-
-    @Override
-    public void initPromotionCodePlaceholder(Long userId, String roleCode) {
-        // 阶段一占位：未进入真实推广码业务闭环
-    }
 }

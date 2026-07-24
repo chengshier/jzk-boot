@@ -3,16 +3,16 @@ package com.zbkj.admin.controller.jiuzhoukang;
 import com.zbkj.common.annotation.jiuzhoukang.JkBizPermission;
 import com.zbkj.common.constants.jiuzhoukang.JkBizPermissionCodes;
 import com.zbkj.common.constants.jiuzhoukang.JkPermissionCodes;
-import com.zbkj.common.model.jiuzhoukang.JkRegion;
 import com.zbkj.common.page.CommonPage;
 import com.zbkj.common.request.PageParamRequest;
 import com.zbkj.common.request.jiuzhoukang.JkPriceRuleSaveRequest;
 import com.zbkj.common.request.jiuzhoukang.JkPriceRuleSearchRequest;
 import com.zbkj.common.request.jiuzhoukang.JkPriceRuleStatusRequest;
 import com.zbkj.common.response.jiuzhoukang.JkPriceRuleResponse;
+import com.zbkj.common.response.jiuzhoukang.JkRegionOptionResponse;
 import com.zbkj.common.result.CommonResult;
-import com.zbkj.service.dao.jiuzhoukang.JkRegionDao;
 import com.zbkj.service.service.jiuzhoukang.price.JkPriceRuleService;
+import com.zbkj.service.service.jiuzhoukang.region.JkRegionService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,12 +21,11 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.Comparator;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("api/admin/jk/price-rule")
@@ -36,7 +35,7 @@ public class JkPriceRuleController {
     @Autowired
     private JkPriceRuleService priceRuleService;
     @Autowired
-    private JkRegionDao regionDao;
+    private JkRegionService regionService;
 
     @PreAuthorize("hasAuthority('" + JkPermissionCodes.ADMIN_PRICE_RULE_LIST + "')")
     @JkBizPermission(value = JkBizPermissionCodes.PRICE_RULE_CONFIG, checkDataScope = false)
@@ -68,11 +67,10 @@ public class JkPriceRuleController {
     @JkBizPermission(value = JkBizPermissionCodes.PRICE_RULE_CONFIG, checkDataScope = false)
     @GetMapping("/region/options")
     @ApiOperation("价格规则区域选项")
-    public CommonResult<List<JkRegion>> regionOptions() {
-        return CommonResult.success(regionDao.selectList(null).stream()
-                .filter(region -> !Boolean.TRUE.equals(region.getIsDeleted()))
-                .sorted(Comparator.comparing(JkRegion::getRegionLevel, Comparator.nullsLast(Integer::compareTo))
-                        .thenComparing(JkRegion::getRegionCode, Comparator.nullsLast(String::compareTo)))
-                .collect(Collectors.toList()));
+    public CommonResult<List<JkRegionOptionResponse>> regionOptions(@RequestParam(required = false) String parentRegionCode,
+                                                                    @RequestParam(required = false) Integer targetLevel,
+                                                                    @RequestParam(required = false) Boolean enabled,
+                                                                    @RequestParam(required = false) String keyword) {
+        return CommonResult.success(regionService.listRegionOptions(parentRegionCode, targetLevel, enabled == null ? true : enabled, keyword));
     }
 }

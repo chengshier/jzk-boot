@@ -29,18 +29,19 @@ public class JkPlatformOrderController {
     @Autowired
     private JkAdminActorService adminActorService;
 
-    private Long userId() {
+    private Long operatorId() {
         Long userId = adminActorService.getLinkedFrontUserId(adminActorService.getCurrentAdmin());
-        if (userId == null) {
-            throw new IllegalStateException("后台管理员未绑定业务用户");
+        if (userId != null) return userId;
+        if (adminActorService.isPlatformSuperAdmin(adminActorService.getCurrentAdmin())) {
+            return -Long.valueOf(adminActorService.getCurrentAdmin().getId());
         }
-        return userId;
+        throw new IllegalStateException("后台管理员未绑定业务用户");
     }
 
     @GetMapping("/list")
     @ApiOperation("区县代订货单列表")
     @PreAuthorize("hasAuthority('" + JkPermissionCodes.ADMIN_PLATFORM_ORDER_LIST + "')")
-    @JkBizPermission(value = JkBizPermissionCodes.STOCK_PLATFORM_ORDER, checkDataScope = true)
+    @JkBizPermission(value = JkBizPermissionCodes.STOCK_PLATFORM_AUDIT, checkDataScope = false)
     public CommonResult<CommonPage<JkPlatformOrder>> list(JkTradeDocumentSearchRequest request, PageParamRequest pageParamRequest) {
         return CommonResult.success(CommonPage.restPage(platformOrderService.getAdminList(request, pageParamRequest)));
     }
@@ -48,7 +49,7 @@ public class JkPlatformOrderController {
     @GetMapping("/{id}/detail")
     @ApiOperation("区县代订货单详情")
     @PreAuthorize("hasAuthority('" + JkPermissionCodes.ADMIN_PLATFORM_ORDER_LIST + "')")
-    @JkBizPermission(value = JkBizPermissionCodes.STOCK_PLATFORM_ORDER, checkDataScope = true)
+    @JkBizPermission(value = JkBizPermissionCodes.STOCK_PLATFORM_AUDIT, checkDataScope = false)
     public CommonResult<JkPlatformOrderDetailResponse> detail(@PathVariable Long id) {
         return CommonResult.success(platformOrderService.getAdminDetail(id));
     }
@@ -58,22 +59,22 @@ public class JkPlatformOrderController {
     @PreAuthorize("hasAuthority('" + JkPermissionCodes.ADMIN_PLATFORM_ORDER_AUDIT + "')")
     @JkBizPermission(value = JkBizPermissionCodes.PAYMENT_OFFLINE_AUDIT, checkDataScope = true)
     public CommonResult<JkPlatformOrder> audit(@RequestBody @Validated JkPaymentAuditRequest request) {
-        return CommonResult.success(platformOrderService.auditPayment(userId(), request));
+        return CommonResult.success(platformOrderService.auditPayment(operatorId(), request));
     }
 
     @PostMapping("/ship")
     @ApiOperation("平台发货")
     @PreAuthorize("hasAuthority('" + JkPermissionCodes.ADMIN_PLATFORM_ORDER_SHIP + "')")
-    @JkBizPermission(value = JkBizPermissionCodes.STOCK_PLATFORM_ORDER, checkDataScope = true)
+    @JkBizPermission(value = JkBizPermissionCodes.STOCK_PLATFORM_AUDIT, checkDataScope = false)
     public CommonResult<JkPlatformOrder> ship(@RequestBody @Validated JkBusinessActionRequest request) {
-        return CommonResult.success(platformOrderService.ship(userId(), request));
+        return CommonResult.success(platformOrderService.ship(operatorId(), request));
     }
 
     @PostMapping("/close")
     @ApiOperation("关闭平台订货单")
     @PreAuthorize("hasAuthority('" + JkPermissionCodes.ADMIN_PLATFORM_ORDER_CLOSE + "')")
-    @JkBizPermission(value = JkBizPermissionCodes.STOCK_PLATFORM_ORDER, checkDataScope = true)
+    @JkBizPermission(value = JkBizPermissionCodes.STOCK_PLATFORM_AUDIT, checkDataScope = false)
     public CommonResult<JkPlatformOrder> close(@RequestBody @Validated JkBusinessActionRequest request) {
-        return CommonResult.success(platformOrderService.close(userId(), request));
+        return CommonResult.success(platformOrderService.close(operatorId(), request));
     }
 }

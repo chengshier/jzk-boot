@@ -26,6 +26,7 @@ import com.zbkj.common.model.system.SystemAdmin;
 import com.zbkj.common.utils.RedisUtil;
 import com.zbkj.service.delete.OrderUtils;
 import com.zbkj.service.service.jiuzhoukang.commission.RetailOrderCommissionAdapter;
+import com.zbkj.service.service.jiuzhoukang.commission.CommissionTriggerService;
 import com.zbkj.service.service.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -35,6 +36,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
 
+import java.math.BigDecimal;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -137,6 +139,9 @@ public class StoreOrderTaskServiceImpl implements StoreOrderTaskService {
 
     @Autowired
     private RetailOrderCommissionAdapter retailOrderCommissionAdapter;
+
+    @Autowired
+    private CommissionTriggerService jkCommissionTriggerService;
 
     /**
      * 用户取消订单
@@ -399,6 +404,15 @@ public class StoreOrderTaskServiceImpl implements StoreOrderTaskService {
             }
             return Boolean.TRUE;
         });
+        if (Boolean.TRUE.equals(execute)) {
+            try {
+                BigDecimal refundAmount = storeOrder.getRefundPrice() == null ? storeOrder.getPayPrice() : storeOrder.getRefundPrice();
+                jkCommissionTriggerService.onRefundCompleted(storeOrder.getId().longValue(), storeOrder.getOrderId(), refundAmount,
+                        "RETAIL_REFUND:" + storeOrder.getId() + ":" + refundAmount);
+            } catch (Exception commissionException) {
+                logger.error("九州康零售退款佣金冲正失败，CRMEB 原退款主链已完成，orderId={}", storeOrder.getId(), commissionException);
+            }
+        }
         return execute;
     }
 

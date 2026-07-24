@@ -9,6 +9,7 @@ import com.zbkj.common.exception.CrmebException;
 import com.zbkj.common.model.user.User;
 import com.zbkj.common.request.LoginMobileRequest;
 import com.zbkj.common.request.LoginRequest;
+import com.zbkj.common.request.jiuzhoukang.JkAgentRelationBindRequest;
 import com.zbkj.common.response.LoginConfigResponse;
 import com.zbkj.common.response.LoginResponse;
 import com.zbkj.common.token.FrontTokenComponent;
@@ -18,6 +19,7 @@ import com.zbkj.common.utils.RedisUtil;
 import com.zbkj.front.service.LoginService;
 import com.zbkj.service.service.SystemConfigService;
 import com.zbkj.service.service.UserService;
+import com.zbkj.service.service.jiuzhoukang.region.JkAgentRelationService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -57,6 +59,8 @@ public class LoginServiceImpl implements LoginService {
     private FrontTokenComponent tokenComponent;
     @Autowired
     private SystemConfigService systemConfigService;
+    @Autowired
+    private JkAgentRelationService jkAgentRelationService;
 
     /**
      * 账号密码登录
@@ -184,6 +188,23 @@ public class LoginServiceImpl implements LoginService {
         Boolean execute = transactionTemplate.execute(e -> {
             userService.updateById(user);
             userService.updateSpreadCountByUid(spreadUid, "add");
+            // 优先同步九州康关系主表；同步失败保留 CRMEB 原 spreadUid 主链并记录补偿日志。
+            // 后续订单归属只读取下单快照，不在完成时重新读取当前关系。
+            JkAgentRelationBindRequest relationRequest = new JkAgentRelationBindRequest();
+            relationRequest.setUserId(Long.valueOf(user.getUid()));
+            relationRequest.setParentUserId(Long.valueOf(spreadUid));
+            relationRequest.setRelationType("QR");
+            relationRequest.setBindSource("CRMEB_SPREAD");
+            relationRequest.setSourceCode(String.valueOf(spreadUid));
+            relationRequest.setChangeReason("CRMEB 登录/扫码首次绑定同步");
+            try {
+                jkAgentRelationService.bind(relationRequest, Long.valueOf(user.getUid()));
+            } catch (Exception relationException) {
+                // 九州康扩展关系同步失败不能阻断 CRMEB 原登录/推广关系主链。
+                // 失败记录可通过 jk_legacy_spread_relation_migration.sql 补偿迁移。
+                logger.error("CRMEB 推广关系已绑定，但九州康关系同步失败，userUid={}, spreadUid={}",
+                        user.getUid(), spreadUid, relationException);
+            }
             return Boolean.TRUE;
         });
         if (!execute) {
