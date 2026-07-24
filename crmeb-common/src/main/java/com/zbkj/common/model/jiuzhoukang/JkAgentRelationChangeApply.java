@@ -1,10 +1,16 @@
 package com.zbkj.common.model.jiuzhoukang;
 
-import com.baomidou.mybatisplus.annotation.*;
+import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableName;
+import com.zbkj.common.response.jiuzhoukang.JkRelationChangeBlockerResponse;
 import lombok.Data;
 import lombok.experimental.Accessors;
+
 import java.io.Serializable;
 import java.util.Date;
+import java.util.List;
 
 @Data
 @Accessors(chain = true)
@@ -36,4 +42,9 @@ public class JkAgentRelationChangeApply implements Serializable {
     @TableField(exist = false) private String targetParentName;
     @TableField(exist = false) private String statusText;
     @TableField(exist = false) private String statusTag;
+    /** 当前实时阻断检查是否全部通过。 */
+    @TableField(exist = false) private Boolean blockerPassed;
+    /** 当前实时阻断项明细，仅详情接口填充。 */
+    @TableField(exist = false) private List<JkRelationChangeBlockerResponse> blockerItems;
+    @TableField(exist = false) private Date blockerCheckTime;
 }
