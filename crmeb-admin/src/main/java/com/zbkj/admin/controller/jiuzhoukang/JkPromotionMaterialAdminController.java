@@ -5,10 +5,10 @@ import cn.hutool.json.JSONArray;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import com.zbkj.common.annotation.jiuzhoukang.JkBizPermission;
+import com.zbkj.common.constants.jiuzhoukang.JkBizConstants;
 import com.zbkj.common.constants.jiuzhoukang.JkBizPermissionCodes;
 import com.zbkj.common.constants.jiuzhoukang.JkPermissionCodes;
 import com.zbkj.common.result.CommonResult;
-import com.zbkj.front.controller.jiuzhoukang.JkPromotionMaterialController;
 import com.zbkj.service.service.SystemConfigService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
@@ -37,7 +37,7 @@ public class JkPromotionMaterialAdminController {
     @PreAuthorize("hasAuthority('" + JkPermissionCodes.ADMIN_DICT_MANAGE + "')")
     @JkBizPermission(value = JkBizPermissionCodes.DICT_MANAGE, checkDataScope = false)
     public CommonResult<List<Map<String, Object>>> list() {
-        String raw = systemConfigService.getValueByKey(JkPromotionMaterialController.CONFIG_KEY);
+        String raw = systemConfigService.getValueByKey(JkBizConstants.CONFIG_KEY_PROMOTION_MATERIALS);
         if (StrUtil.isBlank(raw) || !JSONUtil.isTypeJSONArray(raw)) {
             return CommonResult.success(new ArrayList<Map<String, Object>>());
         }
@@ -80,6 +80,6 @@ public class JkPromotionMaterialAdminController {
             index++;
         }
         return CommonResult.success(systemConfigService.updateOrSaveValueByName(
-                JkPromotionMaterialController.CONFIG_KEY, JSONUtil.toJsonStr(result)));
+                JkBizConstants.CONFIG_KEY_PROMOTION_MATERIALS, JSONUtil.toJsonStr(result)));
     }
 }
