@@ -1,0 +1,39 @@
+name: JK temporary menu parent patch
+
+on:
+  push:
+    branches:
+      - fix/jk-business-consistency
+    paths:
+      - .github/workflows/jk-temp-menu-parent-patch.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/jk-business-consistency
+      - name: Fix Jiuzhoukang menu parent fallback
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          path = Path('sql/jiuzhoukang/fix/jk_receive_exception_menu_status_upgrade.sql')
+          text = path.read_text(encoding='utf-8')
+          old = '-- 兼容历史数据中“设置”根菜单固定 ID=12 的情况。\nSET @operation_root_id = IFNULL(@operation_root_id, 12);'
+          new = '-- 未配置独立“运营管理”根菜单时，九州康作为一级菜单挂载，禁止使用固定菜单 ID。\n-- CRMEB 基础数据中的 ID=12 通常是“分销”，错误挂载会导致菜单权限层级混乱。\nSET @operation_root_id = IFNULL(@operation_root_id, 0);'
+          if old not in text: raise SystemExit('menu fallback marker not found')
+          path.write_text(text.replace(old, new, 1), encoding='utf-8')
+          PY
+      - name: Commit patch
+        run: |
+          FILE=sql/jiuzhoukang/fix/jk_receive_exception_menu_status_upgrade.sql
+          if git diff --quiet -- "$FILE"; then exit 0; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "$FILE"
+          git commit -m "fix: avoid hard-coded menu parent ID"
+          git push origin HEAD:fix/jk-business-consistency
