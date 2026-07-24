@@ -5,6 +5,7 @@ import cn.hutool.json.JSONArray;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import com.zbkj.common.annotation.jiuzhoukang.JkBizPermission;
+import com.zbkj.common.constants.jiuzhoukang.JkBizConstants;
 import com.zbkj.common.constants.jiuzhoukang.JkBizPermissionCodes;
 import com.zbkj.common.result.CommonResult;
 import com.zbkj.common.token.FrontTokenComponent;
@@ -29,7 +30,6 @@ import java.util.Map;
 @RequestMapping("api/front/jk/promotion/material")
 @Api(tags = "九州康推广素材")
 public class JkPromotionMaterialController {
-    public static final String CONFIG_KEY = "jk_promotion_materials_json";
 
     @Autowired private SystemConfigService systemConfigService;
     @Autowired private FrontTokenComponent token;
@@ -43,7 +43,7 @@ public class JkPromotionMaterialController {
         if (frontUserId == null || frontUserId <= 0) throw new IllegalArgumentException("请先登录");
         JkUserContext context = contextService.getFrontContext(Long.valueOf(frontUserId));
         String roleCode = context == null ? null : context.getPrimaryRoleCode();
-        String raw = systemConfigService.getValueByKey(CONFIG_KEY);
+        String raw = systemConfigService.getValueByKey(JkBizConstants.CONFIG_KEY_PROMOTION_MATERIALS);
         List<Map<String, Object>> rows = new ArrayList<>();
         if (StrUtil.isBlank(raw) || !JSONUtil.isTypeJSONArray(raw)) return CommonResult.success(rows);
 
