@@ -1,0 +1,72 @@
+name: JK temporary receive exception CAS patch
+
+on:
+  push:
+    branches:
+      - fix/jk-business-consistency
+    paths:
+      - .github/workflows/jk-temp-receive-cas-patch.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/jk-business-consistency
+      - name: Enforce business restore CAS
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          path = Path('crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/trade/JkTradeReceiveExceptionServiceImpl.java')
+          text = path.read_text(encoding='utf-8')
+          old = '''    private void restoreBusiness(JkTradeReceiveException entity, Long operatorId) {
+        String originalStatus = TYPE_PLATFORM_ORDER.equals(entity.getBusinessType()) ? "SHIPPED" : "TRANSFERRED";
+        if (TYPE_PLATFORM_ORDER.equals(entity.getBusinessType())) {
+            platformOrderDao.update(null, new UpdateWrapper<JkPlatformOrder>()
+                    .eq("id", entity.getBusinessId()).eq("status", "RECEIVE_EXCEPTION").eq("is_deleted", false)
+                    .set("status", originalStatus).set("receive_status", "UNRECEIVED")
+                    .set("update_user_id", operatorId).set("update_time", new Date()));
+        } else {
+            stockTransferDao.update(null, new UpdateWrapper<JkStockTransfer>()
+                    .eq("id", entity.getBusinessId()).eq("status", "RECEIVE_EXCEPTION").eq("is_deleted", false)
+                    .set("status", originalStatus).set("receive_status", "UNRECEIVED")
+                    .set("update_user_id", operatorId).set("update_time", new Date()));
+        }
+    }
+'''
+          new = '''    private void restoreBusiness(JkTradeReceiveException entity, Long operatorId) {
+        String originalStatus = TYPE_PLATFORM_ORDER.equals(entity.getBusinessType()) ? "SHIPPED" : "TRANSFERRED";
+        int updated;
+        if (TYPE_PLATFORM_ORDER.equals(entity.getBusinessType())) {
+            updated = platformOrderDao.update(null, new UpdateWrapper<JkPlatformOrder>()
+                    .eq("id", entity.getBusinessId()).eq("status", "RECEIVE_EXCEPTION").eq("is_deleted", false)
+                    .set("status", originalStatus).set("receive_status", "UNRECEIVED")
+                    .set("update_user_id", operatorId).set("update_time", new Date()));
+        } else {
+            updated = stockTransferDao.update(null, new UpdateWrapper<JkStockTransfer>()
+                    .eq("id", entity.getBusinessId()).eq("status", "RECEIVE_EXCEPTION").eq("is_deleted", false)
+                    .set("status", originalStatus).set("receive_status", "UNRECEIVED")
+                    .set("update_user_id", operatorId).set("update_time", new Date()));
+        }
+        if (updated != 1) {
+            throw new CrmebException("原业务单状态已变化，异常处理未生效，请刷新后核对");
+        }
+    }
+'''
+          if old not in text:
+              raise SystemExit('restoreBusiness marker not found')
+          path.write_text(text.replace(old, new, 1), encoding='utf-8')
+          PY
+      - name: Commit patch
+        run: |
+          FILE=crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/trade/JkTradeReceiveExceptionServiceImpl.java
+          if git diff --quiet -- "$FILE"; then exit 0; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "$FILE"
+          git commit -m "fix: require CAS success when resolving receipt exceptions"
+          git push origin HEAD:fix/jk-business-consistency
