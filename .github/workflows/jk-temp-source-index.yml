@@ -1,0 +1,17 @@
+name: JK temporary source index
+
+on:
+  push:
+    branches:
+      - fix/jk-business-consistency
+
+jobs:
+  index:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Print relevant source files
+        run: |
+          find crmeb-admin crmeb-front crmeb-common crmeb-service sql docs -type f \
+            \( -path '*jiuzhoukang*' -o -path '*jkBusiness*' \) \
+            | sort
