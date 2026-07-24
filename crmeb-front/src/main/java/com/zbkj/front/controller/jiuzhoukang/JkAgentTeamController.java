@@ -6,9 +6,8 @@ import com.zbkj.common.model.jiuzhoukang.JkAgentRelationChangeApply;
 import com.zbkj.common.page.CommonPage;
 import com.zbkj.common.request.PageParamRequest;
 import com.zbkj.common.request.jiuzhoukang.JkAgentRelationChangeApplyRequest;
-import com.zbkj.common.response.jiuzhoukang.JkPromotionQrcodeResponse;
 import com.zbkj.common.response.jiuzhoukang.JkOptionResponse;
-import java.util.List;
+import com.zbkj.common.response.jiuzhoukang.JkPromotionQrcodeResponse;
 import com.zbkj.common.response.jiuzhoukang.JkTeamSummaryResponse;
 import com.zbkj.common.result.CommonResult;
 import com.zbkj.common.token.FrontTokenComponent;
@@ -18,7 +17,16 @@ import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("api/front/jk/team")
@@ -35,11 +43,17 @@ public class JkAgentTeamController {
     @ApiOperation("本人上级、直属团队和关系历史")
     public CommonResult<JkTeamSummaryResponse> summary() { return CommonResult.success(teamService.summary(userId())); }
 
+    @GetMapping("/member/{memberUserId}")
+    @JkBizPermission(value = JkBizPermissionCodes.TEAM_VIEW, checkDataScope = true)
+    @ApiOperation("直属团队成员真实详情")
+    public CommonResult<Map<String, Object>> member(@PathVariable Long memberUserId) {
+        return CommonResult.success(teamService.memberDetail(userId(), memberUserId));
+    }
+
     @GetMapping("/qrcode")
     @JkBizPermission(value = JkBizPermissionCodes.TEAM_VIEW, checkDataScope = false)
     @ApiOperation("本人推广二维码")
     public CommonResult<JkPromotionQrcodeResponse> qrcode() { return CommonResult.success(teamService.promotionQrcode(userId())); }
-
 
     @GetMapping("/relation-change/parent-options")
     @JkBizPermission(value = JkBizPermissionCodes.AGENT_RELATION_CHANGE_APPLY, checkDataScope = true)
