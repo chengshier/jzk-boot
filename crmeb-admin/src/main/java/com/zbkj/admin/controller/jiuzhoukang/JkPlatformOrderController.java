@@ -12,6 +12,7 @@ import com.zbkj.common.request.jiuzhoukang.JkTradeDocumentSearchRequest;
 import com.zbkj.common.response.jiuzhoukang.JkPlatformOrderDetailResponse;
 import com.zbkj.common.result.CommonResult;
 import com.zbkj.service.service.jiuzhoukang.audit.JkAdminActorService;
+import com.zbkj.service.service.jiuzhoukang.trade.JkTradeLogisticsService;
 import com.zbkj.service.service.jiuzhoukang.trade.PlatformOrderService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
@@ -24,10 +25,9 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("api/admin/jk/platform-order")
 @Api(tags = "九州康区县代订货管理")
 public class JkPlatformOrderController {
-    @Autowired
-    private PlatformOrderService platformOrderService;
-    @Autowired
-    private JkAdminActorService adminActorService;
+    @Autowired private PlatformOrderService platformOrderService;
+    @Autowired private JkTradeLogisticsService logisticsService;
+    @Autowired private JkAdminActorService adminActorService;
 
     private Long operatorId() {
         Long userId = adminActorService.getLinkedFrontUserId(adminActorService.getCurrentAdmin());
@@ -63,11 +63,11 @@ public class JkPlatformOrderController {
     }
 
     @PostMapping("/ship")
-    @ApiOperation("平台发货")
+    @ApiOperation("平台发货并登记物流")
     @PreAuthorize("hasAuthority('" + JkPermissionCodes.ADMIN_PLATFORM_ORDER_SHIP + "')")
     @JkBizPermission(value = JkBizPermissionCodes.STOCK_PLATFORM_AUDIT, checkDataScope = false)
     public CommonResult<JkPlatformOrder> ship(@RequestBody @Validated JkBusinessActionRequest request) {
-        return CommonResult.success(platformOrderService.ship(operatorId(), request));
+        return CommonResult.success(logisticsService.shipPlatformOrder(operatorId(), request));
     }
 
     @PostMapping("/close")

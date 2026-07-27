@@ -12,6 +12,7 @@ import com.zbkj.common.request.jiuzhoukang.JkTradeDocumentSearchRequest;
 import com.zbkj.common.response.jiuzhoukang.JkStockTransferDetailResponse;
 import com.zbkj.common.result.CommonResult;
 import com.zbkj.service.service.jiuzhoukang.audit.JkAdminActorService;
+import com.zbkj.service.service.jiuzhoukang.trade.JkTradeLogisticsService;
 import com.zbkj.service.service.jiuzhoukang.trade.StockTransferService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
@@ -24,16 +25,13 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("api/admin/jk/stock-transfer")
 @Api(tags = "九州康创客/合伙人调拨管理")
 public class JkStockTransferController {
-    @Autowired
-    private StockTransferService service;
-    @Autowired
-    private JkAdminActorService actor;
+    @Autowired private StockTransferService service;
+    @Autowired private JkTradeLogisticsService logisticsService;
+    @Autowired private JkAdminActorService actor;
 
     private Long user() {
         Long id = actor.getLinkedFrontUserId(actor.getCurrentAdmin());
-        if (id == null) {
-            throw new IllegalStateException("后台管理员未绑定业务用户");
-        }
+        if (id == null) throw new IllegalStateException("后台管理员未绑定业务用户");
         return id;
     }
 
@@ -70,11 +68,11 @@ public class JkStockTransferController {
     }
 
     @PostMapping("/dispatch")
-    @ApiOperation("区县代拨货")
+    @ApiOperation("区县代拨货并登记物流")
     @PreAuthorize("hasAuthority('" + JkPermissionCodes.ADMIN_STOCK_TRANSFER_DISPATCH + "')")
     @JkBizPermission(value = JkBizPermissionCodes.STOCK_TRANSFER_CONFIRM, checkDataScope = true)
     public CommonResult<JkStockTransfer> dispatch(@RequestBody @Validated JkBusinessActionRequest request) {
-        return CommonResult.success(service.dispatch(user(), request));
+        return CommonResult.success(logisticsService.dispatchStockTransfer(user(), request));
     }
 
     @PostMapping("/close")

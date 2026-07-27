@@ -1,0 +1,36 @@
+name: Jiuzhoukang consistency CI
+
+on:
+  pull_request:
+    branches:
+      - master
+  workflow_dispatch:
+
+concurrency:
+  group: jk-consistency-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  compile:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up JDK 8
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '8'
+          cache: maven
+      - name: Compile all modules
+        run: |
+          set -o pipefail
+          mvn -B -DskipTests compile 2>&1 | tee maven-compile.log
+      - name: Upload failed compile log
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: maven-compile-log
+          path: maven-compile.log
+          retention-days: 3
