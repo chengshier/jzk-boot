@@ -2,7 +2,7 @@ package com.zbkj.admin.controller.jiuzhoukang;
 
 import com.zbkj.common.annotation.jiuzhoukang.JkBizPermission;
 import com.zbkj.common.constants.jiuzhoukang.JkBizPermissionCodes;
-import com.zbkj.common.constants.jiuzhoukang.JkPermissionCodes;
+import com.zbkj.common.constants.jiuzhoukang.JkRelationPermissionCodes;
 import com.zbkj.common.model.jiuzhoukang.JkRelationLimitRule;
 import com.zbkj.common.page.CommonPage;
 import com.zbkj.common.request.PageParamRequest;
@@ -38,7 +38,7 @@ public class JkRelationQuotaAdminController {
 
     @GetMapping("/rule/list")
     @ApiOperation("关系人数规则列表")
-    @PreAuthorize("hasAuthority('" + JkPermissionCodes.ADMIN_RELATION_LIMIT_RULE_LIST + "')")
+    @PreAuthorize("hasAuthority('" + JkRelationPermissionCodes.ADMIN_RELATION_LIMIT_RULE_LIST + "')")
     @JkBizPermission(value = JkBizPermissionCodes.AGENT_RELATION_MANAGE, checkDataScope = false)
     public CommonResult<CommonPage<JkRelationLimitRule>> ruleList(@RequestParam(required = false) String keyword,
                                                                    @RequestParam(required = false) Boolean status,
@@ -48,7 +48,7 @@ public class JkRelationQuotaAdminController {
 
     @PostMapping("/rule/save")
     @ApiOperation("保存关系人数规则")
-    @PreAuthorize("hasAuthority('" + JkPermissionCodes.ADMIN_RELATION_LIMIT_RULE_SAVE + "')")
+    @PreAuthorize("hasAuthority('" + JkRelationPermissionCodes.ADMIN_RELATION_LIMIT_RULE_SAVE + "')")
     @JkBizPermission(value = JkBizPermissionCodes.AGENT_RELATION_MANAGE, checkDataScope = false)
     public CommonResult<JkRelationLimitRule> saveRule(@RequestBody @Validated JkRelationLimitRuleSaveRequest request) {
         return CommonResult.success(quotaService.saveRule(request, operator()));
@@ -56,7 +56,7 @@ public class JkRelationQuotaAdminController {
 
     @PostMapping("/rule/status")
     @ApiOperation("启停关系人数规则")
-    @PreAuthorize("hasAuthority('" + JkPermissionCodes.ADMIN_RELATION_LIMIT_RULE_STATUS + "')")
+    @PreAuthorize("hasAuthority('" + JkRelationPermissionCodes.ADMIN_RELATION_LIMIT_RULE_STATUS + "')")
     @JkBizPermission(value = JkBizPermissionCodes.AGENT_RELATION_MANAGE, checkDataScope = false)
     public CommonResult<JkRelationLimitRule> ruleStatus(@RequestParam Long id, @RequestParam Boolean status) {
         return CommonResult.success(quotaService.updateRuleStatus(id, status, operator()));
@@ -64,7 +64,7 @@ public class JkRelationQuotaAdminController {
 
     @GetMapping("/usage")
     @ApiOperation("查询指定上级当前额度")
-    @PreAuthorize("hasAuthority('" + JkPermissionCodes.ADMIN_RELATION_LIMIT_RULE_LIST + "')")
+    @PreAuthorize("hasAuthority('" + JkRelationPermissionCodes.ADMIN_RELATION_LIMIT_RULE_LIST + "')")
     @JkBizPermission(value = JkBizPermissionCodes.AGENT_RELATION_MANAGE, checkDataScope = true)
     public CommonResult<JkRelationQuotaResponse> usage(@RequestParam Long parentUserId,
                                                         @RequestParam(required = false) Long childUserId) {
@@ -73,7 +73,7 @@ public class JkRelationQuotaAdminController {
 
     @PostMapping("/force-adjust")
     @ApiOperation("管理员强制调整上下级关系")
-    @PreAuthorize("hasAuthority('" + JkPermissionCodes.ADMIN_AGENT_RELATION_FORCE_ADJUST + "')")
+    @PreAuthorize("hasAuthority('" + JkRelationPermissionCodes.ADMIN_AGENT_RELATION_FORCE_ADJUST + "')")
     @JkBizPermission(value = JkBizPermissionCodes.AGENT_RELATION_MANAGE, checkDataScope = false)
     public CommonResult<JkAgentRelationResponse> forceAdjust(@RequestBody @Validated JkAgentRelationForceAdjustRequest request) {
         return CommonResult.success(relationService.forceAdjust(request, operator()));
