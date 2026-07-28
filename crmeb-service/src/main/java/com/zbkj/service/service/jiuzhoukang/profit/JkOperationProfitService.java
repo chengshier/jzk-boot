@@ -10,5 +10,6 @@ public interface JkOperationProfitService {
     JkOperationProfitRecord record(JkOperationProfitRecord draft);
     BigDecimal summary(Long userId);
     PageInfo<JkOperationProfitRecord> list(Long userId, String sourceType, String status, PageParamRequest page);
+    JkOperationProfitRecord detail(Long viewerUserId, Long id, boolean admin);
     void reverse(String sourceType, Long sourceId, Long sourceItemId, BigDecimal amount, String requestNo, String reason);
 }
