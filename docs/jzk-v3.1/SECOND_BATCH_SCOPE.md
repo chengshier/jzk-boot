@@ -23,9 +23,14 @@
 
 ```text
 sql/jiuzhoukang/fix/jk_v31_phase2_business_closure.sql
+sql/jiuzhoukang/fix/jk_v31_phase2_menu_permission_upgrade.sql
 ```
 
 部署顺序必须为：备份 -> 执行第一批 SQL -> 执行第二批 SQL -> 部署后端 -> 部署 Admin/App -> 真实环境回归。
+
+## 检查策略
+
+PR 先临时以 `master` 为基线触发 JDK 8 全模块编译；检查结束后恢复为第一批分支，保持最终叠加差异清晰。
 
 ## 尚未宣称通过
 
