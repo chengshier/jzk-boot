@@ -1,6 +1,7 @@
 package com.zbkj.service.service.impl.jiuzhoukang.commission;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.zbkj.common.model.jiuzhoukang.JkCommissionRecord;
 import com.zbkj.common.model.jiuzhoukang.JkCommissionReverse;
 import com.zbkj.service.dao.jiuzhoukang.JkCommissionRecordDao;
@@ -18,11 +19,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.UUID;
 
-/**
- * 佣金冲正服务。
- * <p>根据原佣金当前所处的待结算、可提现、提现中或已提现状态选择相应冲正方式。
- * 已提现金额不直接篡改历史，而是形成后续待抵扣，所有冲正均保留来源和幂等键。</p>
- */
+/** 按原佣金状态执行冲正；已提现金额形成待抵扣，历史流水不删除。 */
 @Service
 public class CommissionReverseServiceImpl implements CommissionReverseService {
     @Autowired private JkCommissionReverseDao reverseDao;
@@ -44,16 +41,20 @@ public class CommissionReverseServiceImpl implements CommissionReverseService {
         BigDecimal priorReversed = priorReversed(recordId);
         BigDecimal before = CommissionReverseSupport.remaining(record.getCommissionAmount(), priorReversed);
         CommissionReverseSupport.requireReverseAmount(before, amount);
-        if ("PENDING_SETTLE".equals(record.getStatus()) || "CREATED".equals(record.getStatus())) {
+        String status = record.getStatus();
+        if ("PENDING_SETTLE".equals(status) || "PENDING".equals(status) || "CREATED".equals(status)) {
             accountService.reversePending(record.getReceiverUserId(), record.getReceiverRoleCode(), amount, requestNo,
                     "REVERSE_PENDING:" + requestNo);
-        } else if ("SETTLED".equals(record.getStatus())) {
+        } else if ("SETTLED".equals(status)) {
             accountService.reverseSettledOrFrozen(record.getReceiverUserId(), record.getReceiverRoleCode(), amount, requestNo,
                     "REVERSE_COMMISSION_BALANCE:" + requestNo);
             fundAccountService.reverseCommissionAcrossBalances(record.getReceiverUserId(), record.getReceiverRoleCode(), amount,
                     recordId, requestNo, "REVERSE_FUND_BALANCE:" + requestNo);
+        } else if ("REVERSED".equals(status)) {
+            return reverseDao.selectOne(new LambdaQueryWrapper<JkCommissionReverse>()
+                    .eq(JkCommissionReverse::getOriginalCommissionRecordId, recordId).orderByDesc(JkCommissionReverse::getId).last("limit 1"));
         } else {
-            throw new IllegalArgumentException("当前佣金状态不能冲正：" + record.getStatus());
+            throw new IllegalArgumentException("当前佣金状态不能冲正：" + status);
         }
 
         Date now = new Date();
@@ -64,20 +65,21 @@ public class CommissionReverseServiceImpl implements CommissionReverseService {
                 .setReason(reason).setStatus("SUCCESS").setRequestNo(requestNo).setOperatorId(operatorId)
                 .setCreateTime(now).setUpdateTime(now);
         reverseDao.insert(reverse);
-        if (after.signum() == 0) record.setStatus("REVERSED");
-        record.setUpdateTime(now);
-        recordDao.updateById(record);
+        BigDecimal totalReversed = priorReversed.add(amount);
+        String nextStatus = after.signum() == 0 ? "REVERSED"
+                : ("SETTLED".equals(status) ? "SETTLED" : "PENDING_SETTLE");
+        int updated = recordDao.update(null, new UpdateWrapper<JkCommissionRecord>()
+                .eq("id", recordId).eq("status", status)
+                .set("reversed_amount", totalReversed).set("status", nextStatus).set("update_time", now));
+        if (updated != 1) throw new IllegalStateException("佣金记录状态已变化，请重试");
         return reverse;
     }
 
     private BigDecimal priorReversed(Long recordId) {
         List<JkCommissionReverse> reverses = reverseDao.selectList(new LambdaQueryWrapper<JkCommissionReverse>()
-                .eq(JkCommissionReverse::getOriginalCommissionRecordId, recordId)
-                .eq(JkCommissionReverse::getStatus, "SUCCESS"));
+                .eq(JkCommissionReverse::getOriginalCommissionRecordId, recordId).eq(JkCommissionReverse::getStatus, "SUCCESS"));
         BigDecimal total = BigDecimal.ZERO;
-        for (JkCommissionReverse reverse : reverses) {
-            total = total.add(reverse.getReverseAmount() == null ? BigDecimal.ZERO : reverse.getReverseAmount());
-        }
+        for (JkCommissionReverse reverse : reverses) total = total.add(reverse.getReverseAmount() == null ? BigDecimal.ZERO : reverse.getReverseAmount());
         return total;
     }
 

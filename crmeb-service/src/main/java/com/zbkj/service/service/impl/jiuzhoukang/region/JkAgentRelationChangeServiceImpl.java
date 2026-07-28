@@ -6,21 +6,43 @@ import com.github.pagehelper.Page;
 import com.github.pagehelper.PageHelper;
 import com.github.pagehelper.PageInfo;
 import com.zbkj.common.constants.jiuzhoukang.JkBizConstants;
-import com.zbkj.common.model.jiuzhoukang.*;
+import com.zbkj.common.model.jiuzhoukang.JkAgentRelation;
+import com.zbkj.common.model.jiuzhoukang.JkAgentRelationChangeApply;
+import com.zbkj.common.model.jiuzhoukang.JkCommissionAccount;
+import com.zbkj.common.model.jiuzhoukang.JkStockAccount;
+import com.zbkj.common.model.jiuzhoukang.JkStockItem;
+import com.zbkj.common.model.jiuzhoukang.JkStockTransfer;
+import com.zbkj.common.model.jiuzhoukang.JkUserBusinessRole;
+import com.zbkj.common.model.jiuzhoukang.JkWithdrawApply;
 import com.zbkj.common.model.user.User;
 import com.zbkj.common.page.CommonPage;
 import com.zbkj.common.request.PageParamRequest;
-import com.zbkj.common.request.jiuzhoukang.*;
-import com.zbkj.service.dao.jiuzhoukang.*;
+import com.zbkj.common.request.jiuzhoukang.JkAgentRelationBindRequest;
+import com.zbkj.common.request.jiuzhoukang.JkAgentRelationChangeApplyRequest;
+import com.zbkj.common.request.jiuzhoukang.JkAgentRelationChangeAuditRequest;
+import com.zbkj.service.dao.jiuzhoukang.JkAgentRelationChangeApplyDao;
+import com.zbkj.service.dao.jiuzhoukang.JkAgentRelationDao;
+import com.zbkj.service.dao.jiuzhoukang.JkCommissionAccountDao;
+import com.zbkj.service.dao.jiuzhoukang.JkStockAccountDao;
+import com.zbkj.service.dao.jiuzhoukang.JkStockItemDao;
+import com.zbkj.service.dao.jiuzhoukang.JkStockTransferDao;
+import com.zbkj.service.dao.jiuzhoukang.JkUserBusinessRoleDao;
+import com.zbkj.service.dao.jiuzhoukang.JkWithdrawApplyDao;
 import com.zbkj.service.service.UserService;
-import com.zbkj.service.service.jiuzhoukang.region.*;
+import com.zbkj.service.service.jiuzhoukang.region.JkAgentRelationChangeService;
+import com.zbkj.service.service.jiuzhoukang.region.JkAgentRelationService;
+import com.zbkj.service.service.jiuzhoukang.region.JkRelationChangeBlockerService;
+import com.zbkj.service.service.jiuzhoukang.region.JkRelationQuotaService;
 import com.zbkj.service.service.jiuzhoukang.support.JkDictLabelHelper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.util.*;
+import java.util.Arrays;
+import java.util.Date;
+import java.util.List;
+import java.util.Objects;
 
 @Service
 public class JkAgentRelationChangeServiceImpl implements JkAgentRelationChangeService {
@@ -35,6 +57,7 @@ public class JkAgentRelationChangeServiceImpl implements JkAgentRelationChangeSe
     @Autowired private UserService userService;
     @Autowired private JkAgentRelationService relationService;
     @Autowired private JkRelationChangeBlockerService blockerService;
+    @Autowired private JkRelationQuotaService quotaService;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -52,6 +75,10 @@ public class JkAgentRelationChangeServiceImpl implements JkAgentRelationChangeSe
         validateTargetParent(userId, request.getTargetParentUserId());
         assertNoPendingApply(userId);
         assertNoBusinessBlockers(userId);
+
+        // 在申请事务内预占目标上级名额；驳回、取消会释放，审核通过会消费。
+        quotaService.reserve(request.getRequestNo(), request.getTargetParentUserId(), userId, userId);
+
         Date now = new Date();
         JkAgentRelationChangeApply entity = new JkAgentRelationChangeApply()
                 .setApplyNo("RC" + com.baomidou.mybatisplus.core.toolkit.IdWorker.getIdStr())
@@ -102,8 +129,10 @@ public class JkAgentRelationChangeServiceImpl implements JkAgentRelationChangeSe
             entity.setStatus("REJECTED").setRejectReason(request.getRemark()).setAuditRemark(request.getRemark())
                     .setAuditUserId(operatorId).setAuditTime(now).setUpdateUserId(operatorId).setUpdateTime(now);
             applyDao.updateById(entity);
+            quotaService.releaseReservation(entity.getRequestNo(), "REJECTED", operatorId);
             return enrich(entity);
         }
+
         blockerService.assertNoBlockers(entity);
         validateTargetParent(entity.getUserId(), entity.getTargetParentUserId());
         JkAgentRelation current = currentRelation(entity.getUserId());
@@ -118,9 +147,11 @@ public class JkAgentRelationChangeServiceImpl implements JkAgentRelationChangeSe
         bind.setSourceCode(entity.getApplyNo());
         bind.setChangeReason(entity.getApplyReason());
         bind.setRemark(StrUtil.blankToDefault(request.getRemark(), "换绑申请审核通过"));
-        relationService.bind(bind, operatorId);
+        relationService.changeFromApprovedApply(bind, entity.getCurrentRelationId(), entity.getRequestNo(), operatorId);
+
         JkAgentRelation newRelation = currentRelation(entity.getUserId());
-        entity.setStatus("APPROVED").setAuditRemark(request.getRemark()).setNewRelationId(newRelation == null ? null : newRelation.getId())
+        entity.setStatus("APPROVED").setAuditRemark(request.getRemark())
+                .setNewRelationId(newRelation == null ? null : newRelation.getId())
                 .setAuditUserId(operatorId).setAuditTime(now).setUpdateUserId(operatorId).setUpdateTime(now);
         applyDao.updateById(entity);
         return enrich(entity);
@@ -132,8 +163,12 @@ public class JkAgentRelationChangeServiceImpl implements JkAgentRelationChangeSe
         JkAgentRelationChangeApply entity = require(id);
         if (!userId.equals(entity.getUserId())) throw new IllegalArgumentException("无权取消该换绑申请");
         if (!"PENDING".equals(entity.getStatus())) throw new IllegalArgumentException("当前状态不能取消");
+        if (StrUtil.isNotBlank(requestNo) && !Objects.equals(requestNo, entity.getRequestNo())) {
+            throw new IllegalArgumentException("requestNo 与换绑申请不一致");
+        }
         entity.setStatus("CANCELLED").setAuditRemark(reason).setUpdateUserId(userId).setUpdateTime(new Date());
         applyDao.updateById(entity);
+        quotaService.releaseReservation(entity.getRequestNo(), "CANCELLED", userId);
         return enrich(entity);
     }
 
@@ -200,7 +235,9 @@ public class JkAgentRelationChangeServiceImpl implements JkAgentRelationChangeSe
             List<JkStockItem> items = stockItemDao.selectList(new LambdaQueryWrapper<JkStockItem>()
                     .eq(JkStockItem::getStockAccountId, account.getId()).eq(JkStockItem::getIsDeleted, false));
             for (JkStockItem item : items) {
-                if (safe(item.getAvailableQty()) > 0 || safe(item.getFrozenQty()) > 0) throw new IllegalArgumentException("当前仍有库存余额或冻结库存，暂不能换绑");
+                if (safe(item.getAvailableQty()) > 0 || safe(item.getFrozenQty()) > 0) {
+                    throw new IllegalArgumentException("当前仍有库存余额或冻结库存，暂不能换绑");
+                }
             }
         }
         for (JkCommissionAccount account : commissionAccountDao.selectList(new LambdaQueryWrapper<JkCommissionAccount>()
@@ -233,7 +270,10 @@ public class JkAgentRelationChangeServiceImpl implements JkAgentRelationChangeSe
         User user = row.getUserId() == null ? null : userService.getById(row.getUserId().intValue());
         User current = row.getCurrentParentUserId() == null ? null : userService.getById(row.getCurrentParentUserId().intValue());
         User target = row.getTargetParentUserId() == null ? null : userService.getById(row.getTargetParentUserId().intValue());
-        if (user != null) { row.setUserName(StrUtil.blankToDefault(user.getRealName(), user.getNickname())); row.setUserPhone(user.getPhone()); }
+        if (user != null) {
+            row.setUserName(StrUtil.blankToDefault(user.getRealName(), user.getNickname()));
+            row.setUserPhone(user.getPhone());
+        }
         if (current != null) row.setCurrentParentName(StrUtil.blankToDefault(current.getRealName(), current.getNickname()));
         if (target != null) row.setTargetParentName(StrUtil.blankToDefault(target.getRealName(), target.getNickname()));
         row.setStatusText(JkDictLabelHelper.label("relation_change_status", row.getStatus()));
@@ -241,7 +281,11 @@ public class JkAgentRelationChangeServiceImpl implements JkAgentRelationChangeSe
         return row;
     }
 
-    private int safe(Integer v) { return v == null ? 0 : v; }
-    private BigDecimal money(BigDecimal v) { return v == null ? BigDecimal.ZERO : v; }
-    private String statusTag(String s) { if ("APPROVED".equals(s)) return "success"; if ("REJECTED".equals(s) || "CANCELLED".equals(s)) return "danger"; return "warning"; }
+    private int safe(Integer value) { return value == null ? 0 : value; }
+    private BigDecimal money(BigDecimal value) { return value == null ? BigDecimal.ZERO : value; }
+    private String statusTag(String status) {
+        if ("APPROVED".equals(status)) return "success";
+        if ("REJECTED".equals(status) || "CANCELLED".equals(status)) return "danger";
+        return "warning";
+    }
 }
