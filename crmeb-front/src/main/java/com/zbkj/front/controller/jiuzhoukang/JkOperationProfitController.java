@@ -39,9 +39,6 @@ public class JkOperationProfitController {
     @GetMapping("/{id}")
     @JkBizPermission(value = JkBizPermissionCodes.COMMISSION_VIEW_SELF, checkDataScope = true)
     public CommonResult<JkOperationProfitRecord> detail(@PathVariable Long id) {
-        for (JkOperationProfitRecord row : profitService.list(userId(), null, null, new PageParamRequest()).getList()) {
-            if (id.equals(row.getId())) return CommonResult.success(row);
-        }
-        throw new IllegalArgumentException("经营收益记录不存在或无权查看");
+        return CommonResult.success(profitService.detail(userId(), id, false));
     }
 }
