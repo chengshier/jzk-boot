@@ -29,7 +29,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-/** 统一佣金规则试算和真实分发；只有已发布并处于生效窗口的规则允许入账。 */
+/** 统一佣金规则试算和真实分发；草稿允许试算，但只有已发布规则允许真实入账。 */
 @Service
 public class CommissionScenarioServiceImpl implements CommissionScenarioService {
     @Autowired private JkCommissionRuleDao ruleDao;
@@ -39,16 +39,23 @@ public class CommissionScenarioServiceImpl implements CommissionScenarioService 
 
     @Override
     public List<JkCommissionRuleTrialResponse> trial(JkCommissionRuleTrialRequest request) {
-        Date now = new Date();
-        LambdaQueryWrapper<JkCommissionRule> query = new LambdaQueryWrapper<JkCommissionRule>()
-                .eq(JkCommissionRule::getIsDeleted, false).eq(JkCommissionRule::getStatus, true)
-                .eq(JkCommissionRule::getPublishStatus, "PUBLISHED").eq(JkCommissionRule::getSourceType, request.getSourceType())
-                .le(JkCommissionRule::getEffectiveStartTime, now)
-                .and(q -> q.isNull(JkCommissionRule::getEffectiveEndTime).or().gt(JkCommissionRule::getEffectiveEndTime, now))
-                .orderByDesc(JkCommissionRule::getPriority).orderByDesc(JkCommissionRule::getVersionNo).orderByDesc(JkCommissionRule::getId);
-        if (request.getRuleId() != null) query.eq(JkCommissionRule::getId, request.getRuleId());
+        List<JkCommissionRule> rules;
+        if (request.getRuleId() != null) {
+            JkCommissionRule rule = ruleDao.selectById(request.getRuleId());
+            if (rule == null || Boolean.TRUE.equals(rule.getIsDeleted())) throw new IllegalArgumentException("佣金规则不存在");
+            if (!rule.getSourceType().equals(request.getSourceType())) throw new IllegalArgumentException("试算业务来源与规则不一致");
+            rules = Collections.singletonList(rule);
+        } else {
+            Date now = new Date();
+            rules = ruleDao.selectList(new LambdaQueryWrapper<JkCommissionRule>()
+                    .eq(JkCommissionRule::getIsDeleted, false).eq(JkCommissionRule::getStatus, true)
+                    .eq(JkCommissionRule::getPublishStatus, "PUBLISHED").eq(JkCommissionRule::getSourceType, request.getSourceType())
+                    .le(JkCommissionRule::getEffectiveStartTime, now)
+                    .and(q -> q.isNull(JkCommissionRule::getEffectiveEndTime).or().gt(JkCommissionRule::getEffectiveEndTime, now))
+                    .orderByDesc(JkCommissionRule::getPriority).orderByDesc(JkCommissionRule::getVersionNo).orderByDesc(JkCommissionRule::getId));
+        }
         List<JkCommissionRuleTrialResponse> result = new ArrayList<JkCommissionRuleTrialResponse>();
-        for (JkCommissionRule rule : ruleDao.selectList(query)) result.add(evaluate(rule, request));
+        for (JkCommissionRule rule : rules) result.add(evaluate(rule, request));
         applyStackPolicy(result);
         return result;
     }
@@ -56,6 +63,7 @@ public class CommissionScenarioServiceImpl implements CommissionScenarioService 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void dispatch(JkCommissionRuleTrialRequest request, String eventKey, String sourceNo, String requestNo) {
+        if (request.getRuleId() != null) throw new IllegalArgumentException("真实分发禁止指定草稿规则");
         List<JkCommissionRuleTrialResponse> trials = trial(request);
         boolean hasPayableMatch = false;
         for (JkCommissionRuleTrialResponse trial : trials) {
@@ -118,6 +126,7 @@ public class CommissionScenarioServiceImpl implements CommissionScenarioService 
                 .setExpectedSettleDate(new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(addDays(new Date(), rule.getSettleDelayDays())));
         response.getExplanations().add("受益人来自业务发生时快照，不读取当前关系");
         response.getExplanations().add("该结果属于 PLATFORM_PAYABLE；线下经营毛利单独记账");
+        if (!"PUBLISHED".equals(rule.getPublishStatus())) response.getExplanations().add("当前为草稿试算，结果不会真实入账");
         if (rule.getPerOrderCap() != null && raw.compareTo(capped) > 0) response.getExplanations().add("已应用单笔封顶");
         return response;
     }
