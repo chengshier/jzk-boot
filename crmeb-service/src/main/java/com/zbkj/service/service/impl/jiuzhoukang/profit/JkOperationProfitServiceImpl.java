@@ -72,6 +72,14 @@ public class JkOperationProfitServiceImpl implements JkOperationProfitService {
     }
 
     @Override
+    public JkOperationProfitRecord detail(Long viewerUserId, Long id, boolean admin) {
+        JkOperationProfitRecord row = recordDao.selectById(id);
+        if (row == null || Boolean.TRUE.equals(row.getIsDeleted())) throw new IllegalArgumentException("经营收益记录不存在");
+        if (!admin && !viewerUserId.equals(row.getUserId())) throw new IllegalArgumentException("无权查看该经营收益记录");
+        return row;
+    }
+
+    @Override
     @Transactional(rollbackFor = Exception.class)
     public void reverse(String sourceType, Long sourceId, Long sourceItemId, BigDecimal amount, String requestNo, String reason) {
         LambdaQueryWrapper<JkOperationProfitRecord> query = new LambdaQueryWrapper<JkOperationProfitRecord>()
