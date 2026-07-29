@@ -7,6 +7,7 @@ import cn.hutool.json.JSONUtil;
 import com.zbkj.common.model.user.UserToken;
 import com.zbkj.common.request.jiuzhoukang.JkSubscriptionTaskCreateRequest;
 import com.zbkj.service.service.UserTokenService;
+import com.zbkj.service.service.jiuzhoukang.support.JkAfterCommitExecutor;
 import com.zbkj.service.service.jiuzhoukang.wechat.JkSubscriptionBusinessNotificationService;
 import com.zbkj.service.service.jiuzhoukang.wechat.JkSubscriptionTaskService;
 import org.slf4j.Logger;
@@ -33,6 +34,7 @@ public class JkSubscriptionBusinessNotificationServiceImpl implements JkSubscrip
 
     @Autowired private JkSubscriptionTaskService taskService;
     @Autowired private UserTokenService userTokenService;
+    @Autowired private JkAfterCommitExecutor afterCommitExecutor;
 
     @Value("${jk.wechat.subscribe.audit-field-mapping:businessNo=character_string1,subject=thing2,status=phrase3,remark=thing4,time=time5}")
     private String auditFieldMapping;
@@ -89,8 +91,21 @@ public class JkSubscriptionBusinessNotificationServiceImpl implements JkSubscrip
         return semantic;
     }
 
-    private void enqueueSafely(String templateCode, String businessType, Long businessId, Long receiverUserId,
-                               String pagePath, Map<String, String> semantic, String fieldMapping, String stateKey) {
+    private void enqueueSafely(final String templateCode, final String businessType, final Long businessId,
+                               final Long receiverUserId, final String pagePath,
+                               final Map<String, String> semantic, final String fieldMapping, final String stateKey) {
+        final String taskRequestNo = requestNo(templateCode, businessType, businessId, stateKey);
+        afterCommitExecutor.execute("SUBSCRIPTION_TASK:" + taskRequestNo, new Runnable() {
+            @Override
+            public void run() {
+                enqueueNow(templateCode, businessType, businessId, receiverUserId, pagePath,
+                        semantic, fieldMapping, taskRequestNo);
+            }
+        });
+    }
+
+    private void enqueueNow(String templateCode, String businessType, Long businessId, Long receiverUserId,
+                            String pagePath, Map<String, String> semantic, String fieldMapping, String taskRequestNo) {
         try {
             if (businessId == null || receiverUserId == null) {
                 LOGGER.warn("订阅消息缺少业务ID或接收人，template={}, businessType={}, businessId={}, receiver={}",
@@ -105,7 +120,7 @@ public class JkSubscriptionBusinessNotificationServiceImpl implements JkSubscrip
             request.setRecipientOpenId(resolveMiniProgramOpenId(receiverUserId));
             request.setPagePath(normalizePagePath(pagePath));
             request.setPayloadJson(toWechatPayload(semantic, fieldMapping));
-            request.setRequestNo(requestNo(templateCode, businessType, businessId, stateKey));
+            request.setRequestNo(taskRequestNo);
             request.setMaxRetryCount(3);
             taskService.enqueue(request);
         } catch (Exception error) {
