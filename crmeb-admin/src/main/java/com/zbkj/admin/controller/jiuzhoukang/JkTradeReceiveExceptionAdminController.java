@@ -1,6 +1,7 @@
 package com.zbkj.admin.controller.jiuzhoukang;
 
 import com.zbkj.common.constants.jiuzhoukang.JkPermissionCodes;
+import com.zbkj.common.exception.CrmebException;
 import com.zbkj.common.model.jiuzhoukang.JkTradeReceiveException;
 import com.zbkj.common.page.CommonPage;
 import com.zbkj.common.request.PageParamRequest;
@@ -55,7 +56,7 @@ public class JkTradeReceiveExceptionAdminController {
     public CommonResult<JkTradeReceiveExceptionDetailResponse> handle(
             @RequestBody @Validated JkTradeReceiveExceptionHandleRequest request) {
         if ("RESOLVED".equalsIgnoreCase(request.getAction())) {
-            throw new IllegalArgumentException("异常处理完成必须通过 V2 分 SKU 方案，旧接口禁止直接完成");
+            throw new CrmebException("异常处理完成必须通过 V2 分 SKU 方案，旧接口禁止直接完成");
         }
         return CommonResult.success(service.handle(operatorId(), request));
     }
