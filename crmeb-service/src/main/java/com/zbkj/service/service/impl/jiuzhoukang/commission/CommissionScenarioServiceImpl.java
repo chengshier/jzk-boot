@@ -2,6 +2,8 @@ package com.zbkj.service.service.impl.jiuzhoukang.commission;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.IdWorker;
+import cn.hutool.json.JSONUtil;
+import cn.hutool.json.JSONObject;
 import com.zbkj.common.model.jiuzhoukang.JkCommissionMatchLog;
 import com.zbkj.common.model.jiuzhoukang.JkCommissionRecord;
 import com.zbkj.common.model.jiuzhoukang.JkCommissionRule;
@@ -115,6 +117,8 @@ public class CommissionScenarioServiceImpl implements CommissionScenarioService 
         if (Boolean.TRUE.equals(rule.getRequiresRegisteredCustomer()) && !Boolean.TRUE.equals(request.getRegisteredCustomer())) return reject(response, "REGISTERED_CUSTOMER_REQUIRED", "规则要求注册客户");
         if (Boolean.TRUE.equals(rule.getRequiresVoucher()) && !Boolean.TRUE.equals(request.getVoucherPresent())) return reject(response, "VOUCHER_REQUIRED", "规则要求凭证");
         if (Boolean.TRUE.equals(rule.getRequiresAudit()) && !Boolean.TRUE.equals(request.getAudited())) return reject(response, "AUDIT_REQUIRED", "规则要求审核通过");
+        String scopeReject = scopeReject(rule, request);
+        if (scopeReject != null) return reject(response, "BUSINESS_SCOPE_NOT_MATCH", scopeReject);
         Long beneficiary = beneficiary(rule.getBeneficiaryType(), request);
         if (beneficiary == null) return reject(response, "BENEFICIARY_NOT_FOUND", "业务快照无法解析受益人");
         response.setBeneficiaryUserId(beneficiary).setBeneficiaryRoleCode(rule.getReceiverRoleCode());
@@ -163,6 +167,23 @@ public class CommissionScenarioServiceImpl implements CommissionScenarioService 
         if ("FIXED_PER_ORDER".equals(type)) return rule.getFixedAmount();
         if ("FIXED_PER_ITEM".equals(type)) return rule.getFixedAmount() == null ? null : rule.getFixedAmount().multiply(new BigDecimal(Math.max(1, request.getQuantity() == null ? 1 : request.getQuantity())));
         if ("FIXED_PER_QUANTITY".equals(type)) return rule.getUnitAmount() == null ? null : rule.getUnitAmount().multiply(new BigDecimal(Math.max(0, request.getQuantity() == null ? 0 : request.getQuantity())));
+        if ("TIER_PERCENT".equals(type)) return rule.getRate() == null ? null : base.multiply(rule.getRate()).divide(new BigDecimal("100"), 6, RoundingMode.HALF_UP);
+        return null;
+    }
+
+    private String scopeReject(JkCommissionRule rule, JkCommissionRuleTrialRequest request) {
+        if (!notBlank(rule.getScopeConfigJson())) return null;
+        try {
+            JSONObject scope = JSONUtil.parseObj(rule.getScopeConfigJson());
+            java.util.List<Integer> productIds = scope.getBeanList("productIds", Integer.class);
+            if (productIds != null && !productIds.isEmpty() && (request.getProductId() == null || !productIds.contains(request.getProductId()))) return "商品不在规则适用范围";
+            java.util.List<String> regionCodes = scope.getBeanList("regionCodes", String.class);
+            if (regionCodes != null && !regionCodes.isEmpty() && (request.getRegionCode() == null || !regionCodes.contains(request.getRegionCode()))) return "区域不在规则适用范围";
+            BigDecimal threshold = scope.getBigDecimal("performanceThreshold");
+            if (threshold != null && threshold.signum() > 0 && money(request.getBaseAmount()).compareTo(threshold) < 0) return "有效业绩未达到配置门槛";
+        } catch (Exception ex) {
+            return "规则业务范围快照无法解析";
+        }
         return null;
     }
 

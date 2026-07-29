@@ -39,6 +39,16 @@ public class CommissionRuleServiceImpl extends ServiceImpl<JkCommissionRuleDao, 
         if (rule == null) throw new IllegalArgumentException("佣金规则不存在");
         if ("PUBLISHED".equals(rule.getPublishStatus())) throw new IllegalArgumentException("已发布规则不可直接编辑，请复制为新版本");
         BeanUtils.copyProperties(request, rule);
+        if (request.getPlanVersionNo() != null) {
+            rule.setPlanVersionNo(request.getPlanVersionNo());
+            rule.setVersionNo(request.getPlanVersionNo());
+        } else if (request.getVersionNo() != null) {
+            rule.setPlanVersionNo(request.getVersionNo());
+        }
+        if (StrUtil.isBlank(rule.getIncomeNature())) rule.setIncomeNature("PLATFORM_PAYABLE");
+        if (!"PLATFORM_PAYABLE".equals(rule.getIncomeNature())) {
+            throw new IllegalArgumentException("佣金规则只能生成 PLATFORM_PAYABLE；OFFLINE_REALIZED 必须留在经营收益账本");
+        }
         validateDraft(rule);
         Date now = new Date();
         if (rule.getId() == null) {
@@ -161,12 +171,16 @@ public class CommissionRuleServiceImpl extends ServiceImpl<JkCommissionRuleDao, 
         if (StrUtil.isNotBlank(rule.getBaseType()) && !Arrays.asList("ITEM_PAID_AMOUNT", "ORDER_PAID_AMOUNT_EXCLUDE_FREIGHT", "OFFLINE_SALE_PAID_AMOUNT", "VALID_PERFORMANCE_AMOUNT", "TRANSFER_AMOUNT", "PLATFORM_ORDER_AMOUNT", "VALID_QUANTITY", "REAL_GROSS_PROFIT").contains(rule.getBaseType())) throw new IllegalArgumentException("计算基数非法");
         if (StrUtil.isNotBlank(rule.getCalculationType()) && !Arrays.asList("PERCENT", "FIXED_PER_ORDER", "FIXED_PER_ITEM", "FIXED_PER_QUANTITY", "TIER_PERCENT").contains(rule.getCalculationType())) throw new IllegalArgumentException("计算方式非法");
         if (StrUtil.isNotBlank(rule.getStackPolicy()) && !Arrays.asList("MAX_ONE", "ALLOW_STACK", "HIGHEST_AMOUNT", "HIGHEST_PRIORITY").contains(rule.getStackPolicy())) throw new IllegalArgumentException("叠加策略非法");
+        if (StrUtil.isNotBlank(rule.getIncomeNature()) && !"PLATFORM_PAYABLE".equals(rule.getIncomeNature())) throw new IllegalArgumentException("收益性质只能为 PLATFORM_PAYABLE");
         nonNegative(rule.getRate(), "比例"); nonNegative(rule.getFixedAmount(), "固定金额"); nonNegative(rule.getUnitAmount(), "单位金额");
         nonNegative(rule.getPerOrderCap(), "单笔封顶"); nonNegative(rule.getPerUserPeriodCap(), "周期封顶"); nonNegative(rule.getTotalBudget(), "总预算");
     }
 
     private void validatePublish(JkCommissionRule rule, JkCommissionRulePublishRequest request) {
         validateDraft(rule);
+        if (rule.getPlanId() == null || StrUtil.isBlank(rule.getPlanCode()) || rule.getPlanVersionNo() == null) {
+            throw new IllegalArgumentException("发布前必须关联商业方案及不可变版本");
+        }
         if (StrUtil.isBlank(rule.getRuleCode()) || StrUtil.isBlank(rule.getRewardType()) || StrUtil.isBlank(rule.getReceiverRoleCode())
                 || StrUtil.isBlank(rule.getBeneficiaryType()) || StrUtil.isBlank(rule.getBaseType()) || StrUtil.isBlank(rule.getCalculationType())) {
             throw new IllegalArgumentException("发布前必须补齐规则编码、奖励类型、受益角色、受益人来源、计算基数和计算方式");
