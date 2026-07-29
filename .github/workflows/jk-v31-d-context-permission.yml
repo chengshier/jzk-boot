@@ -1,0 +1,45 @@
+name: jk-v31-d-context-permission
+on:
+  push:
+    branches: [feat/jzk-v3.1-phase3-operations]
+    paths: ['.github/workflows/jk-v31-d-context-permission.yml']
+permissions:
+  contents: write
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/jzk-v3.1-phase3-operations
+          fetch-depth: 0
+      - name: Add context permission
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('crmeb-common/src/main/java/com/zbkj/common/constants/jiuzhoukang/JkV31PermissionCodes.java')
+          s=p.read_text(encoding='utf-8')
+          anchor='    public static final String ADMIN_RETAIL_ATTRIBUTION_EXPORT = "admin:jk:retail:attribution:export";\n'
+          line='    public static final String ADMIN_BUSINESS_CONTEXT_VIEW = "admin:jk:business:context:view";\n'
+          if line not in s:
+              if anchor not in s: raise SystemExit('permission anchor missing')
+              s=s.replace(anchor,anchor+line,1)
+          p.write_text(s,encoding='utf-8')
+          sql=Path('sql/jiuzhoukang/v3.1-gapfix/04-jk-v31-period-tier-limit.sql')
+          q=sql.read_text(encoding='utf-8')
+          anchor="  UNION ALL SELECT 'admin:jk:performance:period:close','周期审核关闭','BUTTON','关闭后按已发布规则生成真实佣金并锁定'\n"
+          line="  UNION ALL SELECT 'admin:jk:business:context:view','统一业务上下文查看','BUTTON','只读查看订单归属业绩佣金退款和调整解释链'\n"
+          if line not in q:
+              if anchor not in q: raise SystemExit('sql permission anchor missing')
+              q=q.replace(anchor,anchor+line,1)
+          sql.write_text(q,encoding='utf-8')
+          PY
+      - name: Commit and remove workflow
+        run: |
+          rm -f .github/workflows/jk-v31-d-context-permission.yml
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add crmeb-common/src/main/java/com/zbkj/common/constants/jiuzhoukang/JkV31PermissionCodes.java sql/jiuzhoukang/v3.1-gapfix/04-jk-v31-period-tier-limit.sql .github/workflows/jk-v31-d-context-permission.yml
+          git commit -m 'feat(jzk-v3.1-d): 补充统一业务上下文只读权限'
+          git push origin HEAD:feat/jzk-v3.1-phase3-operations
