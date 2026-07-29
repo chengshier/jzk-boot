@@ -17,6 +17,7 @@ public final class JkV31PermissionCodes {
     public static final String ADMIN_STOCK_CHECK_LIST = "admin:jk:stock:check:list";
     public static final String ADMIN_STOCK_CHECK_AUDIT = "admin:jk:stock:check:audit";
     public static final String ADMIN_PROMOTION_SCENE_MANAGE = "admin:jk:promotion:scene:manage";
+    public static final String ADMIN_PROMOTION_EFFECT_VIEW = "admin:jk:promotion:effect:view";
     public static final String ADMIN_SUBSCRIPTION_TASK_LIST = "admin:jk:subscription:task:list";
     public static final String ADMIN_SUBSCRIPTION_TASK_MANAGE = "admin:jk:subscription:task:manage";
     public static final String ADMIN_HEALTH_REPORT_LIST = "admin:jk:health:report:list";
