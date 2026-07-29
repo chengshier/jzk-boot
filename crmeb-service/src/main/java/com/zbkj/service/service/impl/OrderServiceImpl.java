@@ -958,15 +958,18 @@ public class OrderServiceImpl implements OrderService {
         // 校验收货信息
         String verifyCode = "";
         String userAddressStr = "";
+        UserAddress selectedUserAddress = null;
         if (request.getShippingType() == 1) { // 快递配送
             if (request.getAddressId() <= 0) throw new CrmebException("请选择收货地址");
-            UserAddress userAddress = userAddressService.getById(request.getAddressId());
-            if (ObjectUtil.isNull(userAddress) || userAddress.getIsDel()) {
+            selectedUserAddress = userAddressService.getById(request.getAddressId());
+            if (ObjectUtil.isNull(selectedUserAddress) || selectedUserAddress.getIsDel()
+                    || !user.getUid().equals(selectedUserAddress.getUid())) {
                 throw new CrmebException("收货地址有误");
             }
-            request.setRealName(userAddress.getRealName());
-            request.setPhone(userAddress.getPhone());
-            userAddressStr = userAddress.getProvince() + userAddress.getCity() + userAddress.getDistrict() + userAddress.getDetail();
+            request.setRealName(selectedUserAddress.getRealName());
+            request.setPhone(selectedUserAddress.getPhone());
+            userAddressStr = selectedUserAddress.getProvince() + selectedUserAddress.getCity()
+                    + selectedUserAddress.getDistrict() + selectedUserAddress.getDetail();
         } else if (request.getShippingType() == 2) { // 到店自提
             if (StringUtils.isBlank(request.getRealName()) || StringUtils.isBlank(request.getPhone())) {
                 throw new CrmebException("请填写姓名和电话");
@@ -1069,6 +1072,11 @@ public class OrderServiceImpl implements OrderService {
         storeOrder.setRealName(request.getRealName());
         storeOrder.setUserPhone(request.getPhone());
         storeOrder.setUserAddress(userAddressStr);
+        if (selectedUserAddress != null) {
+            // 只固化到本单；不得反向覆盖 eb_user.jk_region_code。
+            storeOrder.setJkShippingAddressId(selectedUserAddress.getId());
+            storeOrder.setJkShippingRegionCode(selectedUserAddress.getJkRegionCode());
+        }
         // 如果是自提
         if (request.getShippingType() == 2) {
             storeOrder.setVerifyCode(verifyCode);

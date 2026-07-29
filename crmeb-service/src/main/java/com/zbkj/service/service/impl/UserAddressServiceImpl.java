@@ -16,6 +16,7 @@ import com.zbkj.service.dao.UserAddressDao;
 import com.zbkj.service.service.SystemCityService;
 import com.zbkj.service.service.UserAddressService;
 import com.zbkj.service.service.UserService;
+import com.zbkj.service.service.jiuzhoukang.region.JkRegionService;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -47,6 +48,9 @@ public class UserAddressServiceImpl extends ServiceImpl<UserAddressDao, UserAddr
     @Autowired
     private UserService userService;
 
+    @Autowired
+    private JkRegionService jkRegionService;
+
     /**
      * 列表
      *
@@ -58,7 +62,7 @@ public class UserAddressServiceImpl extends ServiceImpl<UserAddressDao, UserAddr
         PageHelper.startPage(pageParamRequest.getPage(), pageParamRequest.getLimit());
         LambdaQueryWrapper<UserAddress> lqw = Wrappers.lambdaQuery();
         lqw.select(UserAddress::getId, UserAddress::getRealName, UserAddress::getPhone, UserAddress::getProvince,
-                UserAddress::getCity, UserAddress::getDistrict, UserAddress::getDetail, UserAddress::getIsDefault);
+                UserAddress::getCity, UserAddress::getDistrict, UserAddress::getDetail, UserAddress::getJkRegionCode, UserAddress::getIsDefault);
         lqw.eq(UserAddress::getUid, UserId);
         lqw.eq(UserAddress::getIsDel, false);
         lqw.orderByDesc(UserAddress::getIsDefault);
@@ -97,6 +101,13 @@ public class UserAddressServiceImpl extends ServiceImpl<UserAddressDao, UserAddr
 
         if (request.getAddress().getCityId() > 0 && StrUtil.isNotBlank(request.getAddress().getDistrict())) {
             checkCity(userAddress.getCityId());
+        }
+        if (StrUtil.isNotBlank(request.getJkRegionCode())) {
+            // 必须由九州康区域级联组件提交有效编码；禁止只凭中文详细地址模糊解析。
+            jkRegionService.getRegionPath(request.getJkRegionCode().trim());
+            userAddress.setJkRegionCode(request.getJkRegionCode().trim());
+        } else {
+            userAddress.setJkRegionCode(null);
         }
         userAddress.setUid(userService.getUserIdException());
         if (userAddress.getIsDefault()) {
@@ -175,7 +186,7 @@ public class UserAddressServiceImpl extends ServiceImpl<UserAddressDao, UserAddr
         Integer UserId = userService.getUserIdException();
         LambdaQueryWrapper<UserAddress> lqw = Wrappers.lambdaQuery();
         lqw.select(UserAddress::getId, UserAddress::getRealName, UserAddress::getPhone, UserAddress::getProvince,
-                UserAddress::getCity, UserAddress::getDistrict, UserAddress::getDetail, UserAddress::getIsDefault);
+                UserAddress::getCity, UserAddress::getDistrict, UserAddress::getDetail, UserAddress::getJkRegionCode, UserAddress::getIsDefault);
         lqw.eq(UserAddress::getId, id);
         lqw.eq(UserAddress::getUid, UserId);
         lqw.eq(UserAddress::getIsDel, false);
