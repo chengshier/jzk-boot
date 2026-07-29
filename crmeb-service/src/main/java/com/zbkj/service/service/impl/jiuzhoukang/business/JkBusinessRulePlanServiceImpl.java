@@ -203,7 +203,7 @@ public class JkBusinessRulePlanServiceImpl implements JkBusinessRulePlanService 
     private List<String> safeList(List<String> values) { return values == null ? new ArrayList<String>() : values; }
     private List<String> parseStringList(String json) {
         if (StrUtil.isBlank(json)) return new ArrayList<String>();
-        try { return JSONUtil.toList(json, String.class); } catch (Exception ignored) { return new ArrayList<String>(); }
+        try { return JSONUtil.toList(JSONUtil.parseArray(json), String.class); } catch (Exception ignored) { return new ArrayList<String>(); }
     }
     private String templateName(String code) {
         if ("DIRECT_REFERRAL".equals(code)) return "直属推荐奖励";

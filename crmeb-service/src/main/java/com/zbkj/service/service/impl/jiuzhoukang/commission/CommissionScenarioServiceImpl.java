@@ -175,10 +175,14 @@ public class CommissionScenarioServiceImpl implements CommissionScenarioService 
         if (!notBlank(rule.getScopeConfigJson())) return null;
         try {
             JSONObject scope = JSONUtil.parseObj(rule.getScopeConfigJson());
-            java.util.List<Integer> productIds = scope.getBeanList("productIds", Integer.class);
-            if (productIds != null && !productIds.isEmpty() && (request.getProductId() == null || !productIds.contains(request.getProductId()))) return "商品不在规则适用范围";
-            java.util.List<String> regionCodes = scope.getBeanList("regionCodes", String.class);
-            if (regionCodes != null && !regionCodes.isEmpty() && (request.getRegionCode() == null || !regionCodes.contains(request.getRegionCode()))) return "区域不在规则适用范围";
+            java.util.List<Integer> productIds = scope.getJSONArray("productIds") == null
+                    ? new java.util.ArrayList<Integer>()
+                    : JSONUtil.toList(scope.getJSONArray("productIds"), Integer.class);
+            if (!productIds.isEmpty() && (request.getProductId() == null || !productIds.contains(request.getProductId()))) return "商品不在规则适用范围";
+            java.util.List<String> regionCodes = scope.getJSONArray("regionCodes") == null
+                    ? new java.util.ArrayList<String>()
+                    : JSONUtil.toList(scope.getJSONArray("regionCodes"), String.class);
+            if (!regionCodes.isEmpty() && (request.getRegionCode() == null || !regionCodes.contains(request.getRegionCode()))) return "区域不在规则适用范围";
             BigDecimal threshold = scope.getBigDecimal("performanceThreshold");
             if (threshold != null && threshold.signum() > 0 && money(request.getBaseAmount()).compareTo(threshold) < 0) return "有效业绩未达到配置门槛";
         } catch (Exception ex) {
