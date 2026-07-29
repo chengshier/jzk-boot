@@ -62,14 +62,15 @@ public class JkPlatformOrderController {
     @JkBizPermission(value = JkBizPermissionCodes.PAYMENT_OFFLINE_AUDIT, checkDataScope = true)
     public CommonResult<JkPlatformOrder> audit(@RequestBody @Validated JkPaymentAuditRequest request) {
         JkPlatformOrder order = platformOrderService.auditPayment(operatorId(), request);
+        boolean approved = "PAYMENT_APPROVED".equals(order.getStatus());
         notificationService.notifyAuditResult(
                 "PLATFORM_ORDER",
                 order.getId(),
                 order.getPlatformOrderNo(),
                 order.getUserId(),
                 "平台订货付款审核",
-                Boolean.TRUE.equals(request.getApproved()) ? "已通过" : "已驳回",
-                Boolean.TRUE.equals(request.getApproved()) ? request.getRemark() : order.getRejectReason(),
+                approved ? "已通过" : "已驳回",
+                approved ? request.getRemark() : order.getRejectReason(),
                 detailPage(order));
         return CommonResult.success(order);
     }
