@@ -1,0 +1,41 @@
+name: jk-v31-e-discover-phase3-closure
+on:
+  push:
+    branches: [feat/jzk-v3.1-phase3-operations]
+    paths: ['.github/workflows/jk-v31-e-discover-phase3-closure.yml']
+permissions:
+  contents: write
+jobs:
+  audit:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/jzk-v3.1-phase3-operations
+          fetch-depth: 0
+      - name: Discover phase3 implementations and side effects
+        shell: bash
+        run: |
+          mkdir -p docs/jzk-v3.1-gapfix
+          {
+            echo '# V3.1 E batch implementation discovery'
+            echo
+            echo '## Candidate files'
+            find crmeb-* -type f \( -name '*.java' -o -name '*.xml' \) | grep -Ei 'ReceiveException|ReportExport|Promotion(Code|Effect)|Subscription(Task|Message)|Health(Report|Authorization|Access|Privacy)|PrivateFile|Minio' | sort
+            echo
+            echo '## Real side-effect indicators'
+            grep -R -n --include='*.java' -E 'refund|reverse|restock|stockFlow|changeStock|Minio|upload|privateFile|export|subscribe|templateId|sendMessage|accessLog|authorization|privacy|revoke|PromotionEffect|scan|visit' crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang crmeb-admin/src/main/java/com/zbkj/admin/controller/jiuzhoukang crmeb-front/src/main/java/com/zbkj/front/controller/jiuzhoukang 2>/dev/null | head -n 2500 || true
+            echo
+            echo '## TODO and placeholder indicators'
+            grep -R -n --include='*.java' --include='*.xml' -E 'TODO|placeholder|mock|not implemented|暂未|仅记录|预留|return null|UnsupportedOperationException' crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang crmeb-admin/src/main/java/com/zbkj/admin/controller/jiuzhoukang crmeb-front/src/main/java/com/zbkj/front/controller/jiuzhoukang 2>/dev/null | head -n 1200 || true
+          } > docs/jzk-v3.1-gapfix/phase3-real-closure-discovery.txt
+      - name: Commit discovery and remove workflow
+        shell: bash
+        run: |
+          rm -f .github/workflows/jk-v31-e-discover-phase3-closure.yml
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add docs/jzk-v3.1-gapfix/phase3-real-closure-discovery.txt .github/workflows/jk-v31-e-discover-phase3-closure.yml
+          git commit -m 'chore(jzk-v3.1-e): 输出第三批真实闭环审计报告'
+          git push origin HEAD:feat/jzk-v3.1-phase3-operations
