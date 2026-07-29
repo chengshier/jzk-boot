@@ -1,0 +1,61 @@
+name: JZK V3.1 gapfix guards
+
+on:
+  push:
+    branches: [feat/jzk-v3.1-phase3-operations]
+  pull_request:
+    branches: [master]
+  workflow_dispatch:
+
+concurrency:
+  group: jk-v31-gapfix-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  prohibited-patterns:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate V3.1 SQL against real schema
+        shell: bash
+        run: |
+          set -euo pipefail
+          files=$(find sql/jiuzhoukang/v3.1-gapfix -type f -name '*.sql' -print)
+          if grep -n -E 'INSERT[[:space:]]+INTO[[:space:]]+eb_system_menu[^;]*(\bpath\b|\bis_del\b)' $files; then
+            echo 'V3.1 SQL must use component/is_delete for eb_system_menu' >&2; exit 1
+          fi
+          if grep -n -E 'jk_business_permission[^;]*parent_code' $files; then
+            echo 'jk_business_permission has no parent_code' >&2; exit 1
+          fi
+          if grep -R -n -E 'jk_user_region_profile|用户服务区域' sql/jiuzhoukang/v3.1-gapfix crmeb-*; then
+            echo 'Do not create an independent user service-region table/page' >&2; exit 1
+          fi
+      - name: Enforce disabled commission templates
+        shell: bash
+        run: |
+          set -euo pipefail
+          if grep -R -n --include='*.sql' -E "template_code[^;]*(status[^;]*=[[:space:]]*1|PUBLISHED)" sql/jiuzhoukang/v3.1-gapfix; then
+            echo 'No commission template may be enabled or published by seed SQL' >&2; exit 1
+          fi
+          grep -q 'rule.setStatus(false)' crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/commission/CommissionRuleServiceImpl.java
+          grep -q 'setPublishStatus("DRAFT")' crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/commission/CommissionRuleServiceImpl.java
+      - name: Enforce snapshot attribution and financial separation
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q 'RetailOrderAttribution' crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/commission/CommissionTriggerServiceImpl.java
+          grep -q 'PLATFORM_PAYABLE' crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/commission/CommissionRuleServiceImpl.java
+          if grep -R -n --include='*.java' 'setIncomeNature("OFFLINE_REALIZED")' crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/commission; then
+            echo 'OFFLINE_REALIZED must not be emitted by commission services' >&2; exit 1
+          fi
+          grep -q 'PENDING_COMPENSATION' crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/order/JkRetailAttributionAdminServiceImpl.java
+      - name: Enforce real business closure markers
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q 'FOR UPDATE' crmeb-service/src/main/java/com/zbkj/service/dao/jiuzhoukang/JkCommissionLimitUsageDao.java
+          grep -q 'RETAIL_ORDER", "OFFLINE_SALE' crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/performance/JkPerformancePeriodServiceImpl.java
+          grep -q 'recordRetailCompleted' crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/commission/CommissionScenarioServiceImpl.java
+          test -f sql/jiuzhoukang/v3.1-gapfix/00-jk-v31-schema-precheck.sql
+          test -f sql/jiuzhoukang/v3.1-gapfix/05-jk-v31-promotion-effect.sql
