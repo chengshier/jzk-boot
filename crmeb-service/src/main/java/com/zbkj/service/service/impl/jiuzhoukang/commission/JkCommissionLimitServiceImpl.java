@@ -115,17 +115,18 @@ public class JkCommissionLimitServiceImpl implements JkCommissionLimitService {
 
     private JkCommissionLimitUsage lockOrCreate(String type, Long ruleId, Long userId,
                                                 String periodKey, BigDecimal limit, Date now) {
-        JkCommissionLimitUsage usage = usageDao.selectForUpdate(type, ruleId, userId, periodKey);
+        Long dbUserId = userId == null ? 0L : userId;
+        JkCommissionLimitUsage usage = usageDao.selectForUpdate(type, ruleId, dbUserId, periodKey);
         if (usage != null) return usage;
         JkCommissionLimitUsage created = new JkCommissionLimitUsage()
-                .setUsageType(type).setRuleId(ruleId).setUserId(userId).setPeriodKey(periodKey)
+                .setUsageType(type).setRuleId(ruleId).setUserId(dbUserId).setPeriodKey(periodKey)
                 .setLimitAmount(limit).setUsedAmount(ZERO).setVersion(0).setCreateTime(now).setUpdateTime(now);
         try {
             usageDao.insert(created);
         } catch (DuplicateKeyException ignored) {
             // 并发创建由唯一索引裁决，随后重新加锁读取。
         }
-        usage = usageDao.selectForUpdate(type, ruleId, userId, periodKey);
+        usage = usageDao.selectForUpdate(type, ruleId, dbUserId, periodKey);
         if (usage == null) throw new IllegalStateException("佣金限额占用行创建失败");
         return usage;
     }
