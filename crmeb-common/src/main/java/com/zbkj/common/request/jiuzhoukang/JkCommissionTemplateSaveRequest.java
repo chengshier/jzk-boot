@@ -22,6 +22,8 @@ public class JkCommissionTemplateSaveRequest implements Serializable {
     @NotNull(message = "奖励数值不能为空") private BigDecimal rewardValue;
     private List<Integer> productIds;
     private List<String> regionCodes;
+    private BigDecimal performanceThreshold;
+    private String periodType;
     private BigDecimal perOrderCap;
     private BigDecimal perUserPeriodCap;
     private Integer settleDelayDays;
