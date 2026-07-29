@@ -6,16 +6,19 @@ import cn.hutool.http.HttpResponse;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import com.github.pagehelper.Page;
 import com.github.pagehelper.PageHelper;
 import com.github.pagehelper.PageInfo;
 import com.zbkj.common.exception.CrmebException;
 import com.zbkj.common.model.jiuzhoukang.JkSubscriptionTask;
+import com.zbkj.common.model.user.UserToken;
 import com.zbkj.common.page.CommonPage;
 import com.zbkj.common.request.PageParamRequest;
 import com.zbkj.common.request.jiuzhoukang.JkSubscriptionTaskCreateRequest;
 import com.zbkj.service.dao.jiuzhoukang.JkSubscriptionTaskDao;
+import com.zbkj.service.service.UserTokenService;
 import com.zbkj.service.service.jiuzhoukang.wechat.JkSubscriptionTaskService;
 import com.zbkj.service.service.jiuzhoukang.wechat.JkWechatAccessTokenService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -40,14 +43,17 @@ import java.util.Map;
 @Service
 public class JkSubscriptionTaskServiceImpl implements JkSubscriptionTaskService {
     private static final String PENDING = "PENDING";
+    private static final String PROCESSING = "PROCESSING";
     private static final String RETRY_WAIT = "RETRY_WAIT";
     private static final String WAIT_CONFIG = "WAIT_CONFIG";
     private static final String WAIT_RECIPIENT = "WAIT_RECIPIENT";
     private static final String SENT = "SENT";
     private static final String FAILED = "FAILED";
+    private static final int MINI_PROGRAM_TOKEN_TYPE = 2;
 
     @Autowired private JkSubscriptionTaskDao taskDao;
     @Autowired private JkWechatAccessTokenService tokenService;
+    @Autowired private UserTokenService userTokenService;
 
     @Value("${jk.wechat.subscribe-enabled:false}") private boolean subscribeEnabled;
     @Value("${jk.wechat.subscribe.audit-template-id:}") private String auditTemplateId;
@@ -63,19 +69,13 @@ public class JkSubscriptionTaskServiceImpl implements JkSubscriptionTaskService 
         if (old != null) return enrich(old);
         Date now = new Date();
         String templateId = templateId(request.getTemplateCode());
-        String initialStatus = PENDING;
-        String initialError = null;
-        if (!subscribeEnabled || StrUtil.isBlank(templateId)) {
-            initialStatus = WAIT_CONFIG;
-            initialError = !subscribeEnabled ? "订阅消息总开关未启用" : "模板ID未配置";
-        } else if (StrUtil.isBlank(request.getRecipientOpenId())) {
-            initialStatus = WAIT_RECIPIENT;
-            initialError = "缺少来自可信微信登录上下文的openId";
-        }
+        String trustedOpenId = trustedOpenId(request.getReceiverUserId());
+        String initialStatus = resolveReadyStatus(templateId, trustedOpenId);
+        String initialError = initialError(initialStatus);
         JkSubscriptionTask task = new JkSubscriptionTask().setTaskNo("SM" + IdWorker.getIdStr())
                 .setTemplateCode(normalizeTemplateCode(request.getTemplateCode())).setTemplateId(templateId)
                 .setBusinessType(request.getBusinessType()).setBusinessId(request.getBusinessId())
-                .setReceiverUserId(request.getReceiverUserId()).setRecipientOpenId(request.getRecipientOpenId())
+                .setReceiverUserId(request.getReceiverUserId()).setRecipientOpenId(trustedOpenId)
                 .setPagePath(request.getPagePath()).setPayloadJson(normalizePayload(request.getPayloadJson()))
                 .setStatus(initialStatus).setRetryCount(0)
                 .setMaxRetryCount(request.getMaxRetryCount() == null ? 3 : Math.max(0, Math.min(10, request.getMaxRetryCount())))
@@ -96,12 +96,22 @@ public class JkSubscriptionTaskServiceImpl implements JkSubscriptionTaskService 
     public int processDue(int limit) {
         int size = Math.max(1, Math.min(100, limit));
         Date now = new Date();
+        Date staleBefore = addMinutes(now, -10);
         List<JkSubscriptionTask> tasks = taskDao.selectList(new LambdaQueryWrapper<JkSubscriptionTask>()
-                .in(JkSubscriptionTask::getStatus, Arrays.asList(PENDING, RETRY_WAIT))
-                .and(q -> q.isNull(JkSubscriptionTask::getNextRetryTime).or().le(JkSubscriptionTask::getNextRetryTime, now))
-                .eq(JkSubscriptionTask::getIsDeleted, false).orderByAsc(JkSubscriptionTask::getId).last("limit " + size));
+                .and(q -> q.in(JkSubscriptionTask::getStatus, Arrays.asList(PENDING, RETRY_WAIT))
+                        .and(due -> due.isNull(JkSubscriptionTask::getNextRetryTime)
+                                .or().le(JkSubscriptionTask::getNextRetryTime, now))
+                        .or(stale -> stale.eq(JkSubscriptionTask::getStatus, PROCESSING)
+                                .le(JkSubscriptionTask::getUpdateTime, staleBefore)))
+                .eq(JkSubscriptionTask::getIsDeleted, false)
+                .orderByAsc(JkSubscriptionTask::getId)
+                .last("limit " + size));
         int sent = 0;
-        for (JkSubscriptionTask task : tasks) if (processOne(task)) sent++;
+        for (JkSubscriptionTask task : tasks) {
+            if (!claim(task, now, staleBefore)) continue;
+            JkSubscriptionTask claimed = require(task.getId());
+            if (processOne(claimed)) sent++;
+        }
         return sent;
     }
 
@@ -111,9 +121,13 @@ public class JkSubscriptionTaskServiceImpl implements JkSubscriptionTaskService 
         JkSubscriptionTask task = require(taskId);
         if (SENT.equals(task.getStatus())) throw new CrmebException("已发送任务不能重试");
         String templateId = templateId(task.getTemplateCode());
-        task.setTemplateId(templateId).setRetryCount(0).setNextRetryTime(new Date())
-                .setErrorCode(null).setErrorMessage(StrUtil.blankToDefault(reason, "管理员重新入队"))
-                .setStatus(resolveReadyStatus(templateId, task.getRecipientOpenId())).setUpdateTime(new Date());
+        String trustedOpenId = trustedOpenId(task.getReceiverUserId());
+        String readyStatus = resolveReadyStatus(templateId, trustedOpenId);
+        task.setTemplateId(templateId).setRecipientOpenId(trustedOpenId).setRetryCount(0)
+                .setNextRetryTime(PENDING.equals(readyStatus) ? new Date() : null)
+                .setErrorCode(null).setErrorMessage(PENDING.equals(readyStatus)
+                        ? StrUtil.blankToDefault(reason, "管理员重新入队") : initialError(readyStatus))
+                .setStatus(readyStatus).setUpdateTime(new Date());
         taskDao.updateById(task);
         return enrich(task);
     }
@@ -141,11 +155,27 @@ public class JkSubscriptionTaskServiceImpl implements JkSubscriptionTaskService 
         result.put("receiveTemplateConfigured", StrUtil.isNotBlank(receiveTemplateId));
         result.put("withdrawTemplateConfigured", StrUtil.isNotBlank(withdrawTemplateId));
         result.put("pending", count(PENDING) + count(RETRY_WAIT));
+        result.put("processing", count(PROCESSING));
         result.put("waitConfig", count(WAIT_CONFIG));
         result.put("waitRecipient", count(WAIT_RECIPIENT));
         result.put("failed", count(FAILED));
         result.put("ready", subscribeEnabled && Boolean.TRUE.equals(tokenService.status().get("ready")));
         return result;
+    }
+
+    private boolean claim(JkSubscriptionTask task, Date now, Date staleBefore) {
+        LambdaUpdateWrapper<JkSubscriptionTask> update = new LambdaUpdateWrapper<JkSubscriptionTask>()
+                .eq(JkSubscriptionTask::getId, task.getId())
+                .eq(JkSubscriptionTask::getIsDeleted, false)
+                .set(JkSubscriptionTask::getStatus, PROCESSING)
+                .set(JkSubscriptionTask::getUpdateTime, now);
+        if (PROCESSING.equals(task.getStatus())) {
+            update.eq(JkSubscriptionTask::getStatus, PROCESSING)
+                    .le(JkSubscriptionTask::getUpdateTime, staleBefore);
+        } else {
+            update.eq(JkSubscriptionTask::getStatus, task.getStatus());
+        }
+        return taskDao.update(null, update) == 1;
     }
 
     private boolean processOne(JkSubscriptionTask task) {
@@ -155,13 +185,16 @@ public class JkSubscriptionTaskServiceImpl implements JkSubscriptionTaskService 
                     !subscribeEnabled ? "订阅消息总开关未启用" : "模板ID未配置");
             return false;
         }
-        if (StrUtil.isBlank(task.getRecipientOpenId())) {
+        String trustedOpenId = trustedOpenId(task.getReceiverUserId());
+        if (StrUtil.isBlank(trustedOpenId)) {
+            task.setRecipientOpenId(null);
             updateWait(task, WAIT_RECIPIENT, "RECIPIENT_OPENID_MISSING", "缺少来自可信微信登录上下文的openId");
             return false;
         }
+        task.setRecipientOpenId(trustedOpenId);
         try {
             JSONObject body = new JSONObject();
-            body.put("touser", task.getRecipientOpenId());
+            body.put("touser", trustedOpenId);
             body.put("template_id", templateId);
             if (StrUtil.isNotBlank(task.getPagePath())) body.put("page", task.getPagePath());
             body.put("miniprogram_state", "formal");
@@ -200,6 +233,22 @@ public class JkSubscriptionTaskServiceImpl implements JkSubscriptionTaskService 
     private void updateWait(JkSubscriptionTask task, String status, String code, String message) {
         task.setStatus(status).setNextRetryTime(null).setErrorCode(code).setErrorMessage(message).setUpdateTime(new Date());
         taskDao.updateById(task);
+    }
+
+    private String trustedOpenId(Long userId) {
+        if (userId == null || userId <= 0 || userId > Integer.MAX_VALUE) return null;
+        try {
+            UserToken token = userTokenService.getTokenByUserId(userId.intValue(), MINI_PROGRAM_TOKEN_TYPE);
+            return token == null ? null : StrUtil.trim(token.getToken());
+        } catch (Exception ignored) {
+            return null;
+        }
+    }
+
+    private String initialError(String status) {
+        if (WAIT_CONFIG.equals(status)) return !subscribeEnabled ? "订阅消息总开关未启用" : "模板ID未配置";
+        if (WAIT_RECIPIENT.equals(status)) return "缺少来自可信微信登录上下文的openId";
+        return null;
     }
 
     private String resolveReadyStatus(String templateId, String openId) {
@@ -250,6 +299,7 @@ public class JkSubscriptionTaskServiceImpl implements JkSubscriptionTaskService 
 
     private String statusText(String status) {
         if (PENDING.equals(status)) return "待发送";
+        if (PROCESSING.equals(status)) return "发送处理中";
         if (RETRY_WAIT.equals(status)) return "等待重试";
         if (WAIT_CONFIG.equals(status)) return "等待配置";
         if (WAIT_RECIPIENT.equals(status)) return "等待接收人授权";
