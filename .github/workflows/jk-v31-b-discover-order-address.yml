@@ -1,0 +1,36 @@
+name: jk-v31-b-discover-order-address
+on:
+  push:
+    branches: [feat/jzk-v3.1-phase3-operations]
+    paths: ['.github/workflows/jk-v31-b-discover-order-address.yml']
+permissions:
+  contents: write
+jobs:
+  discover:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/jzk-v3.1-phase3-operations
+          fetch-depth: 0
+      - name: Locate order address write points
+        shell: bash
+        run: |
+          mkdir -p docs/jzk-v3.1-gapfix
+          {
+            echo '# setUserAddress / addressId write points'
+            grep -R -n --include='*.java' -E 'setUserAddress\(|getAddressId\(|addressId|UserAddressService' crmeb-* 2>/dev/null | head -n 500 || true
+            echo
+            echo '# RetailOrderAttributionService call points'
+            grep -R -n --include='*.java' -E 'RetailOrderAttributionService|\.snapshot\(.*StoreOrder|attributionService\.snapshot' crmeb-* 2>/dev/null | head -n 300 || true
+          } > docs/jzk-v3.1-gapfix/order-address-write-points.txt
+      - name: Commit discovery report and remove workflow
+        shell: bash
+        run: |
+          rm -f .github/workflows/jk-v31-b-discover-order-address.yml
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add docs/jzk-v3.1-gapfix/order-address-write-points.txt .github/workflows/jk-v31-b-discover-order-address.yml
+          git commit -m 'chore(jzk-v3.1-b): 定位订单收货区域写入点'
+          git push origin HEAD:feat/jzk-v3.1-phase3-operations
