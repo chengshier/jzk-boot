@@ -71,7 +71,7 @@ public class JkSubscriptionTaskServiceImpl implements JkSubscriptionTaskService 
         String templateId = templateId(request.getTemplateCode());
         String trustedOpenId = trustedOpenId(request.getReceiverUserId());
         String initialStatus = resolveReadyStatus(templateId, trustedOpenId);
-        String initialError = initialError(initialStatus);
+        String initialError = initialError(initialStatus, templateId);
         JkSubscriptionTask task = new JkSubscriptionTask().setTaskNo("SM" + IdWorker.getIdStr())
                 .setTemplateCode(normalizeTemplateCode(request.getTemplateCode())).setTemplateId(templateId)
                 .setBusinessType(request.getBusinessType()).setBusinessId(request.getBusinessId())
@@ -126,7 +126,7 @@ public class JkSubscriptionTaskServiceImpl implements JkSubscriptionTaskService 
         task.setTemplateId(templateId).setRecipientOpenId(trustedOpenId).setRetryCount(0)
                 .setNextRetryTime(PENDING.equals(readyStatus) ? new Date() : null)
                 .setErrorCode(null).setErrorMessage(PENDING.equals(readyStatus)
-                        ? StrUtil.blankToDefault(reason, "管理员重新入队") : initialError(readyStatus))
+                        ? StrUtil.blankToDefault(reason, "管理员重新入队") : initialError(readyStatus, templateId))
                 .setStatus(readyStatus).setUpdateTime(new Date());
         taskDao.updateById(task);
         return enrich(task);
@@ -147,9 +147,10 @@ public class JkSubscriptionTaskServiceImpl implements JkSubscriptionTaskService 
 
     @Override
     public Map<String, Object> status() {
+        Map<String, Object> wechatStatus = tokenService.status();
         Map<String, Object> result = new LinkedHashMap<String, Object>();
         result.put("enabled", subscribeEnabled);
-        result.put("wechat", tokenService.status());
+        result.put("wechat", wechatStatus);
         result.put("auditTemplateConfigured", StrUtil.isNotBlank(auditTemplateId));
         result.put("transferTemplateConfigured", StrUtil.isNotBlank(transferTemplateId));
         result.put("receiveTemplateConfigured", StrUtil.isNotBlank(receiveTemplateId));
@@ -159,7 +160,7 @@ public class JkSubscriptionTaskServiceImpl implements JkSubscriptionTaskService 
         result.put("waitConfig", count(WAIT_CONFIG));
         result.put("waitRecipient", count(WAIT_RECIPIENT));
         result.put("failed", count(FAILED));
-        result.put("ready", subscribeEnabled && Boolean.TRUE.equals(tokenService.status().get("ready")));
+        result.put("ready", subscribeEnabled && Boolean.TRUE.equals(wechatStatus.get("ready")));
         return result;
     }
 
@@ -180,9 +181,20 @@ public class JkSubscriptionTaskServiceImpl implements JkSubscriptionTaskService 
 
     private boolean processOne(JkSubscriptionTask task) {
         String templateId = templateId(task.getTemplateCode());
-        if (!subscribeEnabled || StrUtil.isBlank(templateId)) {
-            updateWait(task, WAIT_CONFIG, !subscribeEnabled ? "SUBSCRIBE_DISABLED" : "TEMPLATE_NOT_CONFIGURED",
-                    !subscribeEnabled ? "订阅消息总开关未启用" : "模板ID未配置");
+        if (!subscribeEnabled || !wechatReady() || StrUtil.isBlank(templateId)) {
+            String code;
+            String message;
+            if (!subscribeEnabled) {
+                code = "SUBSCRIBE_DISABLED";
+                message = "订阅消息总开关未启用";
+            } else if (!wechatReady()) {
+                code = "WECHAT_NOT_READY";
+                message = "微信能力、appid或secret未配置完整";
+            } else {
+                code = "TEMPLATE_NOT_CONFIGURED";
+                message = "模板ID未配置";
+            }
+            updateWait(task, WAIT_CONFIG, code, message);
             return false;
         }
         String trustedOpenId = trustedOpenId(task.getReceiverUserId());
@@ -245,14 +257,23 @@ public class JkSubscriptionTaskServiceImpl implements JkSubscriptionTaskService 
         }
     }
 
-    private String initialError(String status) {
-        if (WAIT_CONFIG.equals(status)) return !subscribeEnabled ? "订阅消息总开关未启用" : "模板ID未配置";
+    private boolean wechatReady() {
+        return Boolean.TRUE.equals(tokenService.status().get("ready"));
+    }
+
+    private String initialError(String status, String templateId) {
+        if (WAIT_CONFIG.equals(status)) {
+            if (!subscribeEnabled) return "订阅消息总开关未启用";
+            if (!wechatReady()) return "微信能力、appid或secret未配置完整";
+            if (StrUtil.isBlank(templateId)) return "模板ID未配置";
+            return "订阅消息配置未就绪";
+        }
         if (WAIT_RECIPIENT.equals(status)) return "缺少来自可信微信登录上下文的openId";
         return null;
     }
 
     private String resolveReadyStatus(String templateId, String openId) {
-        if (!subscribeEnabled || StrUtil.isBlank(templateId)) return WAIT_CONFIG;
+        if (!subscribeEnabled || !wechatReady() || StrUtil.isBlank(templateId)) return WAIT_CONFIG;
         if (StrUtil.isBlank(openId)) return WAIT_RECIPIENT;
         return PENDING;
     }
