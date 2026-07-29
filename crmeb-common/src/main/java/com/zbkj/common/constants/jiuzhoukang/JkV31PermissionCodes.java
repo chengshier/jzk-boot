@@ -28,6 +28,7 @@ public final class JkV31PermissionCodes {
     public static final String ADMIN_RETAIL_ATTRIBUTION_RESOLVE = "admin:jk:retail:attribution:resolve";
     public static final String ADMIN_RETAIL_ATTRIBUTION_ADJUST = "admin:jk:retail:attribution:adjust";
     public static final String ADMIN_RETAIL_ATTRIBUTION_EXPORT = "admin:jk:retail:attribution:export";
+    public static final String ADMIN_BUSINESS_CONTEXT_VIEW = "admin:jk:business:context:view";
 
     public static final String ADMIN_BUSINESS_PLAN_LIST = "admin:jk:business:plan:list";
     public static final String ADMIN_BUSINESS_PLAN_EDIT = "admin:jk:business:plan:edit";

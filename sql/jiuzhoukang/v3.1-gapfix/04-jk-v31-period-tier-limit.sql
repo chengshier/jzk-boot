@@ -166,6 +166,7 @@ FROM (
   UNION ALL SELECT 'admin:jk:performance:period:build','周期业绩构建','BUTTON','只汇总有效终端销售业绩'
   UNION ALL SELECT 'admin:jk:performance:period:trial','周期奖励试算','BUTTON','试算不写佣金'
   UNION ALL SELECT 'admin:jk:performance:period:close','周期审核关闭','BUTTON','关闭后按已发布规则生成真实佣金并锁定'
+  UNION ALL SELECT 'admin:jk:business:context:view','统一业务上下文查看','BUTTON','只读查看订单归属业绩佣金退款和调整解释链'
 ) seed
 WHERE NOT EXISTS(SELECT 1 FROM jk_business_permission p WHERE p.permission_code=seed.code AND p.is_deleted=0);
 
