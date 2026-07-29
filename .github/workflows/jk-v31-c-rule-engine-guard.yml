@@ -1,0 +1,63 @@
+name: jk-v31-c-rule-engine-guard
+on:
+  push:
+    branches: [feat/jzk-v3.1-phase3-operations]
+    paths: ['.github/workflows/jk-v31-c-rule-engine-guard.yml']
+permissions:
+  contents: write
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/jzk-v3.1-phase3-operations
+          fetch-depth: 0
+      - name: Enforce plan, scope and platform-payable rules
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          rule_path = Path('crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/commission/CommissionRuleServiceImpl.java')
+          text = rule_path.read_text(encoding='utf-8')
+          old = '''        BeanUtils.copyProperties(request, rule);\n        validateDraft(rule);\n'''
+          new = '''        BeanUtils.copyProperties(request, rule);\n        if (request.getPlanVersionNo() != null) {\n            rule.setPlanVersionNo(request.getPlanVersionNo());\n            rule.setVersionNo(request.getPlanVersionNo());\n        } else if (request.getVersionNo() != null) {\n            rule.setPlanVersionNo(request.getVersionNo());\n        }\n        if (StrUtil.isBlank(rule.getIncomeNature())) rule.setIncomeNature("PLATFORM_PAYABLE");\n        if (!"PLATFORM_PAYABLE".equals(rule.getIncomeNature())) {\n            throw new IllegalArgumentException("佣金规则只能生成 PLATFORM_PAYABLE；OFFLINE_REALIZED 必须留在经营收益账本");\n        }\n        validateDraft(rule);\n'''
+          if old not in text: raise SystemExit('saveRule anchor missing')
+          text = text.replace(old, new, 1)
+          old = '''        if (StrUtil.isNotBlank(rule.getStackPolicy()) && !Arrays.asList("MAX_ONE", "ALLOW_STACK", "HIGHEST_AMOUNT", "HIGHEST_PRIORITY").contains(rule.getStackPolicy())) throw new IllegalArgumentException("叠加策略非法");\n'''
+          new = old + '''        if (StrUtil.isNotBlank(rule.getIncomeNature()) && !"PLATFORM_PAYABLE".equals(rule.getIncomeNature())) throw new IllegalArgumentException("收益性质只能为 PLATFORM_PAYABLE");\n'''
+          if old not in text: raise SystemExit('validateDraft anchor missing')
+          text = text.replace(old, new, 1)
+          old = '''        validateDraft(rule);\n        if (StrUtil.isBlank(rule.getRuleCode()) || StrUtil.isBlank(rule.getRewardType()) || StrUtil.isBlank(rule.getReceiverRoleCode())\n'''
+          new = '''        validateDraft(rule);\n        if (rule.getPlanId() == null || StrUtil.isBlank(rule.getPlanCode()) || rule.getPlanVersionNo() == null) {\n            throw new IllegalArgumentException("发布前必须关联商业方案及不可变版本");\n        }\n        if (StrUtil.isBlank(rule.getRuleCode()) || StrUtil.isBlank(rule.getRewardType()) || StrUtil.isBlank(rule.getReceiverRoleCode())\n'''
+          if old not in text: raise SystemExit('validatePublish anchor missing')
+          rule_path.write_text(text.replace(old, new, 1), encoding='utf-8')
+
+          scenario_path = Path('crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/commission/CommissionScenarioServiceImpl.java')
+          text = scenario_path.read_text(encoding='utf-8')
+          old = 'import com.baomidou.mybatisplus.core.toolkit.IdWorker;\n'
+          new = old + 'import cn.hutool.json.JSONUtil;\nimport cn.hutool.json.JSONObject;\n'
+          if old not in text: raise SystemExit('scenario import anchor missing')
+          text = text.replace(old, new, 1)
+          old = '''        if (Boolean.TRUE.equals(rule.getRequiresAudit()) && !Boolean.TRUE.equals(request.getAudited())) return reject(response, "AUDIT_REQUIRED", "规则要求审核通过");\n        Long beneficiary = beneficiary(rule.getBeneficiaryType(), request);\n'''
+          new = '''        if (Boolean.TRUE.equals(rule.getRequiresAudit()) && !Boolean.TRUE.equals(request.getAudited())) return reject(response, "AUDIT_REQUIRED", "规则要求审核通过");\n        String scopeReject = scopeReject(rule, request);\n        if (scopeReject != null) return reject(response, "BUSINESS_SCOPE_NOT_MATCH", scopeReject);\n        Long beneficiary = beneficiary(rule.getBeneficiaryType(), request);\n'''
+          if old not in text: raise SystemExit('scenario evaluate anchor missing')
+          text = text.replace(old, new, 1)
+          old = '''        if ("FIXED_PER_QUANTITY".equals(type)) return rule.getUnitAmount() == null ? null : rule.getUnitAmount().multiply(new BigDecimal(Math.max(0, request.getQuantity() == null ? 0 : request.getQuantity())));\n        return null;\n    }\n\n    private Long beneficiary'''
+          new = '''        if ("FIXED_PER_QUANTITY".equals(type)) return rule.getUnitAmount() == null ? null : rule.getUnitAmount().multiply(new BigDecimal(Math.max(0, request.getQuantity() == null ? 0 : request.getQuantity())));\n        if ("TIER_PERCENT".equals(type)) return rule.getRate() == null ? null : base.multiply(rule.getRate()).divide(new BigDecimal("100"), 6, RoundingMode.HALF_UP);\n        return null;\n    }\n\n    private String scopeReject(JkCommissionRule rule, JkCommissionRuleTrialRequest request) {\n        if (!notBlank(rule.getScopeConfigJson())) return null;\n        try {\n            JSONObject scope = JSONUtil.parseObj(rule.getScopeConfigJson());\n            java.util.List<Integer> productIds = scope.getBeanList("productIds", Integer.class);\n            if (productIds != null && !productIds.isEmpty() && (request.getProductId() == null || !productIds.contains(request.getProductId()))) return "商品不在规则适用范围";\n            java.util.List<String> regionCodes = scope.getBeanList("regionCodes", String.class);\n            if (regionCodes != null && !regionCodes.isEmpty() && (request.getRegionCode() == null || !regionCodes.contains(request.getRegionCode()))) return "区域不在规则适用范围";\n            BigDecimal threshold = scope.getBigDecimal("performanceThreshold");\n            if (threshold != null && threshold.signum() > 0 && money(request.getBaseAmount()).compareTo(threshold) < 0) return "有效业绩未达到配置门槛";\n        } catch (Exception ex) {\n            return "规则业务范围快照无法解析";\n        }\n        return null;\n    }\n\n    private Long beneficiary'''
+          if old not in text: raise SystemExit('scenario calculate anchor missing')
+          scenario_path.write_text(text.replace(old, new, 1), encoding='utf-8')
+          PY
+      - name: Commit and remove workflow
+        shell: bash
+        run: |
+          rm -f .github/workflows/jk-v31-c-rule-engine-guard.yml
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/commission/CommissionRuleServiceImpl.java \
+                  crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/commission/CommissionScenarioServiceImpl.java \
+                  .github/workflows/jk-v31-c-rule-engine-guard.yml
+          git commit -m 'fix(jzk-v3.1-c): 约束方案范围与平台应付奖励匹配'
+          git push origin HEAD:feat/jzk-v3.1-phase3-operations
