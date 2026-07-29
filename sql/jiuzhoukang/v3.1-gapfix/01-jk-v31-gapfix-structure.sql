@@ -22,6 +22,7 @@ DELIMITER ;
 CALL jk_v31_add_column_if_missing('eb_user','jk_region_code',"varchar(64) DEFAULT NULL COMMENT '九州康用户标准所属区域编码'");
 CALL jk_v31_add_column_if_missing('eb_user','jk_region_source',"varchar(32) DEFAULT NULL COMMENT 'USER_PROFILE/ADMIN/ORDER_ADDRESS_INITIALIZED/MIGRATION'");
 CALL jk_v31_add_column_if_missing('eb_user','jk_region_update_time',"datetime DEFAULT NULL COMMENT '九州康所属区域更新时间'");
+CALL jk_v31_add_column_if_missing('eb_user_address','jk_region_code',"varchar(64) DEFAULT NULL COMMENT '本收货地址标准区域编码；不得覆盖用户资料区域'");
 
 CALL jk_v31_add_column_if_missing('eb_store_order','jk_shipping_address_id',"int DEFAULT NULL COMMENT '本单收货地址ID快照'");
 CALL jk_v31_add_column_if_missing('eb_store_order','jk_shipping_region_code',"varchar(64) DEFAULT NULL COMMENT '本单标准收货区域编码快照，仅用于当前订单归属兜底'");
