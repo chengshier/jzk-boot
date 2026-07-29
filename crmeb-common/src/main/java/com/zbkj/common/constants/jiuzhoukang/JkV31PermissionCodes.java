@@ -7,6 +7,10 @@ public final class JkV31PermissionCodes {
     /** 仅高级规则管理员可见的底层技术枚举接口，普通运营不授权。 */
     public static final String ADMIN_COMMISSION_RULE_ADVANCED = "admin:jk:commission:rule:advanced";
     public static final String ADMIN_PERFORMANCE_LIST = "admin:jk:performance:list";
+    public static final String ADMIN_PERFORMANCE_PERIOD_LIST = "admin:jk:performance:period:list";
+    public static final String ADMIN_PERFORMANCE_PERIOD_BUILD = "admin:jk:performance:period:build";
+    public static final String ADMIN_PERFORMANCE_PERIOD_TRIAL = "admin:jk:performance:period:trial";
+    public static final String ADMIN_PERFORMANCE_PERIOD_CLOSE = "admin:jk:performance:period:close";
     public static final String ADMIN_OPERATION_PROFIT_LIST = "admin:jk:operation:profit:list";
     public static final String ADMIN_OFFLINE_SALE_LIST = "admin:jk:offline:sale:list";
     public static final String ADMIN_OFFLINE_SALE_AUDIT = "admin:jk:offline:sale:audit";
