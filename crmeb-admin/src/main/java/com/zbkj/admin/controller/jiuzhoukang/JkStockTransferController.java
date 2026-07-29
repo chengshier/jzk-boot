@@ -14,6 +14,7 @@ import com.zbkj.common.result.CommonResult;
 import com.zbkj.service.service.jiuzhoukang.audit.JkAdminActorService;
 import com.zbkj.service.service.jiuzhoukang.trade.JkTradeLogisticsService;
 import com.zbkj.service.service.jiuzhoukang.trade.StockTransferService;
+import com.zbkj.service.service.jiuzhoukang.wechat.JkSubscriptionBusinessNotificationService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,6 +29,7 @@ public class JkStockTransferController {
     @Autowired private StockTransferService service;
     @Autowired private JkTradeLogisticsService logisticsService;
     @Autowired private JkAdminActorService actor;
+    @Autowired private JkSubscriptionBusinessNotificationService notificationService;
 
     private Long user() {
         Long id = actor.getLinkedFrontUserId(actor.getCurrentAdmin());
@@ -56,7 +58,17 @@ public class JkStockTransferController {
     @PreAuthorize("hasAuthority('" + JkPermissionCodes.ADMIN_STOCK_TRANSFER_AUDIT + "')")
     @JkBizPermission(value = JkBizPermissionCodes.STOCK_TRANSFER_AUDIT, checkDataScope = true)
     public CommonResult<JkStockTransfer> audit(@RequestBody @Validated JkPaymentAuditRequest request) {
-        return CommonResult.success(service.audit(user(), request));
+        JkStockTransfer transfer = service.audit(user(), request);
+        notificationService.notifyAuditResult(
+                "STOCK_TRANSFER",
+                transfer.getId(),
+                transfer.getTransferNo(),
+                transfer.getUserId(),
+                "库存调拨申请审核",
+                Boolean.TRUE.equals(request.getApproved()) ? "已通过" : "已驳回",
+                Boolean.TRUE.equals(request.getApproved()) ? request.getRemark() : transfer.getRejectReason(),
+                detailPage(transfer));
+        return CommonResult.success(transfer);
     }
 
     @PostMapping("/payment/confirm")
@@ -64,7 +76,16 @@ public class JkStockTransferController {
     @PreAuthorize("hasAuthority('" + JkPermissionCodes.ADMIN_STOCK_TRANSFER_PAYMENT + "')")
     @JkBizPermission(value = JkBizPermissionCodes.PAYMENT_OFFLINE_AUDIT, checkDataScope = true)
     public CommonResult<JkStockTransfer> payment(@RequestBody @Validated JkPaymentAuditRequest request) {
-        return CommonResult.success(service.confirmPayment(user(), request));
+        JkStockTransfer transfer = service.confirmPayment(user(), request);
+        notificationService.notifyTransferStatus(
+                "STOCK_TRANSFER",
+                transfer.getId(),
+                transfer.getTransferNo(),
+                transfer.getUserId(),
+                Boolean.TRUE.equals(request.getApproved()) ? "付款已确认" : "付款被驳回",
+                Boolean.TRUE.equals(request.getApproved()) ? request.getRemark() : transfer.getRejectReason(),
+                detailPage(transfer));
+        return CommonResult.success(transfer);
     }
 
     @PostMapping("/dispatch")
@@ -72,7 +93,16 @@ public class JkStockTransferController {
     @PreAuthorize("hasAuthority('" + JkPermissionCodes.ADMIN_STOCK_TRANSFER_DISPATCH + "')")
     @JkBizPermission(value = JkBizPermissionCodes.STOCK_TRANSFER_CONFIRM, checkDataScope = true)
     public CommonResult<JkStockTransfer> dispatch(@RequestBody @Validated JkBusinessActionRequest request) {
-        return CommonResult.success(logisticsService.dispatchStockTransfer(user(), request));
+        JkStockTransfer transfer = logisticsService.dispatchStockTransfer(user(), request);
+        notificationService.notifyReceiveReminder(
+                "STOCK_TRANSFER",
+                transfer.getId(),
+                transfer.getTransferNo(),
+                transfer.getUserId(),
+                "调拨商品待收货",
+                request.getRemark(),
+                detailPage(transfer));
+        return CommonResult.success(transfer);
     }
 
     @PostMapping("/close")
@@ -81,5 +111,9 @@ public class JkStockTransferController {
     @JkBizPermission(value = JkBizPermissionCodes.STOCK_TRANSFER_AUDIT, checkDataScope = true)
     public CommonResult<JkStockTransfer> close(@RequestBody @Validated JkBusinessActionRequest request) {
         return CommonResult.success(service.close(user(), request));
+    }
+
+    private String detailPage(JkStockTransfer transfer) {
+        return "pages/jk/trade/detail?businessType=STOCK_TRANSFER&id=" + transfer.getId();
     }
 }
