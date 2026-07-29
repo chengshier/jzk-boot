@@ -62,14 +62,15 @@ public class JkStockTransferController {
     @JkBizPermission(value = JkBizPermissionCodes.STOCK_TRANSFER_CONFIRM, checkDataScope = true)
     public CommonResult<JkStockTransfer> handleAudit(@RequestBody @Validated JkPaymentAuditRequest request) {
         JkStockTransfer transfer = service.audit(userId(), request);
+        boolean approved = "AUDIT_APPROVED".equals(transfer.getStatus());
         notificationService.notifyAuditResult(
                 "STOCK_TRANSFER",
                 transfer.getId(),
                 transfer.getTransferNo(),
                 transfer.getUserId(),
                 "库存调拨申请审核",
-                Boolean.TRUE.equals(request.getApproved()) ? "已通过" : "已驳回",
-                Boolean.TRUE.equals(request.getApproved()) ? request.getRemark() : transfer.getRejectReason(),
+                approved ? "已通过" : "已驳回",
+                approved ? request.getRemark() : transfer.getRejectReason(),
                 detailPage(transfer));
         return CommonResult.success(transfer);
     }
@@ -78,13 +79,14 @@ public class JkStockTransferController {
     @JkBizPermission(value = JkBizPermissionCodes.STOCK_TRANSFER_CONFIRM, checkDataScope = true)
     public CommonResult<JkStockTransfer> handleConfirmPayment(@RequestBody @Validated JkPaymentAuditRequest request) {
         JkStockTransfer transfer = service.confirmPayment(userId(), request);
+        boolean approved = "PAYMENT_APPROVED".equals(transfer.getStatus());
         notificationService.notifyTransferStatus(
                 "STOCK_TRANSFER",
                 transfer.getId(),
                 transfer.getTransferNo(),
                 transfer.getUserId(),
-                Boolean.TRUE.equals(request.getApproved()) ? "付款已确认" : "付款被驳回",
-                Boolean.TRUE.equals(request.getApproved()) ? request.getRemark() : transfer.getRejectReason(),
+                approved ? "付款已确认" : "付款被驳回",
+                approved ? request.getRemark() : transfer.getRejectReason(),
                 detailPage(transfer));
         return CommonResult.success(transfer);
     }
