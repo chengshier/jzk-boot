@@ -12,7 +12,10 @@ public class JkSubscriptionTaskCreateRequest {
     private String businessType;
     private Long businessId;
     @NotNull(message = "接收用户不能为空") private Long receiverUserId;
-    /** 只能来自已认证微信登录上下文；为空时任务进入 WAIT_RECIPIENT，不允许前端任意覆盖。 */
+    /**
+     * 兼容历史内部调用保留。任务服务不会信任此字段，而是按 receiverUserId 从已认证小程序登录关系重新解析 openId。
+     * 前端不得提供或覆盖该值。
+     */
     private String recipientOpenId;
     private String pagePath;
     private String payloadJson;
