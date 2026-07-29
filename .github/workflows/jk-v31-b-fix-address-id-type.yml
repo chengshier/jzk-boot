@@ -1,0 +1,38 @@
+name: jk-v31-b-fix-address-id-type
+on:
+  push:
+    branches: [feat/jzk-v3.1-phase3-operations]
+    paths: ['.github/workflows/jk-v31-b-fix-address-id-type.yml']
+permissions:
+  contents: write
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/jzk-v3.1-phase3-operations
+          fetch-depth: 0
+      - name: Fix Integer to Long conversion
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path('crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/order/RetailOrderAttributionServiceImpl.java')
+          text = path.read_text(encoding='utf-8')
+          old = '.setRelationSource(receiver.relationSource).setShippingAddressId(order.getJkShippingAddressId())'
+          new = '.setRelationSource(receiver.relationSource).setShippingAddressId(order.getJkShippingAddressId() == null ? null : order.getJkShippingAddressId().longValue())'
+          if old not in text:
+              raise SystemExit('target expression not found')
+          path.write_text(text.replace(old, new, 1), encoding='utf-8')
+          PY
+      - name: Commit and remove workflow
+        shell: bash
+        run: |
+          rm -f .github/workflows/jk-v31-b-fix-address-id-type.yml
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/order/RetailOrderAttributionServiceImpl.java .github/workflows/jk-v31-b-fix-address-id-type.yml
+          git commit -m 'fix(jzk-v3.1-b): 修复订单地址ID快照类型转换'
+          git push origin HEAD:feat/jzk-v3.1-phase3-operations
