@@ -4,6 +4,8 @@ package com.zbkj.common.constants.jiuzhoukang;
 public final class JkV31PermissionCodes {
     public static final String ADMIN_COMMISSION_RULE_TRIAL = "admin:jk:commission:rule:trial";
     public static final String ADMIN_COMMISSION_RULE_PUBLISH = "admin:jk:commission:rule:publish";
+    /** 仅高级规则管理员可见的底层技术枚举接口，普通运营不授权。 */
+    public static final String ADMIN_COMMISSION_RULE_ADVANCED = "admin:jk:commission:rule:advanced";
     public static final String ADMIN_PERFORMANCE_LIST = "admin:jk:performance:list";
     public static final String ADMIN_OPERATION_PROFIT_LIST = "admin:jk:operation:profit:list";
     public static final String ADMIN_OFFLINE_SALE_LIST = "admin:jk:offline:sale:list";
