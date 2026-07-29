@@ -157,7 +157,7 @@ public class RetailOrderAttributionServiceImpl implements RetailOrderAttribution
                     .setFinalRegionCode(receiver.finalRegionCode).setFinalRegionNameSnapshot(receiver.finalRegionName)
                     .setRegionCode(receiver.finalRegionCode).setRegionSourceType(receiver.regionSourceType)
                     .setAttributionType(receiver.attributionType).setRelationId(receiver.relationId)
-                    .setRelationSource(receiver.relationSource).setShippingAddressId(order.getJkShippingAddressId())
+                    .setRelationSource(receiver.relationSource).setShippingAddressId(order.getJkShippingAddressId() == null ? null : order.getJkShippingAddressId().longValue())
                     .setItemOriginalAmount(original).setItemDiscountAmount(original.subtract(paid).max(BigDecimal.ZERO))
                     .setItemPaidAmount(paid).setFreightAllocatedAmount(BigDecimal.ZERO)
                     .setRefundedAmount(BigDecimal.ZERO).setRefundAmount(BigDecimal.ZERO).setCommissionBaseAmount(paid)
