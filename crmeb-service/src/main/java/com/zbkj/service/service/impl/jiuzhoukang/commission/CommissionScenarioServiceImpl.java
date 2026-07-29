@@ -14,6 +14,7 @@ import com.zbkj.service.dao.jiuzhoukang.JkCommissionRecordDao;
 import com.zbkj.service.dao.jiuzhoukang.JkCommissionRuleDao;
 import com.zbkj.service.service.jiuzhoukang.commission.CommissionAccountService;
 import com.zbkj.service.service.jiuzhoukang.commission.CommissionScenarioService;
+import com.zbkj.service.service.jiuzhoukang.commission.JkCommissionLimitService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
@@ -38,6 +39,7 @@ public class CommissionScenarioServiceImpl implements CommissionScenarioService 
     @Autowired private JkCommissionRecordDao recordDao;
     @Autowired private JkCommissionMatchLogDao matchLogDao;
     @Autowired private CommissionAccountService accountService;
+    @Autowired private JkCommissionLimitService limitService;
 
     @Override
     public List<JkCommissionRuleTrialResponse> trial(JkCommissionRuleTrialRequest request) {
@@ -71,11 +73,22 @@ public class CommissionScenarioServiceImpl implements CommissionScenarioService 
         for (JkCommissionRuleTrialResponse trial : trials) {
             writeMatchLog(eventKey + ":" + trial.getRuleId(), request, trial);
             if (!"MATCHED".equals(trial.getMatchStatus()) || money(trial.getCappedAmount()).signum() <= 0) continue;
-            hasPayableMatch = true;
             String actionKey = request.getSourceType() + ":" + request.getSourceItemId() + ":" + trial.getBeneficiaryUserId()
                     + ":" + trial.getRewardType() + ":" + trial.getRuleId() + ":" + trial.getRuleVersionNo();
             if (recordDao.selectOne(new LambdaQueryWrapper<JkCommissionRecord>()
                     .eq(JkCommissionRecord::getIdempotencyKey, actionKey).last("limit 1")) != null) continue;
+            JkCommissionRule matchedRule = ruleDao.selectById(trial.getRuleId());
+            JkCommissionLimitService.ReservationResult reservation = limitService.reserve(matchedRule,
+                    trial.getBeneficiaryUserId(), request.getBusinessTime(), trial.getCappedAmount(), "COMMISSION_LIMIT:" + actionKey);
+            BigDecimal approvedAmount = money(reservation.getApprovedAmount());
+            trial.getExplanations().add(reservation.getResultMessage());
+            if (approvedAmount.signum() <= 0) {
+                trial.setMatchStatus("LIMIT_EXHAUSTED").setReasonCode(reservation.getResultCode()).setCappedAmount(BigDecimal.ZERO);
+                writeMatchLog(eventKey + ":LIMIT:" + trial.getRuleId(), request, trial);
+                continue;
+            }
+            trial.setCappedAmount(approvedAmount);
+            hasPayableMatch = true;
             Date now = new Date();
             JkCommissionRecord record = new JkCommissionRecord().setCommissionNo("CM" + IdWorker.getIdStr())
                     .setSourceType(request.getSourceType()).setSourceId(request.getSourceId()).setSourceNo(sourceNo)
