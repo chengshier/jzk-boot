@@ -22,6 +22,7 @@ WHERE `id` = 108 AND JSON_VALID(`content`);
 -- MinIO 动态表单。secret key 使用 el-input 的 password 配置。
 SET @minio_form_name = '文件上传-MinIO配置';
 SET @minio_form_content = '{"formRef":"elForm","formModel":"formData","size":"medium","labelPosition":"right","labelWidth":150,"formRules":"rules","gutter":15,"disabled":false,"span":24,"formBtns":true,"fields":[{"__config__":{"label":"MinIO Endpoint：","labelWidth":150,"showLabel":true,"changeTag":true,"tag":"el-input","tagIcon":"input","required":true,"layout":"colFormItem","span":24,"document":"https://element.eleme.cn/#/zh-CN/component/input","regList":[],"tips":false},"__slot__":{"prepend":"","append":""},"placeholder":"例如：https://minio.example.com","style":{"width":"50%"},"clearable":true,"prefix-icon":"","suffix-icon":"","maxlength":null,"show-word-limit":false,"readonly":false,"disabled":false,"__vModel__":"minioEndpoint"},{"__config__":{"label":"Bucket：","labelWidth":150,"showLabel":true,"changeTag":true,"tag":"el-input","tagIcon":"input","required":true,"layout":"colFormItem","span":24,"document":"https://element.eleme.cn/#/zh-CN/component/input","regList":[],"tips":false},"__slot__":{"prepend":"","append":""},"placeholder":"请输入存储桶名称","style":{"width":"50%"},"clearable":true,"prefix-icon":"","suffix-icon":"","maxlength":null,"show-word-limit":false,"readonly":false,"disabled":false,"__vModel__":"minioBucket"},{"__config__":{"label":"Access Key：","labelWidth":150,"showLabel":true,"changeTag":true,"tag":"el-input","tagIcon":"input","required":true,"layout":"colFormItem","span":24,"document":"https://element.eleme.cn/#/zh-CN/component/input","regList":[],"tips":false},"__slot__":{"prepend":"","append":""},"placeholder":"请输入 Access Key","style":{"width":"50%"},"clearable":true,"prefix-icon":"","suffix-icon":"","maxlength":null,"show-word-limit":false,"readonly":false,"disabled":false,"__vModel__":"minioAccessKey"},{"__config__":{"label":"Secret Key：","labelWidth":150,"showLabel":true,"changeTag":true,"tag":"el-input","tagIcon":"password","required":true,"layout":"colFormItem","span":24,"document":"https://element.eleme.cn/#/zh-CN/component/input","regList":[],"tips":false},"__slot__":{"prepend":"","append":""},"placeholder":"请输入 Secret Key","show-password":true,"style":{"width":"50%"},"clearable":true,"prefix-icon":"","suffix-icon":"","maxlength":null,"show-word-limit":false,"readonly":false,"disabled":false,"__vModel__":"minioSecretKey"},{"__config__":{"label":"Region：","labelWidth":150,"showLabel":true,"changeTag":true,"tag":"el-input","tagIcon":"input","required":true,"layout":"colFormItem","span":24,"document":"https://element.eleme.cn/#/zh-CN/component/input","regList":[],"tips":false},"__slot__":{"prepend":"","append":""},"placeholder":"例如：us-east-1","style":{"width":"50%"},"clearable":true,"prefix-icon":"","suffix-icon":"","maxlength":null,"show-word-limit":false,"readonly":false,"disabled":false,"__vModel__":"minioRegion"},{"__config__":{"label":"对象前缀：","labelWidth":150,"showLabel":true,"changeTag":true,"tag":"el-input","tagIcon":"input","required":false,"layout":"colFormItem","span":24,"document":"https://element.eleme.cn/#/zh-CN/component/input","regList":[],"tips":false},"__slot__":{"prepend":"","append":""},"placeholder":"可选，例如：uploads/","style":{"width":"50%"},"clearable":true,"prefix-icon":"","suffix-icon":"","maxlength":null,"show-word-limit":false,"readonly":false,"disabled":false,"__vModel__":"minioPrefix"},{"__config__":{"label":"访问域名：","labelWidth":150,"showLabel":true,"changeTag":true,"tag":"el-input","tagIcon":"input","required":true,"layout":"colFormItem","span":24,"document":"https://element.eleme.cn/#/zh-CN/component/input","regList":[],"tips":false},"__slot__":{"prepend":"","append":""},"placeholder":"文件访问域名，未单独配置时与 Endpoint 相同","style":{"width":"50%"},"clearable":true,"prefix-icon":"","suffix-icon":"","maxlength":null,"show-word-limit":false,"readonly":false,"disabled":false,"__vModel__":"minioUploadUrl"}]}';
+SET @minio_form_content = JSON_SET(@minio_form_content, '$.fields[3].type', 'password');
 
 INSERT INTO `eb_system_form_temp` (`name`, `info`, `content`, `create_time`, `update_time`)
 SELECT @minio_form_name, '文件上传-MinIO配置', @minio_form_content, @now, @now
@@ -69,11 +70,11 @@ WHERE @minio_form_id IS NOT NULL
 -- 连接测试权限挂在既有“系统设置”菜单下，并赋予已有该菜单权限的角色。
 SET @system_config_menu_id = (
   SELECT `id` FROM `eb_system_menu`
-  WHERE `is_delete` = 0 AND `perms` = 'admin:system:config:info'
+  WHERE `is_delte` = 0 AND `perms` = 'admin:system:config:info'
   ORDER BY `id` ASC LIMIT 1
 );
 
-INSERT INTO `eb_system_menu` (`pid`, `name`, `icon`, `perms`, `component`, `menu_type`, `sort`, `is_show`, `is_delete`, `create_time`, `update_time`)
+INSERT INTO `eb_system_menu` (`pid`, `name`, `icon`, `perms`, `component`, `menu_type`, `sort`, `is_show`, `is_delte`, `create_time`, `update_time`)
 SELECT @system_config_menu_id, '测试 MinIO 连接', NULL, 'admin:system:config:minio:test', '', 'A', 1, 1, 0, @now, @now
 WHERE @system_config_menu_id IS NOT NULL
   AND NOT EXISTS (
@@ -83,12 +84,12 @@ WHERE @system_config_menu_id IS NOT NULL
 SET @minio_test_menu_id = (
   SELECT `id` FROM `eb_system_menu`
   WHERE `perms` = 'admin:system:config:minio:test'
-  ORDER BY `is_delete` ASC, `id` ASC LIMIT 1
+  ORDER BY `is_delte` ASC, `id` ASC LIMIT 1
 );
 
 UPDATE `eb_system_menu`
 SET `pid` = @system_config_menu_id, `name` = '测试 MinIO 连接', `component` = '', `menu_type` = 'A',
-    `sort` = 1, `is_show` = 1, `is_delete` = 0, `update_time` = @now
+    `sort` = 1, `is_show` = 1, `is_delte` = 0, `update_time` = @now
 WHERE `id` = @minio_test_menu_id AND @system_config_menu_id IS NOT NULL;
 
 INSERT INTO `eb_system_role_menu` (`rid`, `menu_id`)
