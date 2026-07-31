@@ -41,6 +41,19 @@ public class ResponseRouterMinioTest {
                 JSON.parseObject(routed).getJSONObject("data").getString("image"));
     }
 
+    @Test
+    public void rewritesNestedMinioKeysWithoutTouchingEscapedQuoteText() {
+        installAttachmentService("6", "https://cdn.example.com");
+        String payload = "{\"data\":{\"items\":[{\"image\":\"image-assets/crmebimage/public/a.jpg\"}],"
+                + "\"note\":\"she said \\\"crmebimage/public/a.jpg\\\"\"}}";
+
+        JSONObject data = JSON.parseObject(new ResponseRouter().filter(payload, "api/admin/product/list", config())).getJSONObject("data");
+
+        Assert.assertEquals("https://cdn.example.com/image-assets/crmebimage/public/a.jpg",
+                data.getJSONArray("items").getJSONObject(0).getString("image"));
+        Assert.assertEquals("she said \"crmebimage/public/a.jpg\"", data.getString("note"));
+    }
+
     private void installAttachmentService(String uploadType, String cdn) {
         SystemAttachmentServiceImpl attachmentService = new SystemAttachmentServiceImpl();
         ReflectionTestUtils.setField(attachmentService, "systemConfigService", configService(uploadType, cdn));

@@ -10,6 +10,55 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class JkS3CompatibleClientMinioTest {
 
     @Test
+    public void connectionTestReportsCleanupFailureAfterSuccessfulWrite() {
+        JkS3CompatibleClient client = new JkS3CompatibleClient() {
+            @Override
+            public void put(String endpoint, String bucket, String objectKey, byte[] bytes, String contentType,
+                            String accessKey, String secretKey, String region) { }
+
+            @Override
+            public void delete(String endpoint, String bucket, String objectKey, String accessKey, String secretKey, String region) {
+                throw new IllegalStateException("cleanup failed");
+            }
+        };
+
+        try {
+            client.testWriteDelete("http://minio.example.com", "bucket", "access", "secret", "us-east-1");
+            Assert.fail("expected cleanup failure");
+        } catch (IllegalStateException expected) {
+            Assert.assertTrue(expected.getMessage().contains("对象清理失败"));
+            Assert.assertEquals("cleanup failed", expected.getCause().getMessage());
+            Assert.assertFalse(expected.getMessage().contains("secret"));
+        }
+    }
+
+    @Test
+    public void connectionTestPreservesCleanupFailureWhenWriteAndCleanupBothFail() {
+        JkS3CompatibleClient client = new JkS3CompatibleClient() {
+            @Override
+            public void put(String endpoint, String bucket, String objectKey, byte[] bytes, String contentType,
+                            String accessKey, String secretKey, String region) {
+                throw new IllegalStateException("write failed");
+            }
+
+            @Override
+            public void delete(String endpoint, String bucket, String objectKey, String accessKey, String secretKey, String region) {
+                throw new IllegalStateException("cleanup failed");
+            }
+        };
+
+        try {
+            client.testWriteDelete("http://minio.example.com", "bucket", "access", "secret", "us-east-1");
+            Assert.fail("expected failed connection test");
+        } catch (IllegalStateException expected) {
+            Assert.assertTrue(expected.getMessage().contains("连接测试失败"));
+            Assert.assertEquals(1, expected.getSuppressed().length);
+            Assert.assertEquals("cleanup failed", expected.getSuppressed()[0].getMessage());
+            Assert.assertFalse(expected.getMessage().contains("secret"));
+        }
+    }
+
+    @Test
     public void connectionTestDeletesTestObjectAfterFailedWrite() throws Exception {
         AtomicBoolean deleted = new AtomicBoolean(false);
         HttpServer server = HttpServer.create(new InetSocketAddress(0), 0);

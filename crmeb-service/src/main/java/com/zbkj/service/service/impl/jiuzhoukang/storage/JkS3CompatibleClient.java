@@ -48,12 +48,18 @@ public class JkS3CompatibleClient {
         } catch (RuntimeException error) {
             writeFailure = error;
         }
+        RuntimeException cleanupFailure = null;
         try {
             delete(endpoint, bucket, objectKey, accessKey, secretKey, region);
         } catch (RuntimeException cleanupError) {
-            if (writeFailure == null) throw new IllegalStateException("MinIO 连接测试清理失败");
+            cleanupFailure = cleanupError;
         }
-        if (writeFailure != null) throw new IllegalStateException("MinIO 连接测试失败");
+        if (writeFailure != null) {
+            IllegalStateException failure = new IllegalStateException("MinIO 连接测试失败", writeFailure);
+            if (cleanupFailure != null) failure.addSuppressed(cleanupFailure);
+            throw failure;
+        }
+        if (cleanupFailure != null) throw new IllegalStateException("MinIO 连接测试对象清理失败：" + objectKey, cleanupFailure);
     }
 
     private byte[] execute(String method, String endpoint, String bucket, String objectKey, byte[] body, String contentType,

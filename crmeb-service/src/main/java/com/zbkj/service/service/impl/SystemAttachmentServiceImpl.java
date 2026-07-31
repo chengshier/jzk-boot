@@ -1,6 +1,9 @@
 package com.zbkj.service.service.impl;
 
 import cn.hutool.core.date.DateUtil;
+import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.JSONArray;
+import com.alibaba.fastjson.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
@@ -24,8 +27,6 @@ import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
 import java.util.List;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 /**
  * SystemAttachmentServiceImpl 接口实现
@@ -125,16 +126,38 @@ public class SystemAttachmentServiceImpl extends ServiceImpl<SystemAttachmentDao
 
     private String prefixMinioJson(String path, String marker) {
         if (!path.contains("\"")) return joinCdnPath(path);
-        Pattern quotedValue = Pattern.compile("\\\"([^\\\"]*" + Pattern.quote(marker) + "[^\\\"]*)\\\"");
-        Matcher matcher = quotedValue.matcher(path);
-        StringBuffer result = new StringBuffer();
-        while (matcher.find()) {
-            String value = matcher.group(1);
-            String replacement = value.startsWith("http://") || value.startsWith("https://") ? value : joinCdnPath(value);
-            matcher.appendReplacement(result, Matcher.quoteReplacement("\"" + replacement + "\""));
+        try {
+            Object value = JSON.parse(path);
+            rewriteMinioValues(value, marker);
+            return JSON.toJSONString(value);
+        } catch (Exception ignored) {
+            return path;
         }
-        matcher.appendTail(result);
-        return result.toString();
+    }
+
+    private void rewriteMinioValues(Object value, String marker) {
+        if (value instanceof JSONObject) {
+            JSONObject object = (JSONObject) value;
+            for (String key : object.keySet()) {
+                Object child = object.get(key);
+                if (child instanceof String && isMinioObjectKey((String) child, marker)) object.put(key, joinCdnPath((String) child));
+                else rewriteMinioValues(child, marker);
+            }
+            return;
+        }
+        if (value instanceof JSONArray) {
+            JSONArray array = (JSONArray) value;
+            for (int i = 0; i < array.size(); i++) {
+                Object child = array.get(i);
+                if (child instanceof String && isMinioObjectKey((String) child, marker)) array.set(i, joinCdnPath((String) child));
+                else rewriteMinioValues(child, marker);
+            }
+        }
+    }
+
+    private boolean isMinioObjectKey(String value, String marker) {
+        return value.indexOf(marker) >= 0 && !value.startsWith("http://") && !value.startsWith("https://")
+                && value.indexOf(' ') < 0 && value.indexOf('"') < 0 && value.indexOf('\\') < 0;
     }
 
     private String joinCdnPath(String path) {
