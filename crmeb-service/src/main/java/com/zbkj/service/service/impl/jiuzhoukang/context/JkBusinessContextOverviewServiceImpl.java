@@ -57,7 +57,7 @@ public class JkBusinessContextOverviewServiceImpl implements JkBusinessContextOv
 
     private void fillAttributionRelations(Map<String, Object> result, JkRetailOrderAttribution row) {
         result.put("relationSnapshot", row.getRelationSnapshotJson());
-        result.put("amountSnapshot", row.getAmountSnapshotJson());
+        result.put("amountSnapshot", amountSnapshot(row));
         result.put("performance", performanceRecordDao.selectList(new LambdaQueryWrapper<JkPerformanceRecord>()
                 .eq(JkPerformanceRecord::getSourceType, "RETAIL_ORDER")
                 .eq(JkPerformanceRecord::getSourceItemId, row.getOrderInfoId())
@@ -73,6 +73,19 @@ public class JkBusinessContextOverviewServiceImpl implements JkBusinessContextOv
         result.put("adjustments", attributionAdjustmentDao.selectList(new LambdaQueryWrapper<JkRetailOrderAttributionAdjustment>()
                 .eq(JkRetailOrderAttributionAdjustment::getAttributionId, row.getId())
                 .orderByDesc(JkRetailOrderAttributionAdjustment::getId)));
+    }
+
+    private Map<String, Object> amountSnapshot(JkRetailOrderAttribution row) {
+        Map<String, Object> amount = new LinkedHashMap<String, Object>();
+        amount.put("itemOriginalAmount", row.getItemOriginalAmount());
+        amount.put("itemDiscountAmount", row.getItemDiscountAmount());
+        amount.put("itemPaidAmount", row.getItemPaidAmount());
+        amount.put("freightAllocatedAmount", row.getFreightAllocatedAmount());
+        amount.put("refundedAmount", row.getRefundedAmount());
+        amount.put("commissionBaseAmount", row.getCommissionBaseAmount());
+        amount.put("priceSnapshotJson", row.getPriceSnapshotJson());
+        amount.put("ruleContextSnapshotJson", row.getRuleContextSnapshotJson());
+        return amount;
     }
 
     private void fillCommission(Map<String, Object> result, JkCommissionRecord record) {
