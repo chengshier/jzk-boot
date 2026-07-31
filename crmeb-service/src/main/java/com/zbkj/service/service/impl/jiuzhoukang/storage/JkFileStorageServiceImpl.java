@@ -1,10 +1,12 @@
 package com.zbkj.service.service.impl.jiuzhoukang.storage;
 
 import com.baomidou.mybatisplus.core.toolkit.IdWorker;
+import com.zbkj.common.constants.SysConfigConstants;
 import com.zbkj.common.exception.CrmebException;
 import com.zbkj.common.model.jiuzhoukang.JkFileObject;
 import com.zbkj.common.response.jiuzhoukang.JkFileObjectResponse;
 import com.zbkj.service.dao.jiuzhoukang.JkFileObjectDao;
+import com.zbkj.service.service.SystemConfigService;
 import com.zbkj.service.service.jiuzhoukang.storage.JkFileStorageService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -29,16 +31,12 @@ import java.util.UUID;
 public class JkFileStorageServiceImpl implements JkFileStorageService {
     @Autowired private JkFileObjectDao fileDao;
     @Autowired private JkS3CompatibleClient s3Client;
+    @Autowired private SystemConfigService systemConfigService;
 
     @Value("${jk.storage.enabled:false}") private boolean enabled;
     @Value("${jk.storage.provider:LOCAL_PRIVATE}") private String provider;
     @Value("${jk.storage.max-size:20971520}") private long maxSize;
     @Value("${jk.storage.local-root:/data/jzk-private-files}") private String localRoot;
-    @Value("${jk.storage.minio.endpoint:}") private String minioEndpoint;
-    @Value("${jk.storage.minio.bucket:}") private String minioBucket;
-    @Value("${jk.storage.minio.access-key:}") private String minioAccessKey;
-    @Value("${jk.storage.minio.secret-key:}") private String minioSecretKey;
-    @Value("${jk.storage.minio.region:us-east-1}") private String minioRegion;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -64,9 +62,9 @@ public class JkFileStorageServiceImpl implements JkFileStorageService {
                 + UUID.randomUUID().toString().replace("-", "") + extension;
         String normalizedProvider = provider == null ? "LOCAL_PRIVATE" : provider.trim().toUpperCase(Locale.ROOT);
         if ("MINIO".equals(normalizedProvider)) {
-            requireMinioConfig();
-            s3Client.put(minioEndpoint, minioBucket, objectKey, bytes, normalizedContentType,
-                    minioAccessKey, minioSecretKey, minioRegion);
+            MinioConfig minio = requireMinioConfig();
+            s3Client.put(minio.endpoint, minio.bucket, objectKey, bytes, normalizedContentType,
+                    minio.accessKey, minio.secretKey, minio.region);
         } else if ("LOCAL_PRIVATE".equals(normalizedProvider)) {
             writeLocal(objectKey, bytes);
         } else {
@@ -75,7 +73,7 @@ public class JkFileStorageServiceImpl implements JkFileStorageService {
         Date now = new Date();
         JkFileObject value = new JkFileObject().setFileNo("FO" + IdWorker.getIdStr())
                 .setStorageProvider(normalizedProvider)
-                .setBucketName("MINIO".equals(normalizedProvider) ? minioBucket : null)
+                .setBucketName("MINIO".equals(normalizedProvider) ? minioBucket() : null)
                 .setObjectKey(objectKey).setOriginalName(safeName(originalName)).setContentType(normalizedContentType)
                 .setFileSize((long) bytes.length).setFileHash(sha256(bytes)).setBusinessType(businessType)
                 .setBusinessId(businessId).setOwnerUserId(ownerUserId)
@@ -94,9 +92,9 @@ public class JkFileStorageServiceImpl implements JkFileStorageService {
         }
         if (file.getExpireTime() != null && !file.getExpireTime().after(new Date())) throw new CrmebException("文件访问已过期");
         if ("MINIO".equals(file.getStorageProvider())) {
-            requireMinioConfig();
-            return s3Client.get(minioEndpoint, file.getBucketName(), file.getObjectKey(),
-                    minioAccessKey, minioSecretKey, minioRegion);
+            MinioConfig minio = requireMinioConfig();
+            return s3Client.get(minio.endpoint, file.getBucketName(), file.getObjectKey(),
+                    minio.accessKey, minio.secretKey, minio.region);
         }
         return readLocal(file.getObjectKey());
     }
@@ -114,8 +112,7 @@ public class JkFileStorageServiceImpl implements JkFileStorageService {
     public Map<String, Object> status() {
         Map<String, Object> result = new LinkedHashMap<String, Object>();
         String normalized = provider == null ? "LOCAL_PRIVATE" : provider.trim().toUpperCase(Locale.ROOT);
-        boolean minioConfigured = !isBlank(minioEndpoint) && !isBlank(minioBucket)
-                && !isBlank(minioAccessKey) && !isBlank(minioSecretKey);
+        boolean minioConfigured = minioConfigured();
         result.put("enabled", enabled);
         result.put("provider", normalized);
         result.put("maxSize", maxSize);
@@ -160,9 +157,31 @@ public class JkFileStorageServiceImpl implements JkFileStorageService {
         }
     }
 
-    private void requireMinioConfig() {
-        if (isBlank(minioEndpoint) || isBlank(minioBucket) || isBlank(minioAccessKey) || isBlank(minioSecretKey)) {
+    private MinioConfig requireMinioConfig() {
+        String endpoint = minioValue(SysConfigConstants.CONFIG_MINIO_ENDPOINT);
+        String bucket = minioBucket();
+        String accessKey = minioValue(SysConfigConstants.CONFIG_MINIO_ACCESS_KEY);
+        String secretKey = minioValue(SysConfigConstants.CONFIG_MINIO_SECRET_KEY);
+        if (isBlank(endpoint) || isBlank(bucket) || isBlank(accessKey) || isBlank(secretKey)) {
             throw new CrmebException("MinIO 配置不完整");
+        }
+        return new MinioConfig(endpoint, bucket, accessKey, secretKey, minioRegion());
+    }
+
+    private boolean minioConfigured() {
+        return !isBlank(minioValue(SysConfigConstants.CONFIG_MINIO_ENDPOINT)) && !isBlank(minioBucket())
+                && !isBlank(minioValue(SysConfigConstants.CONFIG_MINIO_ACCESS_KEY))
+                && !isBlank(minioValue(SysConfigConstants.CONFIG_MINIO_SECRET_KEY));
+    }
+
+    private String minioBucket() { return minioValue(SysConfigConstants.CONFIG_MINIO_BUCKET); }
+    private String minioRegion() { String value = minioValue(SysConfigConstants.CONFIG_MINIO_REGION); return isBlank(value) ? "us-east-1" : value; }
+    private String minioValue(String key) { return systemConfigService == null ? null : systemConfigService.getValueByKey(key); }
+
+    private static class MinioConfig {
+        private final String endpoint, bucket, accessKey, secretKey, region;
+        private MinioConfig(String endpoint, String bucket, String accessKey, String secretKey, String region) {
+            this.endpoint = endpoint; this.bucket = bucket; this.accessKey = accessKey; this.secretKey = secretKey; this.region = region;
         }
     }
 

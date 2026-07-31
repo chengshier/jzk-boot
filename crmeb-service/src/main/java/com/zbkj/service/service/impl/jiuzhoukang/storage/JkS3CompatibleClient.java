@@ -16,6 +16,7 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
 import java.util.TimeZone;
+import java.util.UUID;
 
 /**
  * 仅覆盖九州康私有对象 PUT/GET 的 S3 Signature V4 客户端。
@@ -31,6 +32,28 @@ public class JkS3CompatibleClient {
 
     public byte[] get(String endpoint, String bucket, String objectKey, String accessKey, String secretKey, String region) {
         return execute("GET", endpoint, bucket, objectKey, new byte[0], null, accessKey, secretKey, region, true);
+    }
+
+    public void delete(String endpoint, String bucket, String objectKey, String accessKey, String secretKey, String region) {
+        execute("DELETE", endpoint, bucket, objectKey, new byte[0], null, accessKey, secretKey, region, false);
+    }
+
+    /** Verifies credentials without exposing them or retaining the verification object. */
+    public void testWriteDelete(String endpoint, String bucket, String accessKey, String secretKey, String region) {
+        String objectKey = "__crmeb_connection_test__/" + UUID.randomUUID().toString().replace("-", "");
+        RuntimeException writeFailure = null;
+        try {
+            put(endpoint, bucket, objectKey, "crmeb-minio-connection-test".getBytes(StandardCharsets.UTF_8),
+                    "text/plain", accessKey, secretKey, region);
+        } catch (RuntimeException error) {
+            writeFailure = error;
+        }
+        try {
+            delete(endpoint, bucket, objectKey, accessKey, secretKey, region);
+        } catch (RuntimeException cleanupError) {
+            if (writeFailure == null) throw new IllegalStateException("MinIO 连接测试清理失败");
+        }
+        if (writeFailure != null) throw new IllegalStateException("MinIO 连接测试失败");
     }
 
     private byte[] execute(String method, String endpoint, String bucket, String objectKey, byte[] body, String contentType,

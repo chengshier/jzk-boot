@@ -25,6 +25,7 @@ import com.zbkj.common.utils.UploadUtil;
 import com.zbkj.common.model.system.SystemAttachment;
 import com.zbkj.common.config.CrmebConfig;
 import com.zbkj.service.service.*;
+import com.zbkj.service.service.impl.jiuzhoukang.storage.JkS3CompatibleClient;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
@@ -75,6 +76,9 @@ public class UploadServiceImpl implements UploadService {
 
     @Autowired
     private JdCloudService jdCloudService;
+
+    @Autowired
+    private JkS3CompatibleClient minioClient;
 
     /**
      * 图片上传
@@ -314,6 +318,30 @@ public class UploadServiceImpl implements UploadService {
                     logger.error("AsyncServiceImpl.cos.fail " + e.getMessage());
                 }
                 break;
+            case 6:
+                systemAttachment.setImageType(6);
+                String minioUploadUrl = systemConfigService.getValueByKeyException(SysConfigConstants.CONFIG_MINIO_UPLOAD_URL);
+                if (!isPublicHttpUrl(minioUploadUrl)) {
+                    if (!fileIsSave.equals("1")) file.delete();
+                    throw new CrmebException("MinIO 公共访问域名配置无效");
+                }
+                String minioPrefix = systemConfigService.getValueByKey(SysConfigConstants.CONFIG_MINIO_PREFIX);
+                String objectKey = appendPrefix(minioPrefix, systemAttachment.getSattDir());
+                systemAttachment.setSattDir(objectKey);
+                resultFile.setUrl(objectKey);
+                try {
+                    minioClient.put(systemConfigService.getValueByKeyException(SysConfigConstants.CONFIG_MINIO_ENDPOINT),
+                            systemConfigService.getValueByKeyException(SysConfigConstants.CONFIG_MINIO_BUCKET), objectKey,
+                            multipartFile.getBytes(), multipartFile.getContentType(),
+                            systemConfigService.getValueByKeyException(SysConfigConstants.CONFIG_MINIO_ACCESS_KEY),
+                            systemConfigService.getValueByKeyException(SysConfigConstants.CONFIG_MINIO_SECRET_KEY),
+                            systemConfigService.getValueByKey(SysConfigConstants.CONFIG_MINIO_REGION));
+                } catch (Exception error) {
+                    if (!fileIsSave.equals("1")) file.delete();
+                    logger.error("MinIO 上传失败: {}", error.getClass().getSimpleName());
+                    throw new CrmebException("MinIO 上传失败，请检查配置和权限");
+                }
+                break;
         }
         systemAttachmentService.save(systemAttachment);
         if (!fileIsSave.equals("1")) {
@@ -321,6 +349,21 @@ public class UploadServiceImpl implements UploadService {
             file.delete();
         }
         return resultFile;
+    }
+
+    private String appendPrefix(String prefix, String objectKey) {
+        if (StrUtil.isBlank(prefix)) return objectKey;
+        return StrUtil.removeSuffix(prefix.trim(), "/") + "/" + StrUtil.removePrefix(objectKey, "/");
+    }
+
+    private boolean isPublicHttpUrl(String value) {
+        if (StrUtil.isBlank(value)) return false;
+        try {
+            java.net.URI uri = java.net.URI.create(value.trim());
+            return ("http".equalsIgnoreCase(uri.getScheme()) || "https".equalsIgnoreCase(uri.getScheme())) && StrUtil.isNotBlank(uri.getHost());
+        } catch (IllegalArgumentException error) {
+            return false;
+        }
     }
 }
 

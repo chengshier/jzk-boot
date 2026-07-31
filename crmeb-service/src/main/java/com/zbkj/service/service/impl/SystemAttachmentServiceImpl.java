@@ -194,6 +194,9 @@ public class SystemAttachmentServiceImpl extends ServiceImpl<SystemAttachmentDao
             case 5:
                 uploadUrl = SysConfigConstants.CONFIG_JD_UPLOAD_URL;
                 break;
+            case 6:
+                uploadUrl = SysConfigConstants.CONFIG_MINIO_UPLOAD_URL;
+                break;
             default:
                 break;
         }

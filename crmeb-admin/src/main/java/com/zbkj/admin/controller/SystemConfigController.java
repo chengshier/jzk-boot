@@ -6,6 +6,7 @@ import com.zbkj.common.request.SystemFormCheckRequest;
 import com.zbkj.common.response.AdminSiteLogoResponse;
 import com.zbkj.common.result.CommonResult;
 import com.zbkj.service.service.SystemConfigService;
+import com.zbkj.service.service.impl.jiuzhoukang.storage.JkS3CompatibleClient;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import lombok.extern.slf4j.Slf4j;
@@ -37,6 +38,28 @@ public class SystemConfigController {
 
     @Autowired
     private SystemConfigService systemConfigService;
+    @Autowired
+    private JkS3CompatibleClient minioClient;
+
+    @PreAuthorize("hasAuthority('admin:system:config:minio:test')")
+    @ApiOperation(value = "测试 MinIO 连接")
+    @RequestMapping(value = "/minio/test", method = RequestMethod.POST)
+    public CommonResult<String> testMinio(@RequestBody java.util.Map<String, String> request) {
+        String endpoint = required(request, "minioEndpoint");
+        String bucket = required(request, "minioBucket");
+        String accessKey = required(request, "minioAccessKey");
+        String secretKey = required(request, "minioSecretKey");
+        String region = request.get("minioRegion");
+        minioClient.testWriteDelete(endpoint, bucket, accessKey, secretKey,
+                org.apache.commons.lang3.StringUtils.isBlank(region) ? "us-east-1" : region.trim());
+        return CommonResult.success("MinIO 连接正常");
+    }
+
+    private String required(java.util.Map<String, String> request, String key) {
+        String value = request == null ? null : request.get(key);
+        if (org.apache.commons.lang3.StringUtils.isBlank(value)) throw new IllegalArgumentException("MinIO 配置缺少 " + key);
+        return value.trim();
+    }
 
     @PreAuthorize("hasAuthority('admin:system:config:info')")
     @ApiOperation(value = "表单详情")
