@@ -1,0 +1,34 @@
+# setUserAddress / addressId write points
+crmeb-common/src/main/java/com/zbkj/common/vo/OrderInfoVo.java:49:    private Integer addressId;
+crmeb-common/src/main/java/com/zbkj/common/request/OrderComputedPriceRequest.java:36:    private Integer addressId;
+crmeb-common/src/main/java/com/zbkj/common/request/CreateOrderRequest.java:44:    private Integer addressId;
+crmeb-front/src/main/java/com/zbkj/front/controller/UserAddressController.java:9:import com.zbkj.service.service.UserAddressService;
+crmeb-front/src/main/java/com/zbkj/front/controller/UserAddressController.java:37:    private UserAddressService userAddressService;
+crmeb-service/src/main/java/com/zbkj/service/service/UserAddressService.java:11: * UserAddressService 接口实现
+crmeb-service/src/main/java/com/zbkj/service/service/UserAddressService.java:22:public interface UserAddressService extends IService<UserAddress> {
+crmeb-service/src/main/java/com/zbkj/service/service/UserAddressService.java:54:    UserAddress getById(Integer addressId);
+crmeb-service/src/main/java/com/zbkj/service/service/impl/UserAddressServiceImpl.java:17:import com.zbkj.service.service.UserAddressService;
+crmeb-service/src/main/java/com/zbkj/service/service/impl/UserAddressServiceImpl.java:27: * UserAddressServiceImpl 接口实现
+crmeb-service/src/main/java/com/zbkj/service/service/impl/UserAddressServiceImpl.java:39:public class UserAddressServiceImpl extends ServiceImpl<UserAddressDao, UserAddress> implements UserAddressService {
+crmeb-service/src/main/java/com/zbkj/service/service/impl/UserAddressServiceImpl.java:160:    public UserAddress getById(Integer addressId) {
+crmeb-service/src/main/java/com/zbkj/service/service/impl/UserAddressServiceImpl.java:162:        lambdaQueryWrapper.eq(UserAddress::getId, addressId);
+crmeb-service/src/main/java/com/zbkj/service/service/impl/OrderServiceImpl.java:103:    private UserAddressService userAddressService;
+crmeb-service/src/main/java/com/zbkj/service/service/impl/OrderServiceImpl.java:962:            if (request.getAddressId() <= 0) throw new CrmebException("请选择收货地址");
+crmeb-service/src/main/java/com/zbkj/service/service/impl/OrderServiceImpl.java:963:            UserAddress userAddress = userAddressService.getById(request.getAddressId());
+crmeb-service/src/main/java/com/zbkj/service/service/impl/OrderServiceImpl.java:1005:        orderComputedPriceRequest.setAddressId(request.getAddressId());
+crmeb-service/src/main/java/com/zbkj/service/service/impl/OrderServiceImpl.java:1071:        storeOrder.setUserAddress(userAddressStr);
+crmeb-service/src/main/java/com/zbkj/service/service/impl/OrderServiceImpl.java:2095:        } else if (ObjectUtil.isNull(request.getAddressId()) || request.getAddressId() <= 0) {
+crmeb-service/src/main/java/com/zbkj/service/service/impl/OrderServiceImpl.java:2099:            UserAddress userAddress = userAddressService.getById(request.getAddressId());
+
+# RetailOrderAttributionService call points
+crmeb-service/src/main/java/com/zbkj/service/service/jiuzhoukang/order/RetailOrderAttributionService.java:9:public interface RetailOrderAttributionService {
+crmeb-service/src/main/java/com/zbkj/service/service/jiuzhoukang/commission/RetailOrderCommissionAdapter.java:5:import com.zbkj.service.service.jiuzhoukang.order.RetailOrderAttributionService;
+crmeb-service/src/main/java/com/zbkj/service/service/jiuzhoukang/commission/RetailOrderCommissionAdapter.java:24:    @Autowired private RetailOrderAttributionService attributionService;
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/order/RetailOrderAttributionServiceImpl.java:20:import com.zbkj.service.service.jiuzhoukang.order.RetailOrderAttributionService;
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/order/RetailOrderAttributionServiceImpl.java:37:public class RetailOrderAttributionServiceImpl implements RetailOrderAttributionService {
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/commission/CommissionTriggerServiceImpl.java:38:import com.zbkj.service.service.jiuzhoukang.order.RetailOrderAttributionService;
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/commission/CommissionTriggerServiceImpl.java:63:    @Autowired private RetailOrderAttributionService attributionService;
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/commission/CommissionTriggerServiceImpl.java:213:        List<RetailOrderAttributionService.RefundAllocation> allocations = attributionService.allocateRefund(no, refundAmount, requestNo);
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/commission/CommissionTriggerServiceImpl.java:214:        for (RetailOrderAttributionService.RefundAllocation allocation : allocations) {
+crmeb-service/src/main/java/com/zbkj/service/service/impl/OrderServiceImpl.java:46:import com.zbkj.service.service.jiuzhoukang.order.RetailOrderAttributionService;
+crmeb-service/src/main/java/com/zbkj/service/service/impl/OrderServiceImpl.java:94:    private RetailOrderAttributionService retailOrderAttributionService;

@@ -16,6 +16,8 @@ import java.util.Date;
 @Accessors(chain = true)
 @TableName("jk_commission_rule")
 public class JkCommissionRule implements Serializable {
+    private static final long serialVersionUID = 1L;
+
     @TableId(value = "id", type = IdType.AUTO) private Long id;
     private String ruleNo;
     private String ruleName;
@@ -35,7 +37,11 @@ public class JkCommissionRule implements Serializable {
     private Integer version;
 
     private Long planId;
+    private String planCode;
+    private Integer planVersionNo;
+    /** 兼容旧字段，等同于 planVersionNo。 */
     private Integer versionNo;
+    private String templateCode;
     private String ruleCode;
     private String rewardType;
     private String performanceType;
@@ -56,6 +62,8 @@ public class JkCommissionRule implements Serializable {
     private Boolean requiresRegisteredCustomer;
     private Boolean requiresVoucher;
     private Boolean requiresAudit;
+    private String scopeConfigJson;
+    private String incomeNature;
     private Date effectiveStartTime;
     private Date effectiveEndTime;
     private String publishStatus;

@@ -1,0 +1,216 @@
+-- 九州康 JZK V3.1 第三批：盘点、异常收货 V2、文件、推广、订阅与健康报告（MySQL 5.7）
+SET @now=NOW();
+
+CREATE TABLE IF NOT EXISTS `jk_stock_check` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `check_no` varchar(64) NOT NULL,
+  `request_no` varchar(96) NOT NULL,
+  `stock_account_id` bigint NOT NULL,
+  `owner_user_id` bigint DEFAULT NULL,
+  `owner_role_code` varchar(48) DEFAULT NULL,
+  `region_code` varchar(64) DEFAULT NULL,
+  `check_type` varchar(32) NOT NULL DEFAULT 'FULL',
+  `status` varchar(32) NOT NULL DEFAULT 'COUNTING',
+  `snapshot_time` datetime NOT NULL,
+  `submitted_at` datetime DEFAULT NULL,
+  `audit_user_id` bigint DEFAULT NULL,
+  `audit_time` datetime DEFAULT NULL,
+  `audit_remark` varchar(500) DEFAULT NULL,
+  `difference_quantity` int NOT NULL DEFAULT 0,
+  `difference_amount` decimal(18,2) NOT NULL DEFAULT 0.00,
+  `is_deleted` tinyint(1) NOT NULL DEFAULT 0,
+  `create_user_id` bigint DEFAULT NULL,
+  `update_user_id` bigint DEFAULT NULL,
+  `create_time` datetime NOT NULL,
+  `update_time` datetime NOT NULL,
+  `version` int NOT NULL DEFAULT 0,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_jk_stock_check_no` (`check_no`),
+  UNIQUE KEY `uk_jk_stock_check_request` (`request_no`),
+  KEY `idx_jk_stock_check_account_status` (`stock_account_id`,`status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='九州康库存盘点单';
+
+CREATE TABLE IF NOT EXISTS `jk_stock_check_item` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `check_id` bigint NOT NULL,
+  `product_id` int NOT NULL,
+  `sku_id` int NOT NULL,
+  `sku_code` varchar(128) DEFAULT NULL,
+  `product_name` varchar(255) DEFAULT NULL,
+  `sku_name` varchar(255) DEFAULT NULL,
+  `book_quantity` int NOT NULL DEFAULT 0,
+  `actual_quantity` int DEFAULT NULL,
+  `difference_quantity` int NOT NULL DEFAULT 0,
+  `unit_cost` decimal(18,2) DEFAULT NULL,
+  `difference_amount` decimal(18,2) NOT NULL DEFAULT 0.00,
+  `count_remark` varchar(500) DEFAULT NULL,
+  `adjust_status` varchar(32) NOT NULL DEFAULT 'PENDING',
+  `is_deleted` tinyint(1) NOT NULL DEFAULT 0,
+  `create_time` datetime NOT NULL,
+  `update_time` datetime NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_jk_stock_check_item` (`check_id`,`product_id`,`sku_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='库存盘点明细';
+
+CREATE TABLE IF NOT EXISTS `jk_stock_check_log` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `check_id` bigint NOT NULL,
+  `action` varchar(48) NOT NULL,
+  `before_status` varchar(32) DEFAULT NULL,
+  `after_status` varchar(32) DEFAULT NULL,
+  `operator_user_id` bigint DEFAULT NULL,
+  `operator_type` varchar(24) NOT NULL,
+  `request_no` varchar(96) DEFAULT NULL,
+  `remark` varchar(500) DEFAULT NULL,
+  `create_time` datetime NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_jk_stock_check_log` (`check_id`,`create_time`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='库存盘点处理日志';
+
+CREATE TABLE IF NOT EXISTS `jk_receive_exception_resolution` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `exception_id` bigint NOT NULL,
+  `resolution_no` varchar(64) NOT NULL,
+  `resolution_type` varchar(48) NOT NULL,
+  `resolution_status` varchar(32) NOT NULL DEFAULT 'DRAFT',
+  `accepted_quantity` int NOT NULL DEFAULT 0,
+  `reship_quantity` int NOT NULL DEFAULT 0,
+  `refund_amount` decimal(18,2) NOT NULL DEFAULT 0.00,
+  `claim_amount` decimal(18,2) NOT NULL DEFAULT 0.00,
+  `responsibility_party` varchar(48) DEFAULT NULL,
+  `evidence_urls` text,
+  `resolution_json` longtext,
+  `operator_user_id` bigint DEFAULT NULL,
+  `completed_at` datetime DEFAULT NULL,
+  `request_no` varchar(96) NOT NULL,
+  `remark` varchar(500) DEFAULT NULL,
+  `is_deleted` tinyint(1) NOT NULL DEFAULT 0,
+  `create_time` datetime NOT NULL,
+  `update_time` datetime NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_jk_receive_resolution_no` (`resolution_no`),
+  UNIQUE KEY `uk_jk_receive_resolution_request` (`request_no`),
+  KEY `idx_jk_receive_resolution_exception` (`exception_id`,`resolution_status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='异常收货 V2 处理方案';
+
+CREATE TABLE IF NOT EXISTS `jk_file_object` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `file_no` varchar(64) NOT NULL,
+  `storage_provider` varchar(32) NOT NULL,
+  `bucket_name` varchar(128) DEFAULT NULL,
+  `object_key` varchar(512) NOT NULL,
+  `original_name` varchar(255) DEFAULT NULL,
+  `content_type` varchar(128) DEFAULT NULL,
+  `file_size` bigint NOT NULL DEFAULT 0,
+  `file_hash` varchar(128) DEFAULT NULL,
+  `business_type` varchar(64) DEFAULT NULL,
+  `business_id` bigint DEFAULT NULL,
+  `owner_user_id` bigint DEFAULT NULL,
+  `access_level` varchar(32) NOT NULL DEFAULT 'PRIVATE',
+  `status` varchar(32) NOT NULL DEFAULT 'ACTIVE',
+  `expire_time` datetime DEFAULT NULL,
+  `is_deleted` tinyint(1) NOT NULL DEFAULT 0,
+  `create_time` datetime NOT NULL,
+  `update_time` datetime NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_jk_file_no` (`file_no`),
+  UNIQUE KEY `uk_jk_file_object` (`storage_provider`,`bucket_name`,`object_key`),
+  KEY `idx_jk_file_business` (`business_type`,`business_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='统一文件对象元数据';
+
+CREATE TABLE IF NOT EXISTS `jk_promotion_scene` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `scene_code` varchar(64) NOT NULL,
+  `scene_name` varchar(128) NOT NULL,
+  `page_path` varchar(255) NOT NULL,
+  `role_codes` varchar(500) DEFAULT NULL,
+  `scene_template` varchar(255) NOT NULL,
+  `version_no` int NOT NULL DEFAULT 1,
+  `status` tinyint(1) NOT NULL DEFAULT 0,
+  `remark` varchar(500) DEFAULT NULL,
+  `is_deleted` tinyint(1) NOT NULL DEFAULT 0,
+  `create_time` datetime NOT NULL,
+  `update_time` datetime NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_jk_promotion_scene` (`scene_code`,`version_no`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='微信推广码场景配置';
+
+CREATE TABLE IF NOT EXISTS `jk_promotion_code_cache` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `scene_id` bigint NOT NULL,
+  `owner_user_id` bigint NOT NULL,
+  `scene_value` varchar(128) NOT NULL,
+  `file_object_id` bigint DEFAULT NULL,
+  `status` varchar(32) NOT NULL DEFAULT 'PENDING',
+  `error_message` varchar(500) DEFAULT NULL,
+  `generated_at` datetime DEFAULT NULL,
+  `expire_time` datetime DEFAULT NULL,
+  `request_no` varchar(96) NOT NULL,
+  `is_deleted` tinyint(1) NOT NULL DEFAULT 0,
+  `create_time` datetime NOT NULL,
+  `update_time` datetime NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_jk_promotion_cache` (`scene_id`,`owner_user_id`,`scene_value`),
+  UNIQUE KEY `uk_jk_promotion_request` (`request_no`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='真实微信小程序码缓存';
+
+CREATE TABLE IF NOT EXISTS `jk_subscription_task` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `task_no` varchar(64) NOT NULL,
+  `template_code` varchar(64) NOT NULL,
+  `business_type` varchar(64) DEFAULT NULL,
+  `business_id` bigint DEFAULT NULL,
+  `receiver_user_id` bigint NOT NULL,
+  `page_path` varchar(255) DEFAULT NULL,
+  `payload_json` longtext,
+  `status` varchar(32) NOT NULL DEFAULT 'PENDING',
+  `retry_count` int NOT NULL DEFAULT 0,
+  `max_retry_count` int NOT NULL DEFAULT 3,
+  `next_retry_time` datetime DEFAULT NULL,
+  `sent_at` datetime DEFAULT NULL,
+  `error_message` varchar(500) DEFAULT NULL,
+  `request_no` varchar(96) NOT NULL,
+  `is_deleted` tinyint(1) NOT NULL DEFAULT 0,
+  `create_time` datetime NOT NULL,
+  `update_time` datetime NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_jk_subscription_task_no` (`task_no`),
+  UNIQUE KEY `uk_jk_subscription_request` (`request_no`),
+  KEY `idx_jk_subscription_status` (`status`,`next_retry_time`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='微信订阅消息任务，默认总开关关闭';
+
+CREATE TABLE IF NOT EXISTS `jk_health_report` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `report_no` varchar(64) NOT NULL,
+  `user_id` bigint NOT NULL,
+  `report_type` varchar(24) NOT NULL,
+  `period_start` date NOT NULL,
+  `period_end` date NOT NULL,
+  `record_count` int NOT NULL DEFAULT 0,
+  `glucose_count` int NOT NULL DEFAULT 0,
+  `average_glucose` decimal(10,2) DEFAULT NULL,
+  `minimum_glucose` decimal(10,2) DEFAULT NULL,
+  `maximum_glucose` decimal(10,2) DEFAULT NULL,
+  `high_count` int NOT NULL DEFAULT 0,
+  `low_count` int NOT NULL DEFAULT 0,
+  `normal_count` int NOT NULL DEFAULT 0,
+  `diet_count` int NOT NULL DEFAULT 0,
+  `exercise_count` int NOT NULL DEFAULT 0,
+  `medicine_count` int NOT NULL DEFAULT 0,
+  `source_summary_json` longtext,
+  `summary_text` text,
+  `file_object_id` bigint DEFAULT NULL,
+  `status` varchar(32) NOT NULL DEFAULT 'GENERATED',
+  `generated_at` datetime NOT NULL,
+  `request_no` varchar(96) NOT NULL,
+  `is_deleted` tinyint(1) NOT NULL DEFAULT 0,
+  `create_time` datetime NOT NULL,
+  `update_time` datetime NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_jk_health_report_period` (`user_id`,`report_type`,`period_start`,`period_end`),
+  UNIQUE KEY `uk_jk_health_report_request` (`request_no`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='健康周报月报，仅统计真实记录';
+
+INSERT INTO jk_promotion_scene(scene_code,scene_name,page_path,role_codes,scene_template,version_no,status,remark,is_deleted,create_time,update_time)
+SELECT 'AGENT_BIND','代理关系绑定','pages/index/index','maker,partner,county_agent','bind:{userId}',1,0,'配置微信 appid/secret、统一文件存储并人工启用后才生成真实小程序码',0,@now,@now
+WHERE NOT EXISTS(SELECT 1 FROM jk_promotion_scene WHERE scene_code='AGENT_BIND' AND version_no=1);

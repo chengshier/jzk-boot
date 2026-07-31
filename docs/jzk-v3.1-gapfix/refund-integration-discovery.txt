@@ -1,0 +1,975 @@
+# Refund integration discovery
+
+## Candidate files
+crmeb-admin/src/main/java/com/zbkj/admin/task/order/OrderRefundTask.java
+crmeb-common/src/main/java/com/zbkj/common/model/jiuzhoukang/JkRetailRefundAdjustment.java
+crmeb-common/src/main/java/com/zbkj/common/request/OrderRefundApplyRequest.java
+crmeb-common/src/main/java/com/zbkj/common/request/StoreOrderRefundRequest.java
+crmeb-common/src/main/java/com/zbkj/common/request/jiuzhoukang/JkStockTransferReturnRefundRequest.java
+crmeb-common/src/main/java/com/zbkj/common/response/ApplyRefundOrderInfoResponse.java
+crmeb-common/src/main/java/com/zbkj/common/vo/WxRefundResponseVo.java
+crmeb-common/src/main/java/com/zbkj/common/vo/WxRefundVo.java
+crmeb-service/src/main/java/com/zbkj/service/dao/StoreOrderDao.java
+crmeb-service/src/main/java/com/zbkj/service/dao/StoreOrderInfoDao.java
+crmeb-service/src/main/java/com/zbkj/service/dao/StoreOrderStatusDao.java
+crmeb-service/src/main/java/com/zbkj/service/dao/jiuzhoukang/JkPlatformOrderDao.java
+crmeb-service/src/main/java/com/zbkj/service/dao/jiuzhoukang/JkPlatformOrderItemDao.java
+crmeb-service/src/main/java/com/zbkj/service/dao/jiuzhoukang/JkRetailOrderAttributionAdjustmentDao.java
+crmeb-service/src/main/java/com/zbkj/service/dao/jiuzhoukang/JkRetailOrderAttributionDao.java
+crmeb-service/src/main/java/com/zbkj/service/dao/jiuzhoukang/JkRetailRefundAdjustmentDao.java
+crmeb-service/src/main/java/com/zbkj/service/delete/OrderUtils.java
+crmeb-service/src/main/java/com/zbkj/service/service/OrderPayService.java
+crmeb-service/src/main/java/com/zbkj/service/service/OrderService.java
+crmeb-service/src/main/java/com/zbkj/service/service/OrderTaskService.java
+crmeb-service/src/main/java/com/zbkj/service/service/StoreOrderInfoService.java
+crmeb-service/src/main/java/com/zbkj/service/service/StoreOrderRefundService.java
+crmeb-service/src/main/java/com/zbkj/service/service/StoreOrderService.java
+crmeb-service/src/main/java/com/zbkj/service/service/StoreOrderStatusService.java
+crmeb-service/src/main/java/com/zbkj/service/service/StoreOrderTaskService.java
+crmeb-service/src/main/java/com/zbkj/service/service/StoreOrderVerification.java
+crmeb-service/src/main/java/com/zbkj/service/service/impl/OrderPayServiceImpl.java
+crmeb-service/src/main/java/com/zbkj/service/service/impl/OrderServiceImpl.java
+crmeb-service/src/main/java/com/zbkj/service/service/impl/OrderTaskServiceImpl.java
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderInfoServiceImpl.java
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderRefundServiceImpl.java
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderServiceImpl.java
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderStatusServiceImpl.java
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderTaskServiceImpl.java
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderVerificationImpl.java
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/order/JkRetailAttributionAdminServiceImpl.java
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/order/RetailOrderAttributionServiceImpl.java
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/trade/PlatformOrderServiceImpl.java
+crmeb-service/src/main/java/com/zbkj/service/service/jiuzhoukang/commission/RetailOrderCommissionAdapter.java
+crmeb-service/src/main/java/com/zbkj/service/service/jiuzhoukang/order/JkRetailAttributionAdminService.java
+crmeb-service/src/main/java/com/zbkj/service/service/jiuzhoukang/order/RetailOrderAttributionService.java
+crmeb-service/src/main/java/com/zbkj/service/service/jiuzhoukang/trade/PlatformOrderService.java
+crmeb-service/src/main/resources/mapper/store/StoreOrderInfoMapper.xml
+crmeb-service/src/main/resources/mapper/store/StoreOrderMapper.xml
+crmeb-service/src/main/resources/mapper/store/StoreOrderStatusMapper.xml
+crmeb-service/src/test/java/com/zbkj/service/service/jiuzhoukang/trade/PlatformOrderServiceImplTest.java
+
+## Refund completion and commission reverse references
+crmeb-admin/src/main/java/com/zbkj/admin/controller/CallbackController.java:48:     * 微信退款回调
+crmeb-admin/src/main/java/com/zbkj/admin/controller/CallbackController.java:50:    @ApiOperation(value = "微信退款回调")
+crmeb-admin/src/main/java/com/zbkj/admin/controller/CallbackController.java:51:    @RequestMapping(value = "/wechat/refund", method = RequestMethod.POST)
+crmeb-admin/src/main/java/com/zbkj/admin/controller/CallbackController.java:52:    public String weChatRefund(@RequestBody String request) {
+crmeb-admin/src/main/java/com/zbkj/admin/controller/CallbackController.java:53:        System.out.println("微信退款回调 request ===> " + request);
+crmeb-admin/src/main/java/com/zbkj/admin/controller/CallbackController.java:54:        String response = callbackService.weChatRefund(request);
+crmeb-admin/src/main/java/com/zbkj/admin/controller/CallbackController.java:55:        System.out.println("微信退款回调 response ===> " + response);
+crmeb-admin/src/main/java/com/zbkj/admin/controller/jiuzhoukang/JkBusinessContextOverviewController.java:25:    @ApiOperation("统一抽屉只读概览；不执行审核、退款、冲正或余额修改")
+crmeb-admin/src/main/java/com/zbkj/admin/controller/jiuzhoukang/JkWithdrawAdminController.java:18:import com.zbkj.service.service.jiuzhoukang.commission.CommissionReverseService;
+crmeb-admin/src/main/java/com/zbkj/admin/controller/jiuzhoukang/JkWithdrawAdminController.java:34:    private CommissionReverseService reverseService;
+crmeb-admin/src/main/java/com/zbkj/admin/controller/jiuzhoukang/JkWithdrawAdminController.java:217:        JkCommissionReverse reverse = reverseService.reverse(record.getId(), record.getSourceType(), record.getSourceId(), record.getSourceNo(), r.getReverseType(), r.getAmount(), r.getRequestNo(), operator(), r.getReason());
+crmeb-admin/src/main/java/com/zbkj/admin/controller/jiuzhoukang/JkStockTransferReturnAdminController.java:50:    @PostMapping("/refund")
+crmeb-admin/src/main/java/com/zbkj/admin/controller/jiuzhoukang/JkStockTransferReturnAdminController.java:53:    public CommonResult<JkStockTransferReturn> refund(@RequestBody @Validated JkStockTransferReturnRefundRequest request){return CommonResult.success(service.confirmRefund(user(),request));}
+crmeb-admin/src/main/java/com/zbkj/admin/controller/jiuzhoukang/JkReceiveExceptionResolutionAdminController.java:35:    @ApiOperation("创建分SKU补发、退款、退回或接受方案")
+crmeb-admin/src/main/java/com/zbkj/admin/controller/StoreOrderController.java:147:     * 退款
+crmeb-admin/src/main/java/com/zbkj/admin/controller/StoreOrderController.java:149:    @PreAuthorize("hasAuthority('admin:order:refund')")
+crmeb-admin/src/main/java/com/zbkj/admin/controller/StoreOrderController.java:150:    @ApiOperation(value = "退款")
+crmeb-admin/src/main/java/com/zbkj/admin/controller/StoreOrderController.java:151:    @RequestMapping(value = "/refund", method = RequestMethod.GET)
+crmeb-admin/src/main/java/com/zbkj/admin/controller/StoreOrderController.java:152:    public CommonResult<Boolean> refund(@Validated StoreOrderRefundRequest request) {
+crmeb-admin/src/main/java/com/zbkj/admin/controller/StoreOrderController.java:153:        return CommonResult.success(storeOrderService.refund(request));
+crmeb-admin/src/main/java/com/zbkj/admin/controller/StoreOrderController.java:157:     * 拒绝退款
+crmeb-admin/src/main/java/com/zbkj/admin/controller/StoreOrderController.java:159:    @PreAuthorize("hasAuthority('admin:order:refund:refuse')")
+crmeb-admin/src/main/java/com/zbkj/admin/controller/StoreOrderController.java:160:    @ApiOperation(value = "拒绝退款")
+crmeb-admin/src/main/java/com/zbkj/admin/controller/StoreOrderController.java:161:    @RequestMapping(value = "/refund/refuse", method = RequestMethod.GET)
+crmeb-admin/src/main/java/com/zbkj/admin/controller/StoreOrderController.java:162:    public CommonResult<Object> refundRefuse(@RequestParam String orderNo, @RequestParam String reason) {
+crmeb-admin/src/main/java/com/zbkj/admin/controller/StoreOrderController.java:163:        if (storeOrderService.refundRefuse(orderNo, reason)) {
+crmeb-admin/src/main/java/com/zbkj/admin/task/order/OrderRefundTask.java:12: * 账单退款操作
+crmeb-admin/src/main/java/com/zbkj/admin/task/order/OrderRefundTask.java:23:@Component("OrderRefundTask")
+crmeb-admin/src/main/java/com/zbkj/admin/task/order/OrderRefundTask.java:24:public class OrderRefundTask {
+crmeb-admin/src/main/java/com/zbkj/admin/task/order/OrderRefundTask.java:26:    private static final Logger logger = LoggerFactory.getLogger(OrderRefundTask.class);
+crmeb-admin/src/main/java/com/zbkj/admin/task/order/OrderRefundTask.java:34:    public void orderRefund() {
+crmeb-admin/src/main/java/com/zbkj/admin/task/order/OrderRefundTask.java:36:        logger.info("---OrderRefundTask task------produce Data with fixed rate task: Execution Time - {}", CrmebDateUtil.nowDateTime());
+crmeb-admin/src/main/java/com/zbkj/admin/task/order/OrderRefundTask.java:38:            orderTaskService.refundApply();
+crmeb-admin/src/main/java/com/zbkj/admin/task/order/OrderRefundTask.java:42:            logger.error("OrderRefundTask.task" + " | msg : " + e.getMessage());
+crmeb-common/src/main/java/com/zbkj/common/utils/WxPayUtil.java:11:import com.zbkj.common.vo.WxRefundVo;
+crmeb-common/src/main/java/com/zbkj/common/utils/WxPayUtil.java:97:     * @param wxRefundVo  微信退款对象
+crmeb-common/src/main/java/com/zbkj/common/utils/WxPayUtil.java:101:    public static String getSign(WxRefundVo wxRefundVo, String signKey) {
+crmeb-common/src/main/java/com/zbkj/common/utils/WxPayUtil.java:103:        Map<String, Object> map = JSONObject.parseObject(JSONObject.toJSONString(wxRefundVo), Map.class);
+crmeb-common/src/main/java/com/zbkj/common/utils/RestTemplateUtil.java:255:     * 发送POST-JSON请求(微信退款专用)
+crmeb-common/src/main/java/com/zbkj/common/utils/RestTemplateUtil.java:261:    public String postWXRefundXml(String url, String xml, String mchId, String path) throws Exception {
+crmeb-common/src/main/java/com/zbkj/common/vo/ShopAftersaleUpdateVo.java:34:    /** 0:未受理,1:用户取消,2:商家受理中,3:商家逾期未处理,4:商家拒绝退款,5:商家拒绝退货退款,6:待买家退货,7:退货退款关闭,8:待商家收货,11:商家退款中,12:商家逾期未退款,13:退款完成,14:退货退款完成 */
+crmeb-common/src/main/java/com/zbkj/common/vo/OrderExcelVo.java:49://    @ApiModelProperty(value = "退款图片")
+crmeb-common/src/main/java/com/zbkj/common/vo/OrderExcelVo.java:50://    private String refundReasonWapImg;
+crmeb-common/src/main/java/com/zbkj/common/vo/OrderExcelVo.java:52://    @ApiModelProperty(value = "退款用户说明")
+crmeb-common/src/main/java/com/zbkj/common/vo/OrderExcelVo.java:53://    private String refundReasonWapExplain;
+crmeb-common/src/main/java/com/zbkj/common/vo/OrderExcelVo.java:55://    @ApiModelProperty(value = "退款时间")
+crmeb-common/src/main/java/com/zbkj/common/vo/OrderExcelVo.java:56://    private String refundReasonTime;
+crmeb-common/src/main/java/com/zbkj/common/vo/OrderExcelVo.java:58://    @ApiModelProperty(value = "前台退款原因")
+crmeb-common/src/main/java/com/zbkj/common/vo/OrderExcelVo.java:59://    private String refundReasonWap;
+crmeb-common/src/main/java/com/zbkj/common/vo/OrderExcelVo.java:61://    @ApiModelProperty(value = "不退款的理由")
+crmeb-common/src/main/java/com/zbkj/common/vo/OrderExcelVo.java:62://    private String refundReason;
+crmeb-common/src/main/java/com/zbkj/common/vo/OrderExcelVo.java:64://    @ApiModelProperty(value = "退款金额")
+crmeb-common/src/main/java/com/zbkj/common/vo/OrderExcelVo.java:65://    private String refundPrice;
+crmeb-common/src/main/java/com/zbkj/common/vo/OrderExcelVo.java:67://    @ApiModelProperty(value = "0 未退款 1 申请中 2 已退款")
+crmeb-common/src/main/java/com/zbkj/common/vo/OrderExcelVo.java:68://    private String refundStatus;
+crmeb-common/src/main/java/com/zbkj/common/vo/ShopAftersaleVo.java:41:    /** 售后类型，1:退款,2:退款退货,3:换货 */
+crmeb-common/src/main/java/com/zbkj/common/vo/ShopAftersaleVo.java:48:    /** 0:未受理,1:用户取消,2:商家受理中,3:商家逾期未处理,4:商家拒绝退款,5:商家拒绝退货退款,6:待买家退货,7:退货退款关闭,8:待商家收货,11:商家退款中,12:商家逾期未退款,13:退款完成,14:退货退款完成 */
+crmeb-common/src/main/java/com/zbkj/common/vo/WxRefundResponseVo.java:11: * 微信退款返回对象
+crmeb-common/src/main/java/com/zbkj/common/vo/WxRefundResponseVo.java:25:@ApiModel(value="WxRefundResponseVo", description="微信退款返回对象")
+crmeb-common/src/main/java/com/zbkj/common/vo/WxRefundResponseVo.java:26:public class WxRefundResponseVo {
+crmeb-common/src/main/java/com/zbkj/common/vo/WxRefundResponseVo.java:70:    @ApiModelProperty(value = "商户退款单号,同一退款单号多次请求只退一笔。")
+crmeb-common/src/main/java/com/zbkj/common/vo/WxRefundResponseVo.java:71:    @JsonProperty(value = "out_refund_no")
+crmeb-common/src/main/java/com/zbkj/common/vo/WxRefundResponseVo.java:72:    private String outRefundNo;
+crmeb-common/src/main/java/com/zbkj/common/vo/WxRefundResponseVo.java:74:    @ApiModelProperty(value = "微信退款单号")
+crmeb-common/src/main/java/com/zbkj/common/vo/WxRefundResponseVo.java:75:    @JsonProperty(value = "refund_id")
+crmeb-common/src/main/java/com/zbkj/common/vo/WxRefundResponseVo.java:76:    private String refundId;
+crmeb-common/src/main/java/com/zbkj/common/vo/WxRefundResponseVo.java:78:    @ApiModelProperty(value = "退款总金额,单位为分,可以做部分退款")
+crmeb-common/src/main/java/com/zbkj/common/vo/WxRefundResponseVo.java:79:    @JsonProperty(value = "refund_fee")
+crmeb-common/src/main/java/com/zbkj/common/vo/WxRefundResponseVo.java:80:    private Integer refundFee;
+crmeb-common/src/main/java/com/zbkj/common/vo/WxRefundResponseVo.java:82:    @ApiModelProperty(value = "应结退款金额")
+crmeb-common/src/main/java/com/zbkj/common/vo/WxRefundResponseVo.java:83:    @JsonProperty(value = "settlement_refund_fee")
+crmeb-common/src/main/java/com/zbkj/common/vo/WxRefundResponseVo.java:84:    private Integer settlementRefundFee;
+crmeb-common/src/main/java/com/zbkj/common/vo/WxRefundResponseVo.java:106:    @ApiModelProperty(value = "现金退款金额")
+crmeb-common/src/main/java/com/zbkj/common/vo/WxRefundResponseVo.java:107:    @JsonProperty(value = "cash_refund_fee")
+crmeb-common/src/main/java/com/zbkj/common/vo/WxRefundResponseVo.java:108:    private Integer cashRefundFee;
+crmeb-common/src/main/java/com/zbkj/common/vo/WxRefundVo.java:11: * 调用微信退款所需要的参数
+crmeb-common/src/main/java/com/zbkj/common/vo/WxRefundVo.java:25:@ApiModel(value="WxRefundVo", description="调用微信退款所需要的参数")
+crmeb-common/src/main/java/com/zbkj/common/vo/WxRefundVo.java:26:public class WxRefundVo {
+crmeb-common/src/main/java/com/zbkj/common/vo/WxRefundVo.java:49:    @ApiModelProperty(value = "商户退款单号,同一退款单号多次请求只退一笔。")
+crmeb-common/src/main/java/com/zbkj/common/vo/WxRefundVo.java:50:    private String out_refund_no;
+crmeb-common/src/main/java/com/zbkj/common/vo/WxRefundVo.java:55:    @ApiModelProperty(value = "退款金额，单位为分", required = true)
+crmeb-common/src/main/java/com/zbkj/common/vo/WxRefundVo.java:56:    private int refund_fee;
+crmeb-common/src/main/java/com/zbkj/common/vo/WxRefundVo.java:58:    @ApiModelProperty(value = "退款货币种类:符合ISO 4217标准的三位字母代码，默认人民币：CNY，其他值列表详见货币类型")
+crmeb-common/src/main/java/com/zbkj/common/vo/WxRefundVo.java:59:    private String refund_fee_type = "CNY";
+crmeb-common/src/main/java/com/zbkj/common/vo/WxRefundVo.java:61:    @ApiModelProperty(value = "退款结果通知url")
+crmeb-common/src/main/java/com/zbkj/common/vo/ShopAftersaleAddVo.java:37:    /** 售后类型，1:退款,2:退款退货,3:换货 */
+crmeb-common/src/main/java/com/zbkj/common/vo/ShopAftersaleAddVo.java:44:    /** 0:未受理,1:用户取消,2:商家受理中,3:商家逾期未处理,4:商家拒绝退款,5:商家拒绝退货退款,6:待买家退货,7:退货退款关闭,8:待商家收货,11:商家退款中,12:商家逾期未退款,13:退款完成,14:退货退款完成 */
+crmeb-common/src/main/java/com/zbkj/common/constants/PayConstants.java:45:    // 微信退款回调地址
+crmeb-common/src/main/java/com/zbkj/common/constants/PayConstants.java:46:    public static final String WX_PAY_REFUND_NOTIFY_API_URI = "/api/admin/payment/callback/wechat/refund";
+crmeb-common/src/main/java/com/zbkj/common/constants/PayConstants.java:54:    // 公共号退款
+crmeb-common/src/main/java/com/zbkj/common/constants/PayConstants.java:55:    public static final String WX_PAY_REFUND_API_URI= "secapi/pay/refund";
+crmeb-common/src/main/java/com/zbkj/common/constants/Constants.java:359:    public static final String USER_BILL_TYPE_PAY_PRODUCT_REFUND = "pay_product_refund"; //商品退款
+crmeb-common/src/main/java/com/zbkj/common/constants/Constants.java:370:    public static final String USER_BILL_TYPE_USER_RECHARGE_REFUND = "user_recharge_refund";// 用户充值退款
+crmeb-common/src/main/java/com/zbkj/common/constants/Constants.java:380:    public static final String ORDER_STATUS_APPLY_REFUNDING = "applyRefund"; //申请退款
+crmeb-common/src/main/java/com/zbkj/common/constants/Constants.java:381:    public static final String ORDER_STATUS_REFUNDING = "refunding"; //退款中
+crmeb-common/src/main/java/com/zbkj/common/constants/Constants.java:382:    public static final String ORDER_STATUS_REFUNDED = "refunded"; //已退款
+crmeb-common/src/main/java/com/zbkj/common/constants/Constants.java:392:    public static final String ORDER_STATUS_STR_APPLY_REFUNDING = "申请退款"; //申请退款
+crmeb-common/src/main/java/com/zbkj/common/constants/Constants.java:393:    public static final String ORDER_STATUS_STR_REFUNDING = "退款中"; //退款中
+crmeb-common/src/main/java/com/zbkj/common/constants/Constants.java:394:    public static final String ORDER_STATUS_STR_REFUNDED = "已退款"; //已退款
+crmeb-common/src/main/java/com/zbkj/common/constants/Constants.java:404:    public static final int ORDER_STATUS_H5_REFUNDING = -1; // 退款中
+crmeb-common/src/main/java/com/zbkj/common/constants/Constants.java:405:    public static final int ORDER_STATUS_H5_REFUNDED = -2; // 已退款
+crmeb-common/src/main/java/com/zbkj/common/constants/Constants.java:406:    public static final int ORDER_STATUS_H5_REFUND = -3; // 退款
+crmeb-common/src/main/java/com/zbkj/common/constants/Constants.java:418:    public static final String ORDER_TASK_REDIS_KEY_AFTER_REFUND_BY_USER = "alterOrderRefundByUser"; // 用户订单退款后续操作
+crmeb-common/src/main/java/com/zbkj/common/constants/Constants.java:453:    public static final String ORDER_LOG_REFUND_PRICE = "refund_price"; //退款
+crmeb-common/src/main/java/com/zbkj/common/constants/Constants.java:458:    public static final String ORDER_LOG_REFUND_REFUSE = "refund_refuse"; //不退款
+crmeb-common/src/main/java/com/zbkj/common/constants/Constants.java:459:    public static final String ORDER_LOG_REFUND_APPLY = "apply_refund"; //
+crmeb-common/src/main/java/com/zbkj/common/constants/Constants.java:471:    public static final String ORDER_LOG_MESSAGE_REFUND_PRICE = "退款给用户{amount}元"; //退款
+crmeb-common/src/main/java/com/zbkj/common/constants/Constants.java:475:    public static final String ORDER_LOG_MESSAGE_REFUND_REFUSE = "不退款款因：{reason}"; //不退款款因
+crmeb-common/src/main/java/com/zbkj/common/constants/Constants.java:499:    public static final String WE_CHAT_TEMP_KEY_ORDER_REFUND = "OPENTM207791277";// 退款进度通知
+crmeb-common/src/main/java/com/zbkj/common/constants/IntegralRecordConstants.java:32:    /** 佣金记录状态—失效（订单退款） */
+crmeb-common/src/main/java/com/zbkj/common/constants/IntegralRecordConstants.java:53:    /** 佣金记录标题—订单退款 */
+crmeb-common/src/main/java/com/zbkj/common/constants/IntegralRecordConstants.java:54:    public static final String BROKERAGE_RECORD_TITLE_REFUND = "订单退款";
+crmeb-common/src/main/java/com/zbkj/common/constants/BrokerageRecordConstants.java:32:    /** 佣金记录状态—失效（订单退款） */
+crmeb-common/src/main/java/com/zbkj/common/constants/SysConfigConstants.java:59:    /** 退款理由 */
+crmeb-common/src/main/java/com/zbkj/common/constants/ExperienceRecordConstants.java:41:    /** 经验记录标题—用户退款 */
+crmeb-common/src/main/java/com/zbkj/common/constants/ExperienceRecordConstants.java:42:    public static final String EXPERIENCE_RECORD_TITLE_REFUND = "用户退款";
+crmeb-common/src/main/java/com/zbkj/common/constants/jiuzhoukang/JkPermissionCodes.java:133:    /** 调拨退回退款确认。 */
+crmeb-common/src/main/java/com/zbkj/common/constants/jiuzhoukang/JkPermissionCodes.java:134:    public static final String ADMIN_STOCK_TRANSFER_RETURN_REFUND = "admin:jk:stock:transfer:return:refund";
+crmeb-common/src/main/java/com/zbkj/common/constants/SmsConstants.java:64:    public static final String SMS_CONFIG_ADMIN_REFUND_SWITCH = "adminRefundSwitch";
+crmeb-common/src/main/java/com/zbkj/common/constants/SmsConstants.java:68:    /** 用户发起退款管理员短信提醒 */
+crmeb-common/src/main/java/com/zbkj/common/constants/SmsConstants.java:70:    /** 用户发起退款管理员短信提醒模版ID */
+crmeb-common/src/main/java/com/zbkj/common/constants/SmsConstants.java:101:    /** 用户发起退款管理员短信提醒 */
+crmeb-common/src/main/java/com/zbkj/common/constants/WeChatConstants.java:226:    // 公共号退款
+crmeb-common/src/main/java/com/zbkj/common/constants/WeChatConstants.java:227:    public static final String PAY_REFUND_API_URI_WECHAT = "secapi/pay/refund";
+crmeb-common/src/main/java/com/zbkj/common/constants/NotifyConstants.java:40:    /** 用户发起退款(管理员)标记 */
+crmeb-common/src/main/java/com/zbkj/common/constants/NotifyConstants.java:41:    public static final String APPLY_ORDER_REFUND_ADMIN_MARK = "adminApplyOrderRefund";
+crmeb-common/src/main/java/com/zbkj/common/model/finance/UserRecharge.java:64:    @ApiModelProperty(value = "退款金额")
+crmeb-common/src/main/java/com/zbkj/common/model/finance/UserRecharge.java:65:    private BigDecimal refundPrice;
+crmeb-common/src/main/java/com/zbkj/common/model/combination/StorePink.java:78:    @ApiModelProperty(value = "是否退款 0未退款 1已退款")
+crmeb-common/src/main/java/com/zbkj/common/model/combination/StorePink.java:79:    private Boolean isRefund;
+crmeb-common/src/main/java/com/zbkj/common/model/jiuzhoukang/JkStockTransferReturn.java:25:    private String refundStatus;
+crmeb-common/src/main/java/com/zbkj/common/model/jiuzhoukang/JkStockTransferReturn.java:38:    private Long refundUserId;
+crmeb-common/src/main/java/com/zbkj/common/model/jiuzhoukang/JkStockTransferReturn.java:39:    private Date refundTime;
+crmeb-common/src/main/java/com/zbkj/common/model/jiuzhoukang/JkStockTransferReturn.java:40:    private String refundVoucherUrl;
+crmeb-common/src/main/java/com/zbkj/common/model/jiuzhoukang/JkStockTransferReturn.java:41:    private String refundRemark;
+crmeb-common/src/main/java/com/zbkj/common/model/jiuzhoukang/JkStockTransferReturn.java:57:    @TableField(exist = false) private String refundStatusText;
+crmeb-common/src/main/java/com/zbkj/common/model/jiuzhoukang/JkRetailRefundAdjustment.java:13: * 普通零售订单退款发生额。
+crmeb-common/src/main/java/com/zbkj/common/model/jiuzhoukang/JkRetailRefundAdjustment.java:14: * <p>归属快照表保存累计退款，本表保存每一次退款的发生日期和分摊金额，
+crmeb-common/src/main/java/com/zbkj/common/model/jiuzhoukang/JkRetailRefundAdjustment.java:15: * 用于“退款发生月份记负数”的第六阶段报表，避免通过累计值或 update_time 反推当期退款。</p>
+crmeb-common/src/main/java/com/zbkj/common/model/jiuzhoukang/JkRetailRefundAdjustment.java:19:@TableName("jk_retail_refund_adjustment")
+crmeb-common/src/main/java/com/zbkj/common/model/jiuzhoukang/JkRetailRefundAdjustment.java:20:public class JkRetailRefundAdjustment implements Serializable {
+crmeb-common/src/main/java/com/zbkj/common/model/jiuzhoukang/JkRetailRefundAdjustment.java:33:    /** 正数保存退款发生额，报表展示时记为负数。 */
+crmeb-common/src/main/java/com/zbkj/common/model/jiuzhoukang/JkRetailOrderAttribution.java:16: * 支付、完成、退款只能读取本记录；已锁定记录不得直接改受益人、关系或最终区域。
+crmeb-common/src/main/java/com/zbkj/common/model/jiuzhoukang/JkRetailOrderAttribution.java:60:    private BigDecimal refundedAmount;
+crmeb-common/src/main/java/com/zbkj/common/model/jiuzhoukang/JkRetailOrderAttribution.java:61:    private BigDecimal refundAmount;
+crmeb-common/src/main/java/com/zbkj/common/model/jiuzhoukang/JkRetailOrderAttribution.java:76:    private String lastRefundRequestNo;
+crmeb-common/src/main/java/com/zbkj/common/model/jiuzhoukang/JkReceiveExceptionResolutionItem.java:25:    private Integer refundQty;
+crmeb-common/src/main/java/com/zbkj/common/model/jiuzhoukang/JkPerformancePeriod.java:30:    private BigDecimal totalRefundAmount;
+crmeb-common/src/main/java/com/zbkj/common/model/jiuzhoukang/JkPerformancePeriodItem.java:28:    private BigDecimal refundAmount;
+crmeb-common/src/main/java/com/zbkj/common/model/jiuzhoukang/JkReceiveExceptionResolution.java:27:    private BigDecimal refundAmount;
+crmeb-common/src/main/java/com/zbkj/common/model/order/StoreOrder.java:53:    @ApiModelProperty(value = "0 未退款 1 申请中 2 已退款 3 退款中") private Integer refundStatus;
+crmeb-common/src/main/java/com/zbkj/common/model/order/StoreOrder.java:54:    @ApiModelProperty(value = "退款图片") private String refundReasonWapImg;
+crmeb-common/src/main/java/com/zbkj/common/model/order/StoreOrder.java:55:    @ApiModelProperty(value = "退款用户说明") private String refundReasonWapExplain;
+crmeb-common/src/main/java/com/zbkj/common/model/order/StoreOrder.java:56:    @ApiModelProperty(value = "前台退款原因") private String refundReasonWap;
+crmeb-common/src/main/java/com/zbkj/common/model/order/StoreOrder.java:57:    @ApiModelProperty(value = "不退款的理由") private String refundReason;
+crmeb-common/src/main/java/com/zbkj/common/model/order/StoreOrder.java:58:    @ApiModelProperty(value = "退款时间") private Date refundReasonTime;
+crmeb-common/src/main/java/com/zbkj/common/model/order/StoreOrder.java:59:    @ApiModelProperty(value = "退款金额") private BigDecimal refundPrice;
+crmeb-common/src/main/java/com/zbkj/common/model/log/StoreProductLog.java:40:    @ApiModelProperty(value = "类型visit,cart,order,pay,collect,refund")
+crmeb-common/src/main/java/com/zbkj/common/model/log/StoreProductLog.java:70:    @ApiModelProperty(value = "退款数量")
+crmeb-common/src/main/java/com/zbkj/common/model/log/StoreProductLog.java:71:    private Integer refundNum;
+crmeb-common/src/main/java/com/zbkj/common/model/log/StoreProductLog.java:73:    @ApiModelProperty(value = "退款金额")
+crmeb-common/src/main/java/com/zbkj/common/model/log/StoreProductLog.java:74:    private BigDecimal refundPrice;
+crmeb-common/src/main/java/com/zbkj/common/model/user/UserIntegralRecord.java:64:    @ApiModelProperty(value = "状态：1-订单创建，2-冻结期，3-完成，4-失效（订单退款）")
+crmeb-common/src/main/java/com/zbkj/common/model/user/UserBrokerageRecord.java:66:    @ApiModelProperty(value = "状态：1-订单创建，2-冻结期，3-完成，4-失效（订单退款），5-提现申请")
+crmeb-common/src/main/java/com/zbkj/common/result/OrderResultCode.java:19:    ORDER_REFUND_ED(5004, "订单已退款"),
+crmeb-common/src/main/java/com/zbkj/common/result/OrderResultCode.java:36:    REFUND_ORDER_NOT_EXIST(5501, "退款单不存在"),
+crmeb-common/src/main/java/com/zbkj/common/result/OrderResultCode.java:37:    REFUND_ORDER_STATUS_ABNORMAL(5502, "退款单状态异常"),
+crmeb-common/src/main/java/com/zbkj/common/response/StoreStaffTopDetail.java:29:    private Integer refundCount;
+crmeb-common/src/main/java/com/zbkj/common/response/StorePinkResponse.java:67:    @ApiModelProperty(value = "是否退款 0未退款 1已退款")
+crmeb-common/src/main/java/com/zbkj/common/response/StorePinkResponse.java:68:    private Boolean isRefund;
+crmeb-common/src/main/java/com/zbkj/common/response/StoreOrderCountItemResponse.java:52:    @ApiModelProperty(value = "退款中")
+crmeb-common/src/main/java/com/zbkj/common/response/StoreOrderCountItemResponse.java:53:    private Integer refunding;
+crmeb-common/src/main/java/com/zbkj/common/response/StoreOrderCountItemResponse.java:55:    @ApiModelProperty(value = "已退款")
+crmeb-common/src/main/java/com/zbkj/common/response/StoreOrderCountItemResponse.java:56:    private Integer refunded;
+crmeb-common/src/main/java/com/zbkj/common/response/StoreOrderCountItemResponse.java:58:    @ApiModelProperty(value = "0 未退款 1 申请中 2 已退款")
+crmeb-common/src/main/java/com/zbkj/common/response/StoreOrderCountItemResponse.java:59:    private Integer refundStatus;
+crmeb-common/src/main/java/com/zbkj/common/response/StoreOrderDetailInfoResponse.java:95:    @ApiModelProperty(value = "0 未退款 1 申请中 2 已退款")
+crmeb-common/src/main/java/com/zbkj/common/response/StoreOrderDetailInfoResponse.java:96:    private Integer refundStatus;
+crmeb-common/src/main/java/com/zbkj/common/response/StoreOrderDetailInfoResponse.java:98:    @ApiModelProperty(value = "退款图片")
+crmeb-common/src/main/java/com/zbkj/common/response/StoreOrderDetailInfoResponse.java:99:    private String refundReasonWapImg;
+crmeb-common/src/main/java/com/zbkj/common/response/StoreOrderDetailInfoResponse.java:101:    @ApiModelProperty(value = "退款用户说明")
+crmeb-common/src/main/java/com/zbkj/common/response/StoreOrderDetailInfoResponse.java:102:    private String refundReasonWapExplain;
+crmeb-common/src/main/java/com/zbkj/common/response/StoreOrderDetailInfoResponse.java:104:    @ApiModelProperty(value = "退款时间")
+crmeb-common/src/main/java/com/zbkj/common/response/StoreOrderDetailInfoResponse.java:105:    private Date refundReasonTime;
+crmeb-common/src/main/java/com/zbkj/common/response/StoreOrderDetailInfoResponse.java:107:    @ApiModelProperty(value = "前台退款原因")
+crmeb-common/src/main/java/com/zbkj/common/response/StoreOrderDetailInfoResponse.java:108:    private String refundReasonWap;
+crmeb-common/src/main/java/com/zbkj/common/response/StoreOrderDetailInfoResponse.java:110:    @ApiModelProperty(value = "不退款的理由")
+crmeb-common/src/main/java/com/zbkj/common/response/StoreOrderDetailInfoResponse.java:111:    private String refundReason;
+crmeb-common/src/main/java/com/zbkj/common/response/StoreOrderDetailInfoResponse.java:113:    @ApiModelProperty(value = "退款金额")
+crmeb-common/src/main/java/com/zbkj/common/response/StoreOrderDetailInfoResponse.java:114:    private BigDecimal refundPrice;
+crmeb-common/src/main/java/com/zbkj/common/response/StoreOrderDetailInfoResponse.java:263://    @ApiModelProperty(value = "订单状态（-1 : 申请退款 -2 : 退货成功 0：待发货；1：待收货；2：已收货，待评价；3：已完成；）")
+crmeb-common/src/main/java/com/zbkj/common/response/StoreOrderDetailInfoResponse.java:266://    @ApiModelProperty(value = "0 未退款 1 申请中 2 已退款")
+crmeb-common/src/main/java/com/zbkj/common/response/StoreOrderDetailInfoResponse.java:267://    private Integer refundStatus;
+crmeb-common/src/main/java/com/zbkj/common/response/StoreOrderDetailInfoResponse.java:269://    @ApiModelProperty(value = "退款图片")
+crmeb-common/src/main/java/com/zbkj/common/response/StoreOrderDetailInfoResponse.java:270://    private String refundReasonWapImg;
+crmeb-common/src/main/java/com/zbkj/common/response/StoreOrderDetailInfoResponse.java:272://    @ApiModelProperty(value = "退款用户说明")
+crmeb-common/src/main/java/com/zbkj/common/response/StoreOrderDetailInfoResponse.java:273://    private String refundReasonWapExplain;
+crmeb-common/src/main/java/com/zbkj/common/response/StoreOrderDetailInfoResponse.java:275://    @ApiModelProperty(value = "退款时间")
+crmeb-common/src/main/java/com/zbkj/common/response/StoreOrderDetailInfoResponse.java:276://    private Date refundReasonTime;
+crmeb-common/src/main/java/com/zbkj/common/response/StoreOrderDetailInfoResponse.java:278://    @ApiModelProperty(value = "前台退款原因")
+crmeb-common/src/main/java/com/zbkj/common/response/StoreOrderDetailInfoResponse.java:279://    private String refundReasonWap;
+crmeb-common/src/main/java/com/zbkj/common/response/StoreOrderDetailInfoResponse.java:281://    @ApiModelProperty(value = "不退款的理由")
+crmeb-common/src/main/java/com/zbkj/common/response/StoreOrderDetailInfoResponse.java:282://    private String refundReason;
+crmeb-common/src/main/java/com/zbkj/common/response/StoreOrderDetailInfoResponse.java:284://    @ApiModelProperty(value = "退款金额")
+crmeb-common/src/main/java/com/zbkj/common/response/StoreOrderDetailInfoResponse.java:285://    private BigDecimal refundPrice;
+crmeb-common/src/main/java/com/zbkj/common/response/UserIntegralRecordResponse.java:62:    @ApiModelProperty(value = "状态：1-订单创建，2-冻结期，3-完成，4-失效（订单退款）")
+crmeb-common/src/main/java/com/zbkj/common/response/UserRechargeResponse.java:53:    @ApiModelProperty(value = "退款金额")
+crmeb-common/src/main/java/com/zbkj/common/response/UserRechargeResponse.java:54:    private BigDecimal refundPrice;
+crmeb-common/src/main/java/com/zbkj/common/response/OrderDataResponse.java:47:    @ApiModelProperty(value = "退款订单数量")
+crmeb-common/src/main/java/com/zbkj/common/response/OrderDataResponse.java:48:    private Integer refundCount;
+crmeb-common/src/main/java/com/zbkj/common/response/StoreOrderVerificationConfirmResponse.java:84:    @ApiModelProperty(value = "订单状态（-1 : 申请退款 -2 : 退货成功 0：待发货；1：待收货；2：已收货，待评价；3：已完成；）")
+crmeb-common/src/main/java/com/zbkj/common/response/StoreOrderVerificationConfirmResponse.java:87:    @ApiModelProperty(value = "0 未退款 1 申请中 2 已退款")
+crmeb-common/src/main/java/com/zbkj/common/response/StoreOrderVerificationConfirmResponse.java:88:    private Integer refundStatus;
+crmeb-common/src/main/java/com/zbkj/common/response/StoreOrderVerificationConfirmResponse.java:90:    @ApiModelProperty(value = "退款图片")
+crmeb-common/src/main/java/com/zbkj/common/response/StoreOrderVerificationConfirmResponse.java:91:    private String refundReasonWapImg;
+crmeb-common/src/main/java/com/zbkj/common/response/StoreOrderVerificationConfirmResponse.java:93:    @ApiModelProperty(value = "退款用户说明")
+crmeb-common/src/main/java/com/zbkj/common/response/StoreOrderVerificationConfirmResponse.java:94:    private String refundReasonWapExplain;
+crmeb-common/src/main/java/com/zbkj/common/response/StoreOrderVerificationConfirmResponse.java:96:    @ApiModelProperty(value = "退款时间")
+crmeb-common/src/main/java/com/zbkj/common/response/StoreOrderVerificationConfirmResponse.java:97:    private Date refundReasonTime;
+crmeb-common/src/main/java/com/zbkj/common/response/StoreOrderVerificationConfirmResponse.java:99:    @ApiModelProperty(value = "前台退款原因")
+crmeb-common/src/main/java/com/zbkj/common/response/StoreOrderVerificationConfirmResponse.java:100:    private String refundReasonWap;
+crmeb-common/src/main/java/com/zbkj/common/response/StoreOrderVerificationConfirmResponse.java:102:    @ApiModelProperty(value = "不退款的理由")
+crmeb-common/src/main/java/com/zbkj/common/response/StoreOrderVerificationConfirmResponse.java:103:    private String refundReason;
+crmeb-common/src/main/java/com/zbkj/common/response/StoreOrderVerificationConfirmResponse.java:105:    @ApiModelProperty(value = "退款金额")
+crmeb-common/src/main/java/com/zbkj/common/response/StoreOrderVerificationConfirmResponse.java:106:    private BigDecimal refundPrice;
+crmeb-common/src/main/java/com/zbkj/common/response/StorePinkDetailResponse.java:56:    @ApiModelProperty(value = "0 未退款 1 申请中 2 已退款 3退款中")
+crmeb-common/src/main/java/com/zbkj/common/response/StorePinkDetailResponse.java:57:    private Integer refundStatus;
+crmeb-common/src/main/java/com/zbkj/common/response/OrderDetailResponse.java:72:    @ApiModelProperty(value = "0 未退款 1 申请中 2 已退款 3 退款中")
+crmeb-common/src/main/java/com/zbkj/common/response/OrderDetailResponse.java:73:    private Integer refundStatus;
+crmeb-common/src/main/java/com/zbkj/common/response/jiuzhoukang/JkPersonalReportResponse.java:11:    /** 查询周期内发生的退款，正数展示。 */
+crmeb-common/src/main/java/com/zbkj/common/response/jiuzhoukang/JkPersonalReportResponse.java:12:    private BigDecimal retailRefundAmount;
+crmeb-common/src/main/java/com/zbkj/common/response/jiuzhoukang/JkPersonalReportResponse.java:13:    /** 完成销售额减去当期退款发生额。 */
+crmeb-common/src/main/java/com/zbkj/common/response/StoreOrderDetailResponse.java:64:    @ApiModelProperty(value = "退款图片")
+crmeb-common/src/main/java/com/zbkj/common/response/StoreOrderDetailResponse.java:65:    private String refundReasonWapImg;
+crmeb-common/src/main/java/com/zbkj/common/response/StoreOrderDetailResponse.java:67:    @ApiModelProperty(value = "退款用户说明")
+crmeb-common/src/main/java/com/zbkj/common/response/StoreOrderDetailResponse.java:68:    private String refundReasonWapExplain;
+crmeb-common/src/main/java/com/zbkj/common/response/StoreOrderDetailResponse.java:70:    @ApiModelProperty(value = "退款时间")
+crmeb-common/src/main/java/com/zbkj/common/response/StoreOrderDetailResponse.java:71:    private Date refundReasonTime;
+crmeb-common/src/main/java/com/zbkj/common/response/StoreOrderDetailResponse.java:73:    @ApiModelProperty(value = "前台退款原因")
+crmeb-common/src/main/java/com/zbkj/common/response/StoreOrderDetailResponse.java:74:    private String refundReasonWap;
+crmeb-common/src/main/java/com/zbkj/common/response/StoreOrderDetailResponse.java:76:    @ApiModelProperty(value = "不退款的理由")
+crmeb-common/src/main/java/com/zbkj/common/response/StoreOrderDetailResponse.java:77:    private String refundReason;
+crmeb-common/src/main/java/com/zbkj/common/response/StoreOrderDetailResponse.java:79:    @ApiModelProperty(value = "退款金额")
+crmeb-common/src/main/java/com/zbkj/common/response/StoreOrderDetailResponse.java:80:    private BigDecimal refundPrice;
+crmeb-common/src/main/java/com/zbkj/common/response/StoreOrderDetailResponse.java:82:    @ApiModelProperty(value = "0 未退款 1 申请中 2 已退款")
+crmeb-common/src/main/java/com/zbkj/common/response/StoreOrderDetailResponse.java:83:    private Integer refundStatus;
+crmeb-common/src/main/java/com/zbkj/common/response/ApplyRefundOrderInfoResponse.java:14: * 申请退款订单响应对象
+crmeb-common/src/main/java/com/zbkj/common/response/ApplyRefundOrderInfoResponse.java:28:@ApiModel(value="ApplyRefundOrderInfoResponse对象", description="申请退款订单响应对象")
+crmeb-common/src/main/java/com/zbkj/common/response/ApplyRefundOrderInfoResponse.java:29:public class ApplyRefundOrderInfoResponse implements Serializable {
+crmeb-common/src/main/java/com/zbkj/common/response/HomeOperatingDataResponse.java:39:    @ApiModelProperty(value = "退款中订单数量")
+crmeb-common/src/main/java/com/zbkj/common/response/HomeOperatingDataResponse.java:40:    private Integer refundingOrderNum;
+crmeb-common/src/main/java/com/zbkj/common/response/StoreOrderItemResponse.java:70:    @ApiModelProperty(value = "订单状态（-1 : 申请退款 -2 : 退货成功 0：待发货；1：待收货；2：已收货；3：待评价；-1：已退款）")
+crmeb-common/src/main/java/com/zbkj/common/response/StoreOrderItemResponse.java:115:    @ApiModelProperty(value = "退款图片")
+crmeb-common/src/main/java/com/zbkj/common/response/StoreOrderItemResponse.java:116:    private String refundReasonWapImg;
+crmeb-common/src/main/java/com/zbkj/common/response/StoreOrderItemResponse.java:118:    @ApiModelProperty(value = "退款用户说明")
+crmeb-common/src/main/java/com/zbkj/common/response/StoreOrderItemResponse.java:119:    private String refundReasonWapExplain;
+crmeb-common/src/main/java/com/zbkj/common/response/StoreOrderItemResponse.java:121:    @ApiModelProperty(value = "退款时间")
+crmeb-common/src/main/java/com/zbkj/common/response/StoreOrderItemResponse.java:122:    private Date refundReasonTime;
+crmeb-common/src/main/java/com/zbkj/common/response/StoreOrderItemResponse.java:124:    @ApiModelProperty(value = "前台退款原因")
+crmeb-common/src/main/java/com/zbkj/common/response/StoreOrderItemResponse.java:125:    private String refundReasonWap;
+crmeb-common/src/main/java/com/zbkj/common/response/StoreOrderItemResponse.java:127:    @ApiModelProperty(value = "不退款的理由")
+crmeb-common/src/main/java/com/zbkj/common/response/StoreOrderItemResponse.java:128:    private String refundReason;
+crmeb-common/src/main/java/com/zbkj/common/response/StoreOrderItemResponse.java:130:    @ApiModelProperty(value = "退款金额")
+crmeb-common/src/main/java/com/zbkj/common/response/StoreOrderItemResponse.java:131:    private BigDecimal refundPrice;
+crmeb-common/src/main/java/com/zbkj/common/response/StoreOrderItemResponse.java:133:    @ApiModelProperty(value = "0 未退款 1 申请中 2 已退款")
+crmeb-common/src/main/java/com/zbkj/common/response/StoreOrderItemResponse.java:134:    private Integer refundStatus;
+crmeb-common/src/main/java/com/zbkj/common/response/SystemWriteOffOrderResponse.java:39:    @ApiModelProperty(value = "退款总金额")
+crmeb-common/src/main/java/com/zbkj/common/response/SystemWriteOffOrderResponse.java:40:    private BigDecimal refundTotalPrice;
+crmeb-common/src/main/java/com/zbkj/common/response/SystemWriteOffOrderResponse.java:42:    @ApiModelProperty(value = "退款总单数")
+crmeb-common/src/main/java/com/zbkj/common/response/SystemWriteOffOrderResponse.java:43:    private Integer refundTotal = 0;
+crmeb-common/src/main/java/com/zbkj/common/response/StoreOrderInfoResponse.java:79:    @ApiModelProperty(value = "订单状态（-1 : 申请退款 -2 : 退货成功 0：待发货；1：待收货；2：已收货；3：待评价；-1：已退款）")
+crmeb-common/src/main/java/com/zbkj/common/response/StoreOrderInfoResponse.java:82:    @ApiModelProperty(value = "0 未退款 1 申请中 2 已退款")
+crmeb-common/src/main/java/com/zbkj/common/response/StoreOrderInfoResponse.java:83:    private Integer refundStatus;
+crmeb-common/src/main/java/com/zbkj/common/response/StoreOrderInfoResponse.java:109:    @ApiModelProperty(value = "退款金额")
+crmeb-common/src/main/java/com/zbkj/common/response/StoreOrderInfoResponse.java:110:    private BigDecimal refundPrice;
+crmeb-common/src/main/java/com/zbkj/common/response/StoreOrderInfoResponse.java:148:    @ApiModelProperty(value = "退款时间")
+crmeb-common/src/main/java/com/zbkj/common/response/StoreOrderInfoResponse.java:149:    private Date refundReasonTime;
+crmeb-common/src/main/java/com/zbkj/common/response/StoreOrderInfoResponse.java:151:    @ApiModelProperty(value = "退款图片")
+crmeb-common/src/main/java/com/zbkj/common/response/StoreOrderInfoResponse.java:152:    private String refundReasonWapImg;
+crmeb-common/src/main/java/com/zbkj/common/request/StoreOrderSearchRequest.java:41:    @ApiModelProperty(value = "订单状态（all 总数； 未支付 unPaid； 未发货 notShipped；待收货 spike；待评价 bargain；已完成 complete；待核销 toBeWrittenOff；退款中:refunding；已退款:refunded；已删除:deleted")
+crmeb-common/src/main/java/com/zbkj/common/request/StoreOrderSearchRequest.java:42:    @StringContains(limitValues = {"all","unPaid","notShipped","spike","bargain","complete","toBeWrittenOff","refunding","refunded","deleted"}, message = "未知的订单状态")
+crmeb-common/src/main/java/com/zbkj/common/request/OrderRefundApplyRequest.java:31:@ApiModel(value="OrderRefundApplyRequest对象", description="订单申请退款")
+crmeb-common/src/main/java/com/zbkj/common/request/OrderRefundApplyRequest.java:32:public class OrderRefundApplyRequest {
+crmeb-common/src/main/java/com/zbkj/common/request/OrderRefundApplyRequest.java:35:    @ApiModelProperty(value = "退款原因", required = true)
+crmeb-common/src/main/java/com/zbkj/common/request/OrderRefundApplyRequest.java:36:    @NotNull(message = "退款原因必须填写")
+crmeb-common/src/main/java/com/zbkj/common/request/OrderRefundApplyRequest.java:37:    @Length(max = 255, message = "退款原因不能超过255个字符")
+crmeb-common/src/main/java/com/zbkj/common/request/OrderRefundApplyRequest.java:43:    @ApiModelProperty(value = "退款凭证图片(多个图片请用,(英文逗号)隔开)")
+crmeb-common/src/main/java/com/zbkj/common/request/OrderRefundApplyRequest.java:44:    @JsonProperty("refund_reason_wap_img")
+crmeb-common/src/main/java/com/zbkj/common/request/OrderRefundApplyRequest.java:48:    @JsonProperty("refund_reason_wap_explain")
+crmeb-common/src/main/java/com/zbkj/common/request/OrderRefundApplyRequest.java:51:    @ApiModelProperty(value = "待退款订单")
+crmeb-common/src/main/java/com/zbkj/common/request/OrderRefundApplyRequest.java:52:    @NotNull(message = "待退款订单 不能为空")
+crmeb-common/src/main/java/com/zbkj/common/request/StoreOrderRefundRequest.java:16: * 订单退款表
+crmeb-common/src/main/java/com/zbkj/common/request/StoreOrderRefundRequest.java:30:@ApiModel(value="StoreOrderRefundRequest对象", description="订单退款")
+crmeb-common/src/main/java/com/zbkj/common/request/StoreOrderRefundRequest.java:31:public class StoreOrderRefundRequest {
+crmeb-common/src/main/java/com/zbkj/common/request/StoreOrderRefundRequest.java:38:    @ApiModelProperty(value = "退款金额")
+crmeb-common/src/main/java/com/zbkj/common/request/StoreOrderRefundRequest.java:39:    @DecimalMin(value = "0.00", message = "退款金额不能少于0.00")
+crmeb-common/src/main/java/com/zbkj/common/request/jiuzhoukang/JkStockTransferReturnRefundRequest.java:8:public class JkStockTransferReturnRefundRequest {
+crmeb-common/src/main/java/com/zbkj/common/request/jiuzhoukang/JkStockTransferReturnRefundRequest.java:11:    private String refundVoucherUrl;
+crmeb-common/src/main/java/com/zbkj/common/request/jiuzhoukang/JkReceiveExceptionResolutionCreateRequest.java:22:    @DecimalMin(value = "0.00", message = "退款金额不能小于0") private BigDecimal refundAmount;
+crmeb-common/src/main/java/com/zbkj/common/request/jiuzhoukang/JkReceiveExceptionResolutionCreateRequest.java:34:        @Min(value = 0, message = "退款数量不能小于0") private Integer refundQty;
+crmeb-common/src/main/java/com/zbkj/common/request/FundsMonitorRequest.java:41:    @ApiModelProperty(value = "明细类型:recharge-充值支付，admin-后台操作，productRefund商品退款，payProduct购买商品")
+crmeb-common/src/main/java/com/zbkj/common/request/FundsMonitorRequest.java:42:    @StringContains(limitValues = {"recharge", "admin", "productRefund", "payProduct"}, message = "请选择正确的明细类型")
+crmeb-front/src/main/java/com/zbkj/front/controller/jiuzhoukang/JkStockTransferReturnController.java:60:    @PostMapping("/handle/refund")
+crmeb-front/src/main/java/com/zbkj/front/controller/jiuzhoukang/JkStockTransferReturnController.java:62:    public CommonResult<JkStockTransferReturn> refund(@RequestBody @Validated JkStockTransferReturnRefundRequest request) { return CommonResult.success(service.confirmRefund(user(), request)); }
+crmeb-front/src/main/java/com/zbkj/front/controller/StoreOrderController.java:86:        @ApiImplicitParam(name = "type", value = "评价等级|0=未支付,1=待发货,2=待收货,3=待评价,4=已完成,-3=售后/退款", required = true)
+crmeb-front/src/main/java/com/zbkj/front/controller/StoreOrderController.java:174:     * 获取申请订单退款信息
+crmeb-front/src/main/java/com/zbkj/front/controller/StoreOrderController.java:177:    @ApiOperation(value = "获取申请订单退款信息")
+crmeb-front/src/main/java/com/zbkj/front/controller/StoreOrderController.java:178:    @RequestMapping(value = "/apply/refund/{orderId}", method = RequestMethod.GET)
+crmeb-front/src/main/java/com/zbkj/front/controller/StoreOrderController.java:179:    public CommonResult<ApplyRefundOrderInfoResponse> refundApplyOrder(@PathVariable String orderId) {
+crmeb-front/src/main/java/com/zbkj/front/controller/StoreOrderController.java:180:        return CommonResult.success(orderService.applyRefundOrderInfo(orderId));
+crmeb-front/src/main/java/com/zbkj/front/controller/StoreOrderController.java:184:     * 订单退款申请
+crmeb-front/src/main/java/com/zbkj/front/controller/StoreOrderController.java:185:     * @param request OrderRefundApplyRequest 订单id
+crmeb-front/src/main/java/com/zbkj/front/controller/StoreOrderController.java:187:    @ApiOperation(value = "订单退款申请")
+crmeb-front/src/main/java/com/zbkj/front/controller/StoreOrderController.java:188:    @RequestMapping(value = "/refund", method = RequestMethod.POST)
+crmeb-front/src/main/java/com/zbkj/front/controller/StoreOrderController.java:189:    public CommonResult<Boolean> refundApply(@RequestBody @Validated OrderRefundApplyRequest request) {
+crmeb-front/src/main/java/com/zbkj/front/controller/StoreOrderController.java:190:        if(orderService.refundApply(request)) {
+crmeb-front/src/main/java/com/zbkj/front/controller/StoreOrderController.java:198:     * 查询订单退款理由
+crmeb-front/src/main/java/com/zbkj/front/controller/StoreOrderController.java:199:     * @return 退款理由
+crmeb-front/src/main/java/com/zbkj/front/controller/StoreOrderController.java:201:    @ApiOperation(value = "订单退款理由（商家提供）")
+crmeb-front/src/main/java/com/zbkj/front/controller/StoreOrderController.java:202:    @RequestMapping(value = "/refund/reason", method = RequestMethod.GET)
+crmeb-front/src/main/java/com/zbkj/front/controller/StoreOrderController.java:203:    public CommonResult<List<String>> refundReason() {
+crmeb-front/src/main/java/com/zbkj/front/controller/StoreOrderController.java:204:        return CommonResult.success(orderService.getRefundReason());
+crmeb-front/src/main/java/com/zbkj/front/controller/WeChatController.java:121:    @ApiImplicitParam(name = "type", value = "支付之前：beforePay|支付成功：afterPay|申请退款：refundApply|充值之前：beforeRecharge|创建砍价：createBargain|参与拼团：pink|取消拼团：cancelPink")
+crmeb-service/src/test/java/com/zbkj/service/service/jiuzhoukang/region/JkRegionServiceImplTest.java:16:import com.zbkj.service.dao.jiuzhoukang.JkRetailRefundAdjustmentDao;
+crmeb-service/src/test/java/com/zbkj/service/service/jiuzhoukang/region/JkRegionServiceImplTest.java:185:        ReflectionTestUtils.setField(service, "retailRefundAdjustmentDao", countDao(JkRetailRefundAdjustmentDao.class, 0L));
+crmeb-service/src/main/resources/mapper/finance/UserRechargeMapper.xml:12:<!--    获取退款总额-->
+crmeb-service/src/main/resources/mapper/finance/UserRechargeMapper.xml:13:    <select id="getSumByRefund" resultType="java.math.BigDecimal">
+crmeb-service/src/main/resources/mapper/finance/UserRechargeMapper.xml:14:        select sum(refund_price) as price from eb_user_recharge
+crmeb-service/src/main/resources/mapper/finance/UserRechargeMapper.xml:15:        where  refund_price > 0 and paid = 1
+crmeb-service/src/main/resources/mapper/store/StorePinkMapper.xml:9:            p.is_tpl, p.is_refund, p.status, p.nickname, p.avatar, p.is_virtual
+crmeb-service/src/main/resources/mapper/store/StorePinkMapper.xml:14:            WHERE is_refund = 'false' AND status IN (1, 2)
+crmeb-service/src/main/resources/mapper/store/StoreOrderMapper.xml:6:        select sum(pay_price) from eb_store_order where ${where} and refund_status = 0
+crmeb-service/src/main/resources/mapper/store/StoreOrderMapper.xml:8:    <select id="getRefundPrice" resultType="java.math.BigDecimal">
+crmeb-service/src/main/resources/mapper/store/StoreOrderMapper.xml:9:        select sum(refund_price) from eb_store_order where ${where} and refund_status = 2
+crmeb-service/src/main/resources/mapper/store/StoreOrderMapper.xml:11:    <select id="getRefundTotal" resultType="java.lang.Integer">
+crmeb-service/src/main/resources/mapper/store/StoreOrderMapper.xml:12:        select count(id) from eb_store_order where ${where} and refund_status = 2
+crmeb-service/src/main/resources/mapper/store/StoreOrderMapper.xml:23:                    and `refund_status` = 0
+crmeb-service/src/main/resources/mapper/store/StoreOrderMapper.xml:29:                    and `refund_status` = 0
+crmeb-service/src/main/resources/mapper/store/StoreOrderMapper.xml:34:                    and `refund_status` = 0
+crmeb-service/src/main/resources/mapper/store/StoreOrderMapper.xml:39:                    and `refund_status` = 0
+crmeb-service/src/main/resources/mapper/store/StoreOrderMapper.xml:44:                    and `refund_status` = 0
+crmeb-service/src/main/resources/mapper/store/StoreOrderMapper.xml:48:                    and `refund_status` in(1,3)
+crmeb-service/src/main/resources/mapper/store/StoreOrderMapper.xml:52:                    and `refund_status` = 2
+crmeb-service/src/main/resources/mapper/store/StoreOrderMapper.xml:56:                    and `refund_status` in(1,2,3)
+crmeb-service/src/main/resources/mapper/store/StoreOrderMapper.xml:73:        where o.`is_del` = 0 and o.`paid` = 1 and o.`refund_status` = 0
+crmeb-service/src/main/resources/mapper/store/StoreOrderMapper.xml:86:        where o.is_del >= 0 and o.paid >= 1 and o.refund_status >= 0
+crmeb-service/src/main/resources/mapper/store/StoreOrderMapper.xml:96:        where o.is_del >= 0 and o.paid >= 1 and o.refund_status >= 0
+crmeb-service/src/main/resources/mapper/store/StoreOrderStatusMapper.xml:5:    <select id="getRefundOrderAmountByDate" resultType="java.math.BigDecimal">
+crmeb-service/src/main/resources/mapper/store/StoreOrderStatusMapper.xml:6:        SELECT IFNULL(sum(o.refund_price),0) FROM `eb_store_order_status` os
+crmeb-service/src/main/resources/mapper/store/StoreOrderStatusMapper.xml:9:        and os.change_type = 'refund_price'
+crmeb-service/src/main/java/com/zbkj/service/dao/UserRechargeDao.java:30:     * 获取退款总金额
+crmeb-service/src/main/java/com/zbkj/service/dao/UserRechargeDao.java:31:     * @return 退款总金额
+crmeb-service/src/main/java/com/zbkj/service/dao/UserRechargeDao.java:33:    BigDecimal getSumByRefund();
+crmeb-service/src/main/java/com/zbkj/service/dao/jiuzhoukang/JkRetailRefundAdjustmentDao.java:4:import com.zbkj.common.model.jiuzhoukang.JkRetailRefundAdjustment;
+crmeb-service/src/main/java/com/zbkj/service/dao/jiuzhoukang/JkRetailRefundAdjustmentDao.java:6:/** 普通零售退款发生额 DAO。 */
+crmeb-service/src/main/java/com/zbkj/service/dao/jiuzhoukang/JkRetailRefundAdjustmentDao.java:7:public interface JkRetailRefundAdjustmentDao extends BaseMapper<JkRetailRefundAdjustment> {
+crmeb-service/src/main/java/com/zbkj/service/dao/StoreOrderStatusDao.java:24:     * 通过日期获取订单退款金额
+crmeb-service/src/main/java/com/zbkj/service/dao/StoreOrderStatusDao.java:28:    BigDecimal getRefundOrderAmountByDate(@Param("date") String date);
+crmeb-service/src/main/java/com/zbkj/service/dao/StoreOrderDao.java:36:     * 退款总金额
+crmeb-service/src/main/java/com/zbkj/service/dao/StoreOrderDao.java:38:    BigDecimal getRefundPrice(String where);
+crmeb-service/src/main/java/com/zbkj/service/dao/StoreOrderDao.java:41:     * 获取退款总单数
+crmeb-service/src/main/java/com/zbkj/service/dao/StoreOrderDao.java:43:    Integer getRefundTotal(String where);
+crmeb-service/src/main/java/com/zbkj/service/delete/OrderUtils.java:137:                queryWrapper.eq(StoreOrder::getRefundStatus, 0);
+crmeb-service/src/main/java/com/zbkj/service/delete/OrderUtils.java:143:                queryWrapper.eq(StoreOrder::getRefundStatus, 0);
+crmeb-service/src/main/java/com/zbkj/service/delete/OrderUtils.java:149:                queryWrapper.eq(StoreOrder::getRefundStatus, 0);
+crmeb-service/src/main/java/com/zbkj/service/delete/OrderUtils.java:154:                queryWrapper.eq(StoreOrder::getRefundStatus, 0);
+crmeb-service/src/main/java/com/zbkj/service/delete/OrderUtils.java:159:                queryWrapper.eq(StoreOrder::getRefundStatus, 0);
+crmeb-service/src/main/java/com/zbkj/service/delete/OrderUtils.java:161:            case Constants.ORDER_STATUS_H5_REFUNDING: // 退款中
+crmeb-service/src/main/java/com/zbkj/service/delete/OrderUtils.java:163:                queryWrapper.in(StoreOrder::getRefundStatus, 1, 3);
+crmeb-service/src/main/java/com/zbkj/service/delete/OrderUtils.java:165:            case Constants.ORDER_STATUS_H5_REFUNDED: // 已退款
+crmeb-service/src/main/java/com/zbkj/service/delete/OrderUtils.java:167:                queryWrapper.eq(StoreOrder::getRefundStatus, 2);
+crmeb-service/src/main/java/com/zbkj/service/delete/OrderUtils.java:169:            case Constants.ORDER_STATUS_H5_REFUND: // 包含已退款和退款中
+crmeb-service/src/main/java/com/zbkj/service/delete/OrderUtils.java:171:                queryWrapper.in(StoreOrder::getRefundStatus, 1,2,3);
+crmeb-service/src/main/java/com/zbkj/service/service/SystemNotificationService.java:84:     * @param type 场景类型(支付之前：beforePay|支付成功：afterPay|申请退款：refundApply|充值之前：beforeRecharge|创建砍价：createBargain|参与拼团：pink|取消拼团：cancelPink)
+crmeb-service/src/main/java/com/zbkj/service/service/SmsService.java:82:     * 发送用户退款管理员提醒短信
+crmeb-service/src/main/java/com/zbkj/service/service/SmsService.java:88:    Boolean sendOrderRefundApplyNotice(String phone, String orderNo, String realName, Integer msgTempId);
+crmeb-service/src/main/java/com/zbkj/service/service/StoreOrderRefundService.java:5:import com.zbkj.common.request.StoreOrderRefundRequest;
+crmeb-service/src/main/java/com/zbkj/service/service/StoreOrderRefundService.java:9: * StoreOrderRefundService 接口
+crmeb-service/src/main/java/com/zbkj/service/service/StoreOrderRefundService.java:20:public interface StoreOrderRefundService extends IService<StoreOrder> {
+crmeb-service/src/main/java/com/zbkj/service/service/StoreOrderRefundService.java:22:    void refund(StoreOrderRefundRequest request, StoreOrder storeOrder);
+crmeb-service/src/main/java/com/zbkj/service/service/OrderService.java:46:     * 查询退款理由
+crmeb-service/src/main/java/com/zbkj/service/service/OrderService.java:47:     * @return 退款理由集合
+crmeb-service/src/main/java/com/zbkj/service/service/OrderService.java:49:    List<String> getRefundReason();
+crmeb-service/src/main/java/com/zbkj/service/service/OrderService.java:80:     * 订单退款申请
+crmeb-service/src/main/java/com/zbkj/service/service/OrderService.java:84:    Boolean refundApply(OrderRefundApplyRequest request);
+crmeb-service/src/main/java/com/zbkj/service/service/OrderService.java:87:     * 订单退款申请Task使用
+crmeb-service/src/main/java/com/zbkj/service/service/OrderService.java:88:     * @param applyList 退款List
+crmeb-service/src/main/java/com/zbkj/service/service/OrderService.java:91:    Boolean refundApplyTask(List<OrderRefundApplyRequest> applyList);
+crmeb-service/src/main/java/com/zbkj/service/service/OrderService.java:106:     * 获取申请订单退款信息
+crmeb-service/src/main/java/com/zbkj/service/service/OrderService.java:108:     * @return ApplyRefundOrderInfoResponse
+crmeb-service/src/main/java/com/zbkj/service/service/OrderService.java:110:    ApplyRefundOrderInfoResponse applyRefundOrderInfo(String orderId);
+crmeb-service/src/main/java/com/zbkj/service/service/StoreOrderService.java:59:     * @param status 评价等级|0=未支付,1=待发货,2=待收货,3=待评价,4=已完成,-3=售后/退款
+crmeb-service/src/main/java/com/zbkj/service/service/StoreOrderService.java:88:    boolean refund(StoreOrderRefundRequest request);
+crmeb-service/src/main/java/com/zbkj/service/service/StoreOrderService.java:108:     * 拒绝退款
+crmeb-service/src/main/java/com/zbkj/service/service/StoreOrderService.java:113:    Boolean refundRefuse(String orderNo, String reason);
+crmeb-service/src/main/java/com/zbkj/service/service/StoreOrderService.java:377:     * 获取退款中订单数量
+crmeb-service/src/main/java/com/zbkj/service/service/StoreOrderService.java:379:    Integer getRefundingNum();
+crmeb-service/src/main/java/com/zbkj/service/service/UserBillService.java:9:import com.zbkj.common.request.StoreOrderRefundRequest;
+crmeb-service/src/main/java/com/zbkj/service/service/UserBillService.java:52:     * 保存退款日志
+crmeb-service/src/main/java/com/zbkj/service/service/UserBillService.java:56:    Boolean saveRefundBill(StoreOrderRefundRequest request, User user);
+crmeb-service/src/main/java/com/zbkj/service/service/OrderTaskService.java:20:     void refundApply();
+crmeb-service/src/main/java/com/zbkj/service/service/jiuzhoukang/trade/StockTransferReturnService.java:15:    JkStockTransferReturn confirmRefund(Long countyUserId, JkStockTransferReturnRefundRequest request);
+crmeb-service/src/main/java/com/zbkj/service/service/jiuzhoukang/order/RetailOrderAttributionService.java:16:    /** 按退款金额在仍可退款的明细实付基数之间分摊，并累计退款基数。 */
+crmeb-service/src/main/java/com/zbkj/service/service/jiuzhoukang/order/RetailOrderAttributionService.java:17:    List<RefundAllocation> allocateRefund(String orderNo, BigDecimal refundAmount, String requestNo);
+crmeb-service/src/main/java/com/zbkj/service/service/jiuzhoukang/order/RetailOrderAttributionService.java:19:    class RefundAllocation {
+crmeb-service/src/main/java/com/zbkj/service/service/jiuzhoukang/order/RetailOrderAttributionService.java:21:        private BigDecimal refundBaseAmount;
+crmeb-service/src/main/java/com/zbkj/service/service/jiuzhoukang/order/RetailOrderAttributionService.java:22:        private BigDecimal beforeRefundedAmount;
+crmeb-service/src/main/java/com/zbkj/service/service/jiuzhoukang/order/RetailOrderAttributionService.java:25:        public RefundAllocation setAttribution(JkRetailOrderAttribution attribution) { this.attribution = attribution; return this; }
+crmeb-service/src/main/java/com/zbkj/service/service/jiuzhoukang/order/RetailOrderAttributionService.java:26:        public BigDecimal getRefundBaseAmount() { return refundBaseAmount; }
+crmeb-service/src/main/java/com/zbkj/service/service/jiuzhoukang/order/RetailOrderAttributionService.java:27:        public RefundAllocation setRefundBaseAmount(BigDecimal refundBaseAmount) { this.refundBaseAmount = refundBaseAmount; return this; }
+crmeb-service/src/main/java/com/zbkj/service/service/jiuzhoukang/order/RetailOrderAttributionService.java:28:        public BigDecimal getBeforeRefundedAmount() { return beforeRefundedAmount; }
+crmeb-service/src/main/java/com/zbkj/service/service/jiuzhoukang/order/RetailOrderAttributionService.java:29:        public RefundAllocation setBeforeRefundedAmount(BigDecimal beforeRefundedAmount) { this.beforeRefundedAmount = beforeRefundedAmount; return this; }
+crmeb-service/src/main/java/com/zbkj/service/service/jiuzhoukang/commission/CommissionReverseService.java:4:public interface CommissionReverseService {
+crmeb-service/src/main/java/com/zbkj/service/service/jiuzhoukang/commission/RetailOrderCommissionAdapter.java:21:public class RetailOrderCommissionAdapter {
+crmeb-service/src/main/java/com/zbkj/service/service/jiuzhoukang/commission/RetailOrderCommissionAdapter.java:22:    private static final Logger LOGGER = LoggerFactory.getLogger(RetailOrderCommissionAdapter.class);
+crmeb-service/src/main/java/com/zbkj/service/service/jiuzhoukang/commission/RetailOrderCommissionAdapter.java:27:    public void afterCrmebOrderCompleted(StoreOrder order) {
+crmeb-service/src/main/java/com/zbkj/service/service/jiuzhoukang/commission/CommissionTriggerService.java:9:    void onRefundCompleted(Long orderId, String orderNo, BigDecimal refundAmount, String requestNo);
+crmeb-service/src/main/java/com/zbkj/service/service/jiuzhoukang/support/JkDictLabelHelper.java:86:        put(labels, "commission_reverse_type", "REFUND", "退款冲正");
+crmeb-service/src/main/java/com/zbkj/service/service/jiuzhoukang/support/JkDictLabelHelper.java:120:        put(labels, "audit_action", "CONFIRM_REFUND", "确认退款");
+crmeb-service/src/main/java/com/zbkj/service/service/jiuzhoukang/support/JkDictLabelHelper.java:136:        put(labels, "stock_transfer_return_status", "REFUND_PENDING", "已收货待退款");
+crmeb-service/src/main/java/com/zbkj/service/service/jiuzhoukang/support/JkDictLabelHelper.java:140:        put(labels, "refund_status", "UNREFUNDED", "未退款");
+crmeb-service/src/main/java/com/zbkj/service/service/jiuzhoukang/support/JkDictLabelHelper.java:141:        put(labels, "refund_status", "REFUND_PENDING", "待退款");
+crmeb-service/src/main/java/com/zbkj/service/service/jiuzhoukang/support/JkDictLabelHelper.java:142:        put(labels, "refund_status", "REFUNDED", "已退款");
+crmeb-service/src/main/java/com/zbkj/service/service/impl/WeChatPayServiceImpl.java:194:                        if (ObjectUtil.isNull(headPink) || headPink.getIsRefund().equals(true) || headPink.getStatus() == 3) {
+crmeb-service/src/main/java/com/zbkj/service/service/impl/WeChatPayServiceImpl.java:234:                    storePink.setIsRefund(false);
+crmeb-service/src/main/java/com/zbkj/service/service/impl/UserRechargeServiceImpl.java:134:        BigDecimal refund = dao.getSumByRefund();
+crmeb-service/src/main/java/com/zbkj/service/service/impl/UserRechargeServiceImpl.java:135:        if(null == refund) refund = BigDecimal.ZERO;
+crmeb-service/src/main/java/com/zbkj/service/service/impl/UserRechargeServiceImpl.java:136:        map.put("refund", refund);
+crmeb-service/src/main/java/com/zbkj/service/service/impl/OrderTaskServiceImpl.java:113:     * 执行 用户退款申请
+crmeb-service/src/main/java/com/zbkj/service/service/impl/OrderTaskServiceImpl.java:118:    public void refundApply() {
+crmeb-service/src/main/java/com/zbkj/service/service/impl/OrderTaskServiceImpl.java:121:        logger.info("OrderTaskServiceImpl.refundApply | size:" + size);
+crmeb-service/src/main/java/com/zbkj/service/service/impl/OrderTaskServiceImpl.java:136://                boolean result = storeOrderTaskService.refundApply(storeOrder);
+crmeb-service/src/main/java/com/zbkj/service/service/impl/OrderTaskServiceImpl.java:137:                boolean result = storeOrderTaskService.refundOrder(storeOrder);
+crmeb-service/src/main/java/com/zbkj/service/service/impl/OrderTaskServiceImpl.java:139:                    logger.error("订单退款错误：result = " + result);
+crmeb-service/src/main/java/com/zbkj/service/service/impl/OrderTaskServiceImpl.java:143:                logger.error("订单退款错误：" + e.getMessage());
+crmeb-service/src/main/java/com/zbkj/service/service/impl/SmsServiceImpl.java:122:            case SmsConstants.SMS_CONFIG_TYPE_ADMIN_CONFIRM_TAKE_OVER_SWITCH: // 用户发起退款管理员短信提醒 admin_name order_id
+crmeb-service/src/main/java/com/zbkj/service/service/impl/SmsServiceImpl.java:406:     * 发送用户退款管理员提醒短信
+crmeb-service/src/main/java/com/zbkj/service/service/impl/SmsServiceImpl.java:415:    public Boolean sendOrderRefundApplyNotice(String phone, String orderNo, String realName, Integer msgTempId) {
+crmeb-service/src/main/java/com/zbkj/service/service/impl/SmsServiceImpl.java:559:            case SmsConstants.SMS_CONFIG_TYPE_ADMIN_CONFIRM_TAKE_OVER_SWITCH: // 用户发起退款管理员短信提醒 admin_name order_id
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StorePinkServiceImpl.java:12:import com.zbkj.common.request.OrderRefundApplyRequest;
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StorePinkServiceImpl.java:165:                response.setRefundStatus(storeOrder.getRefundStatus());
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StorePinkServiceImpl.java:177:        lqw.eq(StorePink::getIsRefund, false);
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StorePinkServiceImpl.java:186:        lqw.eq(StorePink::getIsRefund, false);
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StorePinkServiceImpl.java:209:         * 3.失败的拼团改为失败，订单申请退款
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StorePinkServiceImpl.java:213:        List<OrderRefundApplyRequest> applyList = CollUtil.newArrayList();
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StorePinkServiceImpl.java:234:            // 订单申请退款
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StorePinkServiceImpl.java:235:            OrderRefundApplyRequest refundRequest = new OrderRefundApplyRequest();
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StorePinkServiceImpl.java:236:            refundRequest.setId(headPink.getOrderIdKey());
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StorePinkServiceImpl.java:237:            refundRequest.setText("拼团订单取消，申请退款");
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StorePinkServiceImpl.java:238:            refundRequest.setExplain("用户取消拼团订单，申请退款");
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StorePinkServiceImpl.java:240:            applyList.add(refundRequest);
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StorePinkServiceImpl.java:245:                List<OrderRefundApplyRequest> tempApplyList = memberList.stream().map(i -> {
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StorePinkServiceImpl.java:246:                    OrderRefundApplyRequest tempRefundRequest = new OrderRefundApplyRequest();
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StorePinkServiceImpl.java:247:                    tempRefundRequest.setId(headPink.getOrderIdKey());
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StorePinkServiceImpl.java:248:                    tempRefundRequest.setText("拼团订单取消，申请退款");
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StorePinkServiceImpl.java:249:                    tempRefundRequest.setExplain("用户取消拼团订单，申请退款");
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StorePinkServiceImpl.java:250:                    return tempRefundRequest;
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StorePinkServiceImpl.java:261:            boolean task = orderService.refundApplyTask(applyList);
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StorePinkServiceImpl.java:262:            if (!task) throw new CrmebException("拼团未成功,订单申请退款失败");
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StorePinkServiceImpl.java:369://        lqw.eq(StorePink::getIsRefund, false);
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StorePinkServiceImpl.java:385:        lqw.eq(StorePink::getIsRefund, false);
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StorePinkServiceImpl.java:395:        lqw.eq(StorePink::getIsRefund, false);
+crmeb-service/src/main/java/com/zbkj/service/service/impl/SystemNotificationServiceImpl.java:257:     * 申请退款：refundApply
+crmeb-service/src/main/java/com/zbkj/service/service/impl/SystemNotificationServiceImpl.java:258:     * 		退款成功、拒绝退款
+crmeb-service/src/main/java/com/zbkj/service/service/impl/SystemNotificationServiceImpl.java:266:     * 		退款成功、拒绝退款
+crmeb-service/src/main/java/com/zbkj/service/service/impl/SystemNotificationServiceImpl.java:280:            case "refundApply":// 申请退款
+crmeb-service/src/main/java/com/zbkj/service/service/impl/UserExtractServiceImpl.java:149:     * 退回佣金 = 因退款导致的冻结佣金退回
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderStatusServiceImpl.java:67:     * 保存订单退款记录
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderStatusServiceImpl.java:74:    public Boolean saveRefund(Integer orderId, BigDecimal amount, String message) {
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderStatusServiceImpl.java:131:     * 通过日期获取订单退款数量
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderStatusServiceImpl.java:136:    public Integer getRefundOrderNumByDate(String date) {
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderStatusServiceImpl.java:139:        wrapper.eq("change_type", "refund_price");
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderStatusServiceImpl.java:145:     * 通过日期获取订单退款金额
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderStatusServiceImpl.java:150:    public BigDecimal getRefundOrderAmountByDate(String date) {
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderStatusServiceImpl.java:151:        return dao.getRefundOrderAmountByDate(date);
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderVerificationImpl.java:72:        //订单支付没有退款 数量-
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderVerificationImpl.java:74:        lqwOrderCount.eq(StoreOrder::getIsDel,false).eq(StoreOrder::getPaid,true).eq(StoreOrder::getRefundStatus,0);
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderVerificationImpl.java:76:        //订单支付没有退款 支付总金额
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderVerificationImpl.java:78:        lqwSumPrice.eq(StoreOrder::getIsDel,false).eq(StoreOrder::getPaid,true).eq(StoreOrder::getRefundStatus,0);
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderVerificationImpl.java:102:        //订单退款 数量
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderVerificationImpl.java:103:        LambdaQueryWrapper<StoreOrder> lqwRefundCount = Wrappers.lambdaQuery();
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderVerificationImpl.java:104:        orderUtils.statusApiByWhere(lqwRefundCount,-3);
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderVerificationImpl.java:105:        storeStaffTopDetail.setRefundCount(dao.selectCount(lqwRefundCount));
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderVerificationImpl.java:118:                .eq(StoreOrder::getPaid,1).eq(StoreOrder::getRefundStatus,0);
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderVerificationImpl.java:130:                .eq(StoreOrder::getPaid, true).eq(StoreOrder::getRefundStatus,0);
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderVerificationImpl.java:142:                .eq(StoreOrder::getPaid,true).eq(StoreOrder::getRefundStatus,0);
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderVerificationImpl.java:209:        StoreOrder storeOrderPram = new StoreOrder().setVerifyCode(vCode).setPaid(true).setRefundStatus(0);
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderServiceImpl.java:91:    private StoreOrderRefundService storeOrderRefundService;
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderServiceImpl.java:155:        queryWrapper.select("id", "order_id", "uid", "real_name", "pay_price", "pay_type", "create_time", "status", "refund_status"
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderServiceImpl.java:156:                , "refund_reason_wap_img", "refund_reason_wap_explain", "refund_reason_wap", "refund_reason", "refund_reason_time"
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderServiceImpl.java:180:     * @param status 评价等级|0=未支付,1=待发货,2=待收货,3=待评价,4=已完成,-3=售后/退款
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderServiceImpl.java:198:     * @param status 评价等级|0=未支付,1=待发货,2=待收货,3=待评价,4=已完成,-3=售后/退款
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderServiceImpl.java:268:        BigDecimal refundPrice = dao.getRefundPrice(where);
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderServiceImpl.java:269:        if (ObjectUtil.isNull(refundPrice)) {
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderServiceImpl.java:270:            refundPrice = BigDecimal.ZERO;
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderServiceImpl.java:272:        systemWriteOffOrderResponse.setRefundTotalPrice(refundPrice); //退款总金额
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderServiceImpl.java:273:        systemWriteOffOrderResponse.setRefundTotal(dao.getRefundTotal(where));  //退款总单数
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderServiceImpl.java:445:            storeOrderItemResponse.setRefundStatus(storeOrder.getRefundStatus());
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderServiceImpl.java:534:    /** 退款
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderServiceImpl.java:535:     * @param request StoreOrderRefundRequest 退款参数
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderServiceImpl.java:542:    public boolean refund(StoreOrderRefundRequest request) {
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderServiceImpl.java:545:            throw new CrmebException("未支付无法退款");
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderServiceImpl.java:547:        if (storeOrder.getRefundPrice().add(request.getAmount()).compareTo(storeOrder.getPayPrice()) > 0) {
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderServiceImpl.java:548:            throw new CrmebException("退款金额大于支付金额，请修改退款金额");
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderServiceImpl.java:552:                throw new CrmebException("退款金额不能为0，请修改退款金额");
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderServiceImpl.java:559:        //退款
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderServiceImpl.java:562:                storeOrderRefundService.refund(request, storeOrder);
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderServiceImpl.java:565:                throw new CrmebException("微信申请退款失败！");
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderServiceImpl.java:568:        //修改订单退款状态
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderServiceImpl.java:569:        storeOrder.setRefundStatus(3);
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderServiceImpl.java:570:        storeOrder.setRefundPrice(request.getAmount());
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderServiceImpl.java:578:                userBillService.saveRefundBill(request, user);
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderServiceImpl.java:583:                // 退款task
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderServiceImpl.java:588:                userBillService.saveRefundBill(request, user);
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderServiceImpl.java:590:                // 退款task
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderServiceImpl.java:595:                userBillService.saveRefundBill(request, user);
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderServiceImpl.java:597:                // 退款task
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderServiceImpl.java:603:            storeOrderStatusService.saveRefund(storeOrder.getId(), request.getAmount(), "失败");
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderServiceImpl.java:628:        storeOrderInfoResponse.setRefundReasonWapImg(storeOrder.getRefundReasonWapImg());
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderServiceImpl.java:735:     * 拒绝退款
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderServiceImpl.java:741:    public Boolean refundRefuse(String orderNo, String reason) {
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderServiceImpl.java:743:            throw new CrmebException("请填写拒绝退款原因");
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderServiceImpl.java:746:        storeOrder.setRefundReason(reason);
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderServiceImpl.java:747:        storeOrder.setRefundStatus(0);
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderServiceImpl.java:1007:        lqw.eq(StoreOrder::getRefundStatus, 0);
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderServiceImpl.java:1029:        lqw.lt(StoreOrder::getRefundStatus, 2);
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderServiceImpl.java:1093:        lqw.lt(StoreOrder::getRefundStatus, 2);
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderServiceImpl.java:1109:        lqw.lt(StoreOrder::getRefundStatus, 2);
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderServiceImpl.java:1125:        lqw.lt(StoreOrder::getRefundStatus, 2);
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderServiceImpl.java:1145:        lqw.lt(StoreOrder::getRefundStatus, 2);
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderServiceImpl.java:1194:        // 退款中订单
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderServiceImpl.java:1195:        response.setRefunding(getCount(dateLimit, Constants.ORDER_STATUS_REFUNDING, type, orderNo));
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderServiceImpl.java:1196:        // 已退款订单
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderServiceImpl.java:1197:        response.setRefunded(getCount(dateLimit, Constants.ORDER_STATUS_REFUNDED, type, orderNo));
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderServiceImpl.java:1487:     * 获取退款中订单数量
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderServiceImpl.java:1490:    public Integer getRefundingNum() {
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderServiceImpl.java:1521:        lqw.ne(StoreOrder::getRefundStatus, 3);
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderServiceImpl.java:1659:        lqw.eq(StoreOrder::getIsDel, false).eq(StoreOrder::getPaid, true).eq(StoreOrder::getRefundStatus,0)
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderServiceImpl.java:2096:                queryWrapper.eq("refund_status", 0);
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderServiceImpl.java:2103:                queryWrapper.eq("refund_status", 0);
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderServiceImpl.java:2109:                queryWrapper.eq("refund_status", 0);
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderServiceImpl.java:2115:                queryWrapper.eq("refund_status", 0);
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderServiceImpl.java:2121:                queryWrapper.eq("refund_status", 0);
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderServiceImpl.java:2125:            case Constants.ORDER_STATUS_REFUNDING: //退款中
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderServiceImpl.java:2127:                queryWrapper.in("refund_status", 1,3);
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderServiceImpl.java:2130:            case Constants.ORDER_STATUS_REFUNDED: //已退款
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderServiceImpl.java:2132:                queryWrapper.eq("refund_status", 2);
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderServiceImpl.java:2140:                queryWrapper.ne("refund_status", 2);
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderServiceImpl.java:2164:                queryWrapper.eq("refund_status", 0);
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderServiceImpl.java:2171:                queryWrapper.eq("refund_status", 0);
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderServiceImpl.java:2177:                queryWrapper.eq("refund_status", 0);
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderServiceImpl.java:2183:                queryWrapper.eq("refund_status", 0);
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderServiceImpl.java:2189:                queryWrapper.eq("refund_status", 0);
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderServiceImpl.java:2193:            case Constants.ORDER_STATUS_REFUNDING: //退款中
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderServiceImpl.java:2195:                queryWrapper.in("refund_status", 1,3);
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderServiceImpl.java:2198:            case Constants.ORDER_STATUS_REFUNDED: //已退款
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderServiceImpl.java:2200:                queryWrapper.eq("refund_status", 2);
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderServiceImpl.java:2208:                //queryWrapper.ne("refund_status", 2);
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderServiceImpl.java:2230:                && storeOrder.getRefundStatus() == 0
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderServiceImpl.java:2240:                && storeOrder.getRefundStatus() == 0
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderServiceImpl.java:2251:                && storeOrder.getRefundStatus() == 0
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderServiceImpl.java:2262:                && storeOrder.getRefundStatus() == 0
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderServiceImpl.java:2272:                && storeOrder.getRefundStatus() == 0
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderServiceImpl.java:2282:                && storeOrder.getRefundStatus() == 0
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderServiceImpl.java:2291:        //申请退款
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderServiceImpl.java:2293:                && storeOrder.getRefundStatus() == 1
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderServiceImpl.java:2301:        //退款中
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderServiceImpl.java:2303:                && storeOrder.getRefundStatus() == 3
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderServiceImpl.java:2311:        //已退款
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderServiceImpl.java:2313:                && storeOrder.getRefundStatus() == 2
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreCombinationServiceImpl.java:670:        if (ObjectUtil.isNull(teamPink) || teamPink.getIsRefund()) throw new CrmebException("对应的拼团不存在");
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreCombinationServiceImpl.java:819:     * @return 此处只是转为申请退款订单
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreCombinationServiceImpl.java:827:        if (userPink.getIsRefund()) throw new CrmebException("拼团订单已退款");
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreCombinationServiceImpl.java:845:        if (order.getStatus() == -1 && order.getRefundStatus() != 0) {
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreCombinationServiceImpl.java:846:            throw new CrmebException("拼团订单已进入退款流程");
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreCombinationServiceImpl.java:849:        // 订单申请退款
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreCombinationServiceImpl.java:850:        OrderRefundApplyRequest refundRequest = new OrderRefundApplyRequest();
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreCombinationServiceImpl.java:851:        refundRequest.setId(order.getId());
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreCombinationServiceImpl.java:852:        refundRequest.setUni(order.getOrderId());
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreCombinationServiceImpl.java:853:        refundRequest.setText("拼团订单取消，申请退款");
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreCombinationServiceImpl.java:854:        refundRequest.setExplain("用户取消拼团订单，申请退款");
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreCombinationServiceImpl.java:855:        boolean apply = orderService.refundApply(refundRequest);
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreCombinationServiceImpl.java:856:        if (!apply) throw new CrmebException("订单申请退款失败");
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/performance/JkPerformancePeriodServiceImpl.java:102:                .setTotalRefundAmount(BigDecimal.ZERO).setNetPerformanceAmount(BigDecimal.ZERO)
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/performance/JkPerformancePeriodServiceImpl.java:113:            BigDecimal refund = money(record.getReversedAmount());
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/performance/JkPerformancePeriodServiceImpl.java:114:            BigDecimal net = performance.subtract(refund).max(BigDecimal.ZERO);
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/performance/JkPerformancePeriodServiceImpl.java:120:                    .setPerformanceAmount(performance).setRefundAmount(refund).setNetAmount(net)
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/performance/JkPerformancePeriodServiceImpl.java:125:            reversed = reversed.add(refund);
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/performance/JkPerformancePeriodServiceImpl.java:128:        period.setTotalPerformanceAmount(total).setTotalRefundAmount(reversed)
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/trade/StockTransferReturnServiceImpl.java:33: * <p>流程为申请、区县代审核、冻结申请人库存、寄回、确认收货、库存反向流转、线下退款确认和完成事件。
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/trade/StockTransferReturnServiceImpl.java:71:                .setStatus("SUBMITTED").setAuditStatus("PENDING").setRefundStatus("UNREFUNDED")
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/trade/StockTransferReturnServiceImpl.java:169:                .set("status", "REFUND_PENDING").set("refund_status", "REFUND_PENDING").set("receive_user_id", countyUserId).set("receive_time", new Date())
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/trade/StockTransferReturnServiceImpl.java:176:        entity.setStatus("REFUND_PENDING").setRefundStatus("REFUND_PENDING").setReceiveUserId(countyUserId).setReceiveTime(new Date()).setReceiveRemark(request.getRemark());
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/trade/StockTransferReturnServiceImpl.java:183:    public JkStockTransferReturn confirmRefund(Long countyUserId, JkStockTransferReturnRefundRequest request) {
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/trade/StockTransferReturnServiceImpl.java:186:        if (!"REFUND_PENDING".equals(entity.getStatus())) throw new CrmebException("当前状态不能确认退款");
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/trade/StockTransferReturnServiceImpl.java:189:                .set("status", "COMPLETED").set("refund_status", "REFUNDED").set("refund_user_id", countyUserId)
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/trade/StockTransferReturnServiceImpl.java:190:                .set("refund_time", now).set("refund_voucher_url", request.getRefundVoucherUrl()).set("refund_remark", request.getRemark())
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/trade/StockTransferReturnServiceImpl.java:192:        if (n != 1) throw new CrmebException("当前状态不能确认退款");
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/trade/StockTransferReturnServiceImpl.java:193:        entity.setStatus("COMPLETED").setRefundStatus("REFUNDED").setRefundUserId(countyUserId).setRefundTime(now)
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/trade/StockTransferReturnServiceImpl.java:194:                .setRefundVoucherUrl(request.getRefundVoucherUrl()).setRefundRemark(request.getRemark());
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/trade/StockTransferReturnServiceImpl.java:197:        afterCommitExecutor.execute("STOCK_TRANSFER_RETURN_COMPLETED", id, no, "调拨退回已完成库存回退和线下退款确认",
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/trade/StockTransferReturnServiceImpl.java:325:    private JkStockTransferReturn enrich(JkStockTransferReturn r) { User u=r.getUserId()==null?null:userService.getById(r.getUserId().intValue());if(u!=null){r.setApplicantName(StrUtil.blankToDefault(u.getRealName(),u.getNickname()));r.setApplicantPhone(u.getPhone());}r.setStatusText(JkDictLabelHelper.label("stock_transfer_return_status",r.getStatus()));r.setAuditStatusText(JkDictLabelHelper.label("audit_status",r.getAuditStatus()));r.setRefundStatusText(JkDictLabelHelper.label("refund_status",r.getRefundStatus()));r.setStatusTag("COMPLETED".equals(r.getStatus())?"success":(("AUDIT_REJECTED".equals(r.getStatus())||"CLOSED".equals(r.getStatus())||"CANCELLED".equals(r.getStatus()))?"danger":"warning"));List<JkStockTransferReturnItem> list=items(r.getId());if(!list.isEmpty()){r.setFirstProductName(list.get(0).getProductName());r.setFirstSkuName(list.get(0).getSkuName());}return r; }
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/trade/JkReceiveExceptionResolutionServiceImpl.java:41: * <p>本服务只在有明确数量依据时登记补发、退款、退回或接受方案。纯补发方案全部完成后，
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/trade/JkReceiveExceptionResolutionServiceImpl.java:42: * 原业务恢复待收货；涉及退款、退回或线下接受的方案继续锁定原业务，直到对应资金、退货或
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/trade/JkReceiveExceptionResolutionServiceImpl.java:82:        int refundQtyTotal = 0;
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/trade/JkReceiveExceptionResolutionServiceImpl.java:90:            int refund = safe(requestItem.getRefundQty());
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/trade/JkReceiveExceptionResolutionServiceImpl.java:92:            int current = accepted + reship + refund + returned;
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/trade/JkReceiveExceptionResolutionServiceImpl.java:99:            validateTypeQuantities(type, accepted, reship, refund, returned);
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/trade/JkReceiveExceptionResolutionServiceImpl.java:102:            refundQtyTotal += refund;
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/trade/JkReceiveExceptionResolutionServiceImpl.java:107:                    .setAcceptedQty(accepted).setReshipQty(reship).setRefundQty(refund).setReturnQty(returned)
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/trade/JkReceiveExceptionResolutionServiceImpl.java:111:        validateAmounts(type, refundQtyTotal, request.getRefundAmount(), request.getClaimAmount());
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/trade/JkReceiveExceptionResolutionServiceImpl.java:118:                .setRefundAmount(money(request.getRefundAmount())).setClaimAmount(money(request.getClaimAmount()))
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/trade/JkReceiveExceptionResolutionServiceImpl.java:121:                .setResolutionJson(summaryJson(acceptedTotal, reshipTotal, refundQtyTotal, returnQtyTotal))
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/trade/JkReceiveExceptionResolutionServiceImpl.java:205:                covered += safe(item.getAcceptedQty()) + safe(item.getReshipQty()) + safe(item.getRefundQty()) + safe(item.getReturnQty());
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/trade/JkReceiveExceptionResolutionServiceImpl.java:215:                .setHandleRemark("已完成处理数量 " + covered + "/" + issue + "；涉及退款、退回或接受的方案须等待对应真实业务动作完成")
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/trade/JkReceiveExceptionResolutionServiceImpl.java:231:            int quantity = safe(item.getAcceptedQty()) + safe(item.getReshipQty()) + safe(item.getRefundQty()) + safe(item.getReturnQty());
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/trade/JkReceiveExceptionResolutionServiceImpl.java:237:    private void validateTypeQuantities(String type, int accepted, int reship, int refund, int returned) {
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/trade/JkReceiveExceptionResolutionServiceImpl.java:238:        if ("RESHIP".equals(type) && (reship <= 0 || accepted + refund + returned > 0)) throw new CrmebException("补发方案只能填写补发数量");
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/trade/JkReceiveExceptionResolutionServiceImpl.java:239:        if ("REFUND".equals(type) && (refund <= 0 || accepted + reship + returned > 0)) throw new CrmebException("退款方案只能填写退款数量");
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/trade/JkReceiveExceptionResolutionServiceImpl.java:240:        if ("RETURN".equals(type) && (returned <= 0 || accepted + reship + refund > 0)) throw new CrmebException("退回方案只能填写退回数量");
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/trade/JkReceiveExceptionResolutionServiceImpl.java:241:        if ("ACCEPT".equals(type) && (accepted <= 0 || reship + refund + returned > 0)) throw new CrmebException("接受方案只能填写接受数量");
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/trade/JkReceiveExceptionResolutionServiceImpl.java:244:    private void validateAmounts(String type, int refundQty, BigDecimal refundAmount, BigDecimal claimAmount) {
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/trade/JkReceiveExceptionResolutionServiceImpl.java:245:        if (("REFUND".equals(type) || refundQty > 0) && money(refundAmount).signum() <= 0) throw new CrmebException("包含退款数量时必须填写退款金额");
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/trade/JkReceiveExceptionResolutionServiceImpl.java:246:        if (money(refundAmount).signum() < 0 || money(claimAmount).signum() < 0) throw new CrmebException("退款或索赔金额不能小于0");
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/trade/JkReceiveExceptionResolutionServiceImpl.java:281:        if ("REFUND".equals(type)) return "差额退款";
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/trade/JkReceiveExceptionResolutionServiceImpl.java:294:    private String summaryJson(int accepted, int reship, int refund, int returned) {
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/trade/JkReceiveExceptionResolutionServiceImpl.java:298:        summary.put("refundQty", refund);
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/offline/JkOfflineSaleServiceImpl.java:42:import com.zbkj.service.service.jiuzhoukang.commission.CommissionReverseService;
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/offline/JkOfflineSaleServiceImpl.java:82:    @Autowired private CommissionReverseService commissionReverseService;
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/offline/JkOfflineSaleServiceImpl.java:221:        performanceService.reverse("OFFLINE_SALE", id, null, null, request.getRequestNo(), request.getReason());
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/offline/JkOfflineSaleServiceImpl.java:222:        profitService.reverse("OFFLINE_SALE", id, null, null, request.getRequestNo(), request.getReason());
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/offline/JkOfflineSaleServiceImpl.java:322:            commissionReverseService.reverse(row.getId(), "OFFLINE_SALE_RETURN", sale.getId(), sale.getSaleNo(),
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/order/RetailOrderAttributionServiceImpl.java:11:import com.zbkj.common.model.jiuzhoukang.JkRetailRefundAdjustment;
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/order/RetailOrderAttributionServiceImpl.java:19:import com.zbkj.service.dao.jiuzhoukang.JkRetailRefundAdjustmentDao;
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/order/RetailOrderAttributionServiceImpl.java:39: * 佣金、业绩和退款只能读取这里写入的快照，禁止重新查询当前关系替代历史快照。
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/order/RetailOrderAttributionServiceImpl.java:54:    @Autowired private JkRetailRefundAdjustmentDao refundAdjustmentDao;
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/order/RetailOrderAttributionServiceImpl.java:163:                    .setRefundedAmount(BigDecimal.ZERO).setRefundAmount(BigDecimal.ZERO).setCommissionBaseAmount(paid)
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/order/RetailOrderAttributionServiceImpl.java:189:    public List<RefundAllocation> allocateRefund(String orderNo, BigDecimal refundAmount, String requestNo) {
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/order/RetailOrderAttributionServiceImpl.java:190:        if (orderNo == null || requestNo == null || refundAmount == null || refundAmount.signum() <= 0) {
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/order/RetailOrderAttributionServiceImpl.java:191:            throw new IllegalArgumentException("退款归属分摊参数非法");
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/order/RetailOrderAttributionServiceImpl.java:194:        if (rows.isEmpty()) return new ArrayList<RefundAllocation>();
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/order/RetailOrderAttributionServiceImpl.java:197:            if (!requestNo.equals(row.getLastRefundRequestNo())) { alreadyProcessed = false; break; }
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/order/RetailOrderAttributionServiceImpl.java:199:        if (alreadyProcessed) return new ArrayList<RefundAllocation>();
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/order/RetailOrderAttributionServiceImpl.java:203:            remainingTotal = remainingTotal.add(safe(row.getItemPaidAmount()).subtract(safe(row.getRefundedAmount())).max(BigDecimal.ZERO));
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/order/RetailOrderAttributionServiceImpl.java:205:        BigDecimal toAllocate = refundAmount.min(remainingTotal).setScale(2, RoundingMode.HALF_UP);
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/order/RetailOrderAttributionServiceImpl.java:206:        if (toAllocate.signum() <= 0) return new ArrayList<RefundAllocation>();
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/order/RetailOrderAttributionServiceImpl.java:210:            if (safe(rows.get(i).getItemPaidAmount()).subtract(safe(rows.get(i).getRefundedAmount())).signum() > 0) lastEligibleIndex = i;
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/order/RetailOrderAttributionServiceImpl.java:213:        List<RefundAllocation> result = new ArrayList<RefundAllocation>();
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/order/RetailOrderAttributionServiceImpl.java:217:            BigDecimal beforeRefunded = safe(row.getRefundedAmount());
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/order/RetailOrderAttributionServiceImpl.java:218:            BigDecimal remaining = safe(row.getItemPaidAmount()).subtract(beforeRefunded).max(BigDecimal.ZERO);
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/order/RetailOrderAttributionServiceImpl.java:228:            BigDecimal afterRefunded = beforeRefunded.add(part);
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/order/RetailOrderAttributionServiceImpl.java:232:                    .set(JkRetailOrderAttribution::getRefundedAmount, afterRefunded)
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/order/RetailOrderAttributionServiceImpl.java:233:                    .set(JkRetailOrderAttribution::getRefundAmount, afterRefunded)
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/order/RetailOrderAttributionServiceImpl.java:234:                    .set(JkRetailOrderAttribution::getLastRefundRequestNo, requestNo)
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/order/RetailOrderAttributionServiceImpl.java:237:            if (updated != 1) throw new IllegalStateException("零售退款分摊版本冲突，请重试");
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/order/RetailOrderAttributionServiceImpl.java:238:            row.setRefundedAmount(afterRefunded).setRefundAmount(afterRefunded)
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/order/RetailOrderAttributionServiceImpl.java:239:                    .setLastRefundRequestNo(requestNo).setVersion(version + 1);
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/order/RetailOrderAttributionServiceImpl.java:243:                JkRetailRefundAdjustment adjustment = new JkRetailRefundAdjustment()
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/order/RetailOrderAttributionServiceImpl.java:251:                refundAdjustmentDao.insert(adjustment);
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/order/RetailOrderAttributionServiceImpl.java:252:                result.add(new RefundAllocation().setAttribution(row).setBeforeRefundedAmount(beforeRefunded).setRefundBaseAmount(part));
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/order/JkRetailAttributionAdminServiceImpl.java:76:        result.put("refundedAmount", row.getRefundedAmount());
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/report/JkPersonalReportServiceImpl.java:19:    @Autowired private JkRetailRefundAdjustmentDao refundAdjustmentDao;
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/report/JkPersonalReportServiceImpl.java:23:    @Override public JkPersonalReportResponse summary(Long userId,Date startDate,Date endDate){Date s=startDate==null?new Date(0):start(startDate),e=endDate==null?new Date():next(start(endDate));Set<Long> orderIds=new HashSet<Long>();for(StoreOrder o:orderDao.selectList(new LambdaQueryWrapper<StoreOrder>().eq(StoreOrder::getStatus,3).ge(StoreOrder::getUpdateTime,s).lt(StoreOrder::getUpdateTime,e)))orderIds.add(Long.valueOf(o.getId()));BigDecimal retail=BigDecimal.ZERO;long orderCount=0;if(!orderIds.isEmpty()){Set<Long> distinct=new HashSet<Long>();for(JkRetailOrderAttribution a:attributionDao.selectList(new LambdaQueryWrapper<JkRetailOrderAttribution>().in(JkRetailOrderAttribution::getOrderId,orderIds).eq(JkRetailOrderAttribution::getReceiverUserId,userId).eq(JkRetailOrderAttribution::getIsDeleted,false))){retail=retail.add(nvl(a.getItemPaidAmount()));distinct.add(a.getOrderId());}orderCount=distinct.size();}BigDecimal retailRefund=BigDecimal.ZERO;
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/report/JkPersonalReportServiceImpl.java:24:        for(JkRetailRefundAdjustment adjustment:refundAdjustmentDao.selectList(new LambdaQueryWrapper<JkRetailRefundAdjustment>()
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/report/JkPersonalReportServiceImpl.java:25:                .eq(JkRetailRefundAdjustment::getReceiverUserId,userId).ge(JkRetailRefundAdjustment::getOccurredTime,s)
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/report/JkPersonalReportServiceImpl.java:26:                .lt(JkRetailRefundAdjustment::getOccurredTime,e).eq(JkRetailRefundAdjustment::getIsDeleted,false))) {
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/report/JkPersonalReportServiceImpl.java:27:            retailRefund=retailRefund.add(nvl(adjustment.getAdjustmentAmount()));
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/report/JkPersonalReportServiceImpl.java:29:        BigDecimal transfer=BigDecimal.ZERO;for(JkStockTransfer t:transferDao.selectList(new LambdaQueryWrapper<JkStockTransfer>().eq(JkStockTransfer::getUserId,userId).eq(JkStockTransfer::getStatus,"STOCK_IN").ge(JkStockTransfer::getUpdateTime,s).lt(JkStockTransfer::getUpdateTime,e).eq(JkStockTransfer::getIsDeleted,false)))transfer=transfer.add(nvl(t.getTotalAmount()));BigDecimal returned=BigDecimal.ZERO;for(JkStockTransferReturn r:returnDao.selectList(new LambdaQueryWrapper<JkStockTransferReturn>().eq(JkStockTransferReturn::getUserId,userId).eq(JkStockTransferReturn::getStatus,"COMPLETED").ge(JkStockTransferReturn::getUpdateTime,s).lt(JkStockTransferReturn::getUpdateTime,e).eq(JkStockTransferReturn::getIsDeleted,false)))returned=returned.add(nvl(r.getReturnAmount()));int av=0,fr=0;List<JkStockAccount> accounts=accountDao.selectList(new LambdaQueryWrapper<JkStockAccount>().eq(JkStockAccount::getOwnerUserId,userId).eq(JkStockAccount::getIsDeleted,false));if(!accounts.isEmpty()){List<Long> ids=new ArrayList<Long>();for(JkStockAccount a:accounts)ids.add(a.getId());for(JkStockItem i:itemDao.selectList(new LambdaQueryWrapper<JkStockItem>().in(JkStockItem::getStockAccountId,ids).eq(JkStockItem::getIsDeleted,false))){av+=i.getAvailableQty()==null?0:i.getAvailableQty();fr+=i.getFrozenQty()==null?0:i.getFrozenQty();}}JkCommissionAccount ca=commissionDao.selectOne(new LambdaQueryWrapper<JkCommissionAccount>().eq(JkCommissionAccount::getUserId,userId).eq(JkCommissionAccount::getIsDeleted,false).last("limit 1"));JkFundAccount fa=fundDao.selectOne(new LambdaQueryWrapper<JkFundAccount>().eq(JkFundAccount::getUserId,userId).eq(JkFundAccount::getIsDeleted,false).last("limit 1"));return new JkPersonalReportResponse().setRetailPerformanceAmount(retail).setRetailRefundAmount(retailRefund).setRetailNetPerformanceAmount(retail.subtract(retailRefund)).setRetailOrderCount(orderCount).setTransferInboundAmount(transfer).setTransferReturnAmount(returned).setStockAvailableQty(av).setStockFrozenQty(fr).setPendingCommissionAmount(ca==null?BigDecimal.ZERO:nvl(ca.getPendingSettleAmount())).setSettledCommissionAmount(ca==null?BigDecimal.ZERO:nvl(ca.getSettledAmount())).setAvailableFundAmount(fa==null?BigDecimal.ZERO:nvl(fa.getAvailableAmount())).setWithdrawingAmount(fa==null?BigDecimal.ZERO:nvl(fa.getWithdrawingAmount())).setWithdrawnAmount(fa==null?BigDecimal.ZERO:nvl(fa.getWithdrawnAmount()));}
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/report/JkAdvancedReportServiceImpl.java:33: * <p>经营口径：完成/入库计业绩，退款和退回在发生日记负数，区域与团队使用业务快照，金额不含运费。</p>
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/report/JkAdvancedReportServiceImpl.java:44:    @Autowired private JkRetailRefundAdjustmentDao refundAdjustmentDao;
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/report/JkAdvancedReportServiceImpl.java:75:        // 退款按实际发生日记负数；同一 requestNo 拆分到多明细时，count 仍只计一次退款事件。
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/report/JkAdvancedReportServiceImpl.java:76:        Map<String,Metric> refundEvents=new LinkedHashMap<String,Metric>();
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/report/JkAdvancedReportServiceImpl.java:77:        for(JkRetailRefundAdjustment adjustment:refundAdjustmentDao.selectList(new LambdaQueryWrapper<JkRetailRefundAdjustment>()
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/report/JkAdvancedReportServiceImpl.java:78:                .ge(JkRetailRefundAdjustment::getOccurredTime,day).lt(JkRetailRefundAdjustment::getOccurredTime,end)
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/report/JkAdvancedReportServiceImpl.java:79:                .eq(JkRetailRefundAdjustment::getIsDeleted,false))){
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/report/JkAdvancedReportServiceImpl.java:80:            String region=StrUtil.blankToDefault(adjustment.getRegionCode(),"UNKNOWN");String key=region+"|"+adjustment.getRequestNo();Metric m=refundEvents.get(key);if(m==null){m=new Metric();m.count=1;refundEvents.put(key,m);}m.amount=m.amount.add(nvl(adjustment.getAdjustmentAmount()).negate());
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/report/JkAdvancedReportServiceImpl.java:82:        for(Map.Entry<String,Metric> e:refundEvents.entrySet())add(platform,"RETAIL_REFUND",e.getKey().substring(0,e.getKey().indexOf('|')),e.getValue().amount,1);
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/report/JkAdvancedReportServiceImpl.java:115:        Map<String,Metric> refundByRequest = new LinkedHashMap<String,Metric>();
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/report/JkAdvancedReportServiceImpl.java:116:        for (JkRetailRefundAdjustment adjustment : refundAdjustmentDao.selectList(new LambdaQueryWrapper<JkRetailRefundAdjustment>()
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/report/JkAdvancedReportServiceImpl.java:117:                .ge(JkRetailRefundAdjustment::getOccurredTime, start).lt(JkRetailRefundAdjustment::getOccurredTime, end)
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/report/JkAdvancedReportServiceImpl.java:118:                .eq(rootUserId != null, JkRetailRefundAdjustment::getReceiverUserId, rootUserId)
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/report/JkAdvancedReportServiceImpl.java:119:                .isNotNull(JkRetailRefundAdjustment::getReceiverUserId).eq(JkRetailRefundAdjustment::getIsDeleted, false))) {
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/report/JkAdvancedReportServiceImpl.java:121:            Metric metric = refundByRequest.get(key);
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/report/JkAdvancedReportServiceImpl.java:122:            if (metric == null) { metric = new Metric(); metric.count = 1; refundByRequest.put(key, metric); }
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/report/JkAdvancedReportServiceImpl.java:127:        Map<Long,Metric> refundByUser = collapseUserMetrics(refundByRequest);
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/report/JkAdvancedReportServiceImpl.java:133:        for (Map.Entry<Long,Metric> entry : refundByUser.entrySet())
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/report/JkAdvancedReportServiceImpl.java:230:    /** 为每个区域生成净零售指标：完成销售额 + 当期退款负数。 */
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/report/JkAdvancedReportServiceImpl.java:231:    private void addRetailNet(Map<String,Metric> map){Set<String> regions=new HashSet<String>();for(String key:map.keySet()){if(key.startsWith("RETAIL_COMPLETED|")||key.startsWith("RETAIL_REFUND|"))regions.add(key.substring(key.indexOf('|')+1));}for(String region:regions){Metric gross=map.get("RETAIL_COMPLETED|"+region),refund=map.get("RETAIL_REFUND|"+region),net=new Metric();if(gross!=null){net.amount=net.amount.add(gross.amount);net.count+=gross.count;}if(refund!=null)net.amount=net.amount.add(refund.amount);map.put("RETAIL_NET|"+region,net);}}
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/region/JkRegionServiceImpl.java:14:import com.zbkj.common.model.jiuzhoukang.JkRetailRefundAdjustment;
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/region/JkRegionServiceImpl.java:36:import com.zbkj.service.dao.jiuzhoukang.JkRetailRefundAdjustmentDao;
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/region/JkRegionServiceImpl.java:79:    @Autowired private JkRetailRefundAdjustmentDao retailRefundAdjustmentDao;
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/region/JkRegionServiceImpl.java:239:        long refundAdjustmentCount = countRefundAdjustments(subtreeCodes);
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/region/JkRegionServiceImpl.java:243:                + commissionAccountCount + fundAccountCount + refundAdjustmentCount + commissionRuleCount;
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/region/JkRegionServiceImpl.java:507:            } else if (row instanceof JkRetailRefundAdjustment) {
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/region/JkRegionServiceImpl.java:508:                code = ((JkRetailRefundAdjustment) row).getRegionCode();
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/region/JkRegionServiceImpl.java:579:        Collections.reverse(reversedNodes);
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/region/JkRegionServiceImpl.java:580:        Collections.reverse(reversedCodes);
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/region/JkRegionServiceImpl.java:770:    private long countRefundAdjustments(Set<String> regionCodes) {
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/region/JkRegionServiceImpl.java:771:        return retailRefundAdjustmentDao.selectCount(new LambdaQueryWrapper<JkRetailRefundAdjustment>()
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/region/JkRegionServiceImpl.java:772:                .eq(JkRetailRefundAdjustment::getIsDeleted, false)
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/region/JkRegionServiceImpl.java:773:                .in(JkRetailRefundAdjustment::getRegionCode, regionCodes));
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/commission/CommissionReverseServiceImpl.java:10:import com.zbkj.service.service.jiuzhoukang.commission.CommissionReverseService;
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/commission/CommissionReverseServiceImpl.java:24:public class CommissionReverseServiceImpl implements CommissionReverseService {
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/commission/CommissionTriggerServiceImpl.java:34:import com.zbkj.service.service.jiuzhoukang.commission.CommissionReverseService;
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/commission/CommissionTriggerServiceImpl.java:60:    @Autowired private CommissionReverseService reverseService;
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/commission/CommissionTriggerServiceImpl.java:212:    public void onRefundCompleted(Long id, String no, BigDecimal refundAmount, String requestNo) {
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/commission/CommissionTriggerServiceImpl.java:213:        List<RetailOrderAttributionService.RefundAllocation> allocations = attributionService.allocateRefund(no, refundAmount, requestNo);
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/commission/CommissionTriggerServiceImpl.java:214:        for (RetailOrderAttributionService.RefundAllocation allocation : allocations) {
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/commission/CommissionTriggerServiceImpl.java:217:                    .subtract(safe(allocation.getBeforeRefundedAmount())).max(BigDecimal.ZERO);
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/commission/CommissionTriggerServiceImpl.java:219:            performanceService.reverse("RETAIL_ORDER", attribution.getOrderId(), attribution.getOrderInfoId(),
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/commission/CommissionTriggerServiceImpl.java:220:                    allocation.getRefundBaseAmount(), requestNo + ":PERF:" + attribution.getOrderInfoId(), "普通零售退款");
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/commission/CommissionTriggerServiceImpl.java:229:                BigDecimal reverseAmount = allocation.getRefundBaseAmount().compareTo(remainingBaseBefore) >= 0
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/commission/CommissionTriggerServiceImpl.java:231:                        : remainingCommission.multiply(allocation.getRefundBaseAmount()).divide(remainingBaseBefore, 2, RoundingMode.HALF_UP).min(remainingCommission);
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/commission/CommissionTriggerServiceImpl.java:232:                if (reverseAmount.signum() > 0) reverseService.reverse(record.getId(), "RETAIL_ORDER", id, no, "REFUND", reverseAmount,
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/commission/CommissionTriggerServiceImpl.java:237:                "退款已按下单快照冲正业绩和佣金，refundAmount=" + refundAmount);
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/commission/CommissionTriggerServiceImpl.java:248:        performanceService.reverse("STOCK_TRANSFER", returnOrder.getOriginalTransferId(), null, returnAmount,
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/commission/CommissionTriggerServiceImpl.java:250:        profitService.reverse("STOCK_TRANSFER", returnOrder.getOriginalTransferId(), null, returnAmount,
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/commission/CommissionTriggerServiceImpl.java:262:            if (reverseAmount.signum() > 0) reverseService.reverse(record.getId(), "STOCK_TRANSFER_RETURN", id, no,
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/commission/CommissionTriggerServiceImpl.java:370:        value.put("refundedAmount", attribution.getRefundedAmount()); return JSONUtil.toJsonStr(value);
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/context/JkBusinessContextOverviewServiceImpl.java:11:import com.zbkj.common.model.jiuzhoukang.JkRetailRefundAdjustment;
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/context/JkBusinessContextOverviewServiceImpl.java:20:import com.zbkj.service.dao.jiuzhoukang.JkRetailRefundAdjustmentDao;
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/context/JkBusinessContextOverviewServiceImpl.java:32: * 为统一抽屉提供只读业务解释链。该接口不执行审核、退款、冲正或余额修改。
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/context/JkBusinessContextOverviewServiceImpl.java:38:    @Autowired private JkRetailRefundAdjustmentDao refundAdjustmentDao;
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/context/JkBusinessContextOverviewServiceImpl.java:78:        result.put("refund", refundAdjustmentDao.selectList(new LambdaQueryWrapper<JkRetailRefundAdjustment>()
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/context/JkBusinessContextOverviewServiceImpl.java:79:                .eq(JkRetailRefundAdjustment::getAttributionId, row.getId())
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/context/JkBusinessContextOverviewServiceImpl.java:80:                .eq(JkRetailRefundAdjustment::getIsDeleted, false)
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/context/JkBusinessContextOverviewServiceImpl.java:81:                .orderByDesc(JkRetailRefundAdjustment::getId)));
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/context/JkBusinessContextOverviewServiceImpl.java:163:        result.put("refund", refundAdjustmentDao.selectList(new LambdaQueryWrapper<JkRetailRefundAdjustment>()
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/context/JkBusinessContextOverviewServiceImpl.java:164:                .eq(JkRetailRefundAdjustment::getAttributionId, attribution.getId())
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/context/JkBusinessContextOverviewServiceImpl.java:165:                .eq(JkRetailRefundAdjustment::getIsDeleted, false)));
+crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/context/JkBusinessContextOverviewServiceImpl.java:188:        result.put("refund", new ArrayList<Object>());
+crmeb-service/src/main/java/com/zbkj/service/service/impl/HomeServiceImpl.java:314:     * 1.待发货订单，2.退款中订单，3.待核销订单，4.库存预警
+crmeb-service/src/main/java/com/zbkj/service/service/impl/HomeServiceImpl.java:322:        response.setRefundingOrderNum(storeOrderService.getRefundingNum());
+crmeb-service/src/main/java/com/zbkj/service/service/impl/ExcelServiceImpl.java:275://        aliasMap.put("refundReasonWapImg", "退款图片");
+crmeb-service/src/main/java/com/zbkj/service/service/impl/ExcelServiceImpl.java:276://        aliasMap.put("refundReasonWapExplain", "退款用户说明");
+crmeb-service/src/main/java/com/zbkj/service/service/impl/ExcelServiceImpl.java:277://        aliasMap.put("refundReasonTime", "退款时间");
+crmeb-service/src/main/java/com/zbkj/service/service/impl/ExcelServiceImpl.java:278://        aliasMap.put("refundReasonWap", "前台退款原因");
+crmeb-service/src/main/java/com/zbkj/service/service/impl/ExcelServiceImpl.java:279://        aliasMap.put("refundReason", "不退款的理由");
+crmeb-service/src/main/java/com/zbkj/service/service/impl/ExcelServiceImpl.java:280://        aliasMap.put("refundPrice", "退款金额");
+crmeb-service/src/main/java/com/zbkj/service/service/impl/ExcelServiceImpl.java:281://        aliasMap.put("refundStatus", "退款状态状态，0 未退款 1 申请中 2 已退款");
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderTaskServiceImpl.java:28:import com.zbkj.service.service.jiuzhoukang.commission.RetailOrderCommissionAdapter;
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderTaskServiceImpl.java:141:    private RetailOrderCommissionAdapter retailOrderCommissionAdapter;
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderTaskServiceImpl.java:199:            try { retailOrderCommissionAdapter.afterCrmebOrderCompleted(storeOrder); } catch (Exception commissionException) { logger.error("九州康零售订单佣金适配失败，orderId={}", storeOrder.getId(), commissionException); }
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderTaskServiceImpl.java:218:            // 兼容处理秒杀数据退款
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderTaskServiceImpl.java:281:     * 订单退款处理
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderTaskServiceImpl.java:282:     * 退款得时候根据userBill 来进行回滚
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderTaskServiceImpl.java:285:    public Boolean refundOrder(StoreOrder storeOrder) {
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderTaskServiceImpl.java:299:            logger.error("订单退款处理，对应的用户不存在,storeOrder===>" + storeOrder);
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderTaskServiceImpl.java:313:        experienceRecord.setMark(StrUtil.format("订单退款，扣除{}赠送经验", userExperienceRecord.getExperience()));
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderTaskServiceImpl.java:325:                record.setMark(StrUtil.format("订单退款，返还支付扣除得{}积分", record.getIntegral()));
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderTaskServiceImpl.java:340:        tempOrder.setRefundStatus(2);
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderTaskServiceImpl.java:358:            storeOrderStatusService.saveRefund(storeOrder.getId(), storeOrder.getRefundPrice(), "成功");
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderTaskServiceImpl.java:394:                storePink.setIsRefund(true);
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderTaskServiceImpl.java:409:                BigDecimal refundAmount = storeOrder.getRefundPrice() == null ? storeOrder.getPayPrice() : storeOrder.getRefundPrice();
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderTaskServiceImpl.java:410:                jkCommissionTriggerService.onRefundCompleted(storeOrder.getId().longValue(), storeOrder.getOrderId(), refundAmount,
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderTaskServiceImpl.java:411:                        "RETAIL_REFUND:" + storeOrder.getId() + ":" + refundAmount);
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderTaskServiceImpl.java:413:                logger.error("九州康零售退款佣金冲正失败，CRMEB 原退款主链已完成，orderId={}", storeOrder.getId(), commissionException);
+crmeb-service/src/main/java/com/zbkj/service/service/impl/WechatNewServiceImpl.java:600:     * 微信申请退款
+crmeb-service/src/main/java/com/zbkj/service/service/impl/WechatNewServiceImpl.java:601:     * @param wxRefundVo 微信申请退款对象
+crmeb-service/src/main/java/com/zbkj/service/service/impl/WechatNewServiceImpl.java:603:     * @return 申请退款结果对象
+crmeb-service/src/main/java/com/zbkj/service/service/impl/WechatNewServiceImpl.java:606:    public WxRefundResponseVo payRefund(WxRefundVo wxRefundVo, String path) {
+crmeb-service/src/main/java/com/zbkj/service/service/impl/WechatNewServiceImpl.java:607:        String xmlStr = XmlUtil.objectToXml(wxRefundVo);
+crmeb-service/src/main/java/com/zbkj/service/service/impl/WechatNewServiceImpl.java:612:            xml = restTemplateUtil.postWXRefundXml(url, xmlStr, wxRefundVo.getMch_id(), path);
+crmeb-service/src/main/java/com/zbkj/service/service/impl/WechatNewServiceImpl.java:619:            throw new CrmebException("微信无信息返回，微信申请退款失败！");
+crmeb-service/src/main/java/com/zbkj/service/service/impl/WechatNewServiceImpl.java:622:        WxRefundResponseVo responseVo = CrmebUtil.mapToObj(map, WxRefundResponseVo.class);
+crmeb-service/src/main/java/com/zbkj/service/service/impl/WechatNewServiceImpl.java:624:            wxPayExceptionDispose(map, "微信申请退款异常1");
+crmeb-service/src/main/java/com/zbkj/service/service/impl/WechatNewServiceImpl.java:625:            throw new CrmebException("微信申请退款失败1！" +  responseVo.getReturnMsg());
+crmeb-service/src/main/java/com/zbkj/service/service/impl/WechatNewServiceImpl.java:629:            wxPayExceptionDispose(map, "微信申请退款业务异常");
+crmeb-service/src/main/java/com/zbkj/service/service/impl/WechatNewServiceImpl.java:630:            throw new CrmebException("微信申请退款失败2！" + responseVo.getErrCodeDes());
+crmeb-service/src/main/java/com/zbkj/service/service/impl/WechatNewServiceImpl.java:632:        System.out.println("================微信申请退款结束=========================");
+crmeb-service/src/main/java/com/zbkj/service/service/impl/CallbackServiceImpl.java:191:                            if (ObjectUtil.isNull(headPink) || headPink.getIsRefund().equals(true) || headPink.getStatus() == 3) {
+crmeb-service/src/main/java/com/zbkj/service/service/impl/CallbackServiceImpl.java:231:                        storePink.setIsRefund(false);
+crmeb-service/src/main/java/com/zbkj/service/service/impl/CallbackServiceImpl.java:307:     * 微信退款回调
+crmeb-service/src/main/java/com/zbkj/service/service/impl/CallbackServiceImpl.java:312:    public String weChatRefund(String xmlInfo) {
+crmeb-service/src/main/java/com/zbkj/service/service/impl/CallbackServiceImpl.java:314:        MyRecord refundRecord = refundNotify(xmlInfo, notifyRecord);
+crmeb-service/src/main/java/com/zbkj/service/service/impl/CallbackServiceImpl.java:315:        if (refundRecord.getStr("status").equals("fail")) {
+crmeb-service/src/main/java/com/zbkj/service/service/impl/CallbackServiceImpl.java:316:            logger.error("微信退款回调失败==>" + refundRecord.getColumns() + ", rawData==>" + xmlInfo + ", data==>" + notifyRecord);
+crmeb-service/src/main/java/com/zbkj/service/service/impl/CallbackServiceImpl.java:317:            return refundRecord.getStr("returnXml");
+crmeb-service/src/main/java/com/zbkj/service/service/impl/CallbackServiceImpl.java:320:        if (!refundRecord.getBoolean("isRefund")) {
+crmeb-service/src/main/java/com/zbkj/service/service/impl/CallbackServiceImpl.java:321:            logger.error("微信退款回调失败==>" + refundRecord.getColumns() + ", rawData==>" + xmlInfo + ", data==>" + notifyRecord);
+crmeb-service/src/main/java/com/zbkj/service/service/impl/CallbackServiceImpl.java:322:            return refundRecord.getStr("returnXml");
+crmeb-service/src/main/java/com/zbkj/service/service/impl/CallbackServiceImpl.java:324:        String outRefundNo = notifyRecord.getStr("out_refund_no");
+crmeb-service/src/main/java/com/zbkj/service/service/impl/CallbackServiceImpl.java:325:        StoreOrder storeOrder = storeOrderService.getByOderId(outRefundNo);
+crmeb-service/src/main/java/com/zbkj/service/service/impl/CallbackServiceImpl.java:327:            logger.error("微信退款订单查询失败==>" + refundRecord.getColumns() + ", rawData==>" + xmlInfo + ", data==>" + notifyRecord);
+crmeb-service/src/main/java/com/zbkj/service/service/impl/CallbackServiceImpl.java:328:            return refundRecord.getStr("returnXml");
+crmeb-service/src/main/java/com/zbkj/service/service/impl/CallbackServiceImpl.java:330:        if (storeOrder.getRefundStatus() == 2) {
+crmeb-service/src/main/java/com/zbkj/service/service/impl/CallbackServiceImpl.java:331:            logger.warn("微信退款订单已确认成功==>" + refundRecord.getColumns() + ", rawData==>" + xmlInfo + ", data==>" + notifyRecord);
+crmeb-service/src/main/java/com/zbkj/service/service/impl/CallbackServiceImpl.java:332:            return refundRecord.getStr("returnXml");
+crmeb-service/src/main/java/com/zbkj/service/service/impl/CallbackServiceImpl.java:334:        storeOrder.setRefundStatus(2);
+crmeb-service/src/main/java/com/zbkj/service/service/impl/CallbackServiceImpl.java:338:            // 退款task
+crmeb-service/src/main/java/com/zbkj/service/service/impl/CallbackServiceImpl.java:341:            logger.warn("微信退款订单更新失败==>" + refundRecord.getColumns() + ", rawData==>" + xmlInfo + ", data==>" + notifyRecord);
+crmeb-service/src/main/java/com/zbkj/service/service/impl/CallbackServiceImpl.java:343:        return refundRecord.getStr("returnXml");
+crmeb-service/src/main/java/com/zbkj/service/service/impl/CallbackServiceImpl.java:350:    private MyRecord refundNotify(String xmlInfo, MyRecord notifyRecord) {
+crmeb-service/src/main/java/com/zbkj/service/service/impl/CallbackServiceImpl.java:351:        MyRecord refundRecord = new MyRecord();
+crmeb-service/src/main/java/com/zbkj/service/service/impl/CallbackServiceImpl.java:352:        refundRecord.set("status", "fail");
+crmeb-service/src/main/java/com/zbkj/service/service/impl/CallbackServiceImpl.java:359:            logger.error("wechat refund callback error : " + sb.toString());
+crmeb-service/src/main/java/com/zbkj/service/service/impl/CallbackServiceImpl.java:360:            return refundRecord.set("returnXml", sb.toString()).set("errMsg", "xmlInfo is blank");
+crmeb-service/src/main/java/com/zbkj/service/service/impl/CallbackServiceImpl.java:370:            logger.error("wechat refund callback error : " + e.getMessage());
+crmeb-service/src/main/java/com/zbkj/service/service/impl/CallbackServiceImpl.java:371:            return refundRecord.set("returnXml", sb.toString()).set("errMsg", e.getMessage());
+crmeb-service/src/main/java/com/zbkj/service/service/impl/CallbackServiceImpl.java:388:                String refund_status = infoMap.get("refund_status");
+crmeb-service/src/main/java/com/zbkj/service/service/impl/CallbackServiceImpl.java:389:                refundRecord.set("isRefund", refund_status.equals(Constants.SUCCESS));
+crmeb-service/src/main/java/com/zbkj/service/service/impl/CallbackServiceImpl.java:391:                refundRecord.set("isRefund", false);
+crmeb-service/src/main/java/com/zbkj/service/service/impl/CallbackServiceImpl.java:392:                logger.error("微信退款回调异常，e==》" + e.getMessage());
+crmeb-service/src/main/java/com/zbkj/service/service/impl/CallbackServiceImpl.java:396:            refundRecord.set("isRefund", false);
+crmeb-service/src/main/java/com/zbkj/service/service/impl/CallbackServiceImpl.java:401:        return refundRecord.set("returnXml", sb.toString()).set("status", "ok");
+crmeb-service/src/main/java/com/zbkj/service/service/impl/CallbackServiceImpl.java:447:        list.add("refund_fee");
+crmeb-service/src/main/java/com/zbkj/service/service/impl/CallbackServiceImpl.java:448:        list.add("settlement_refund_fee");
+crmeb-service/src/main/java/com/zbkj/service/service/impl/CallbackServiceImpl.java:450:        list.add("cash_refund_fee");
+crmeb-service/src/main/java/com/zbkj/service/service/impl/CallbackServiceImpl.java:451:        list.add("coupon_refund_fee");
+crmeb-service/src/main/java/com/zbkj/service/service/impl/CallbackServiceImpl.java:452:        list.add("coupon_refund_count");
+crmeb-service/src/main/java/com/zbkj/service/service/impl/OrderPayServiceImpl.java:625:                    if (ObjectUtil.isNull(headPink) || headPink.getIsRefund().equals(true) || headPink.getStatus() == 3) {
+crmeb-service/src/main/java/com/zbkj/service/service/impl/OrderPayServiceImpl.java:665:                storePink.setIsRefund(false);
+crmeb-service/src/main/java/com/zbkj/service/service/impl/UserBillServiceImpl.java:22:import com.zbkj.common.request.StoreOrderRefundRequest;
+crmeb-service/src/main/java/com/zbkj/service/service/impl/UserBillServiceImpl.java:187:     * 保存退款日志
+crmeb-service/src/main/java/com/zbkj/service/service/impl/UserBillServiceImpl.java:191:    public Boolean saveRefundBill(StoreOrderRefundRequest request, User user) {
+crmeb-service/src/main/java/com/zbkj/service/service/impl/UserBillServiceImpl.java:193:        userBill.setTitle("商品退款");
+crmeb-service/src/main/java/com/zbkj/service/service/impl/UserBillServiceImpl.java:200:        userBill.setMark("订单退款到余额" + request.getAmount() + "元");
+crmeb-service/src/main/java/com/zbkj/service/service/impl/UserBillServiceImpl.java:233:                case "productRefund" :
+crmeb-service/src/main/java/com/zbkj/service/service/impl/UserBillServiceImpl.java:234:                    map.put("title", "商品退款");
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderRefundServiceImpl.java:6:import com.zbkj.common.request.StoreOrderRefundRequest;
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderRefundServiceImpl.java:9:import com.zbkj.common.vo.WxRefundVo;
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderRefundServiceImpl.java:12:import com.zbkj.service.service.StoreOrderRefundService;
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderRefundServiceImpl.java:33:public class StoreOrderRefundServiceImpl extends ServiceImpl<StoreOrderDao, StoreOrder> implements StoreOrderRefundService {
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderRefundServiceImpl.java:44:     * 退款
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderRefundServiceImpl.java:47:    public void refund(StoreOrderRefundRequest request, StoreOrder storeOrder) {
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderRefundServiceImpl.java:48:        refundWx(request, storeOrder);
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderRefundServiceImpl.java:52:     * 公众号退款
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderRefundServiceImpl.java:56:    private void refundWx(StoreOrderRefundRequest request, StoreOrder storeOrder) {
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderRefundServiceImpl.java:95:        WxRefundVo wxRefundVo = new WxRefundVo();
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderRefundServiceImpl.java:96:        wxRefundVo.setAppid(appId);
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderRefundServiceImpl.java:97:        wxRefundVo.setMch_id(mchId);
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderRefundServiceImpl.java:98:        wxRefundVo.setNonce_str(WxPayUtil.getNonceStr());
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderRefundServiceImpl.java:99:        wxRefundVo.setOut_trade_no(storeOrder.getOutTradeNo());
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderRefundServiceImpl.java:100:        wxRefundVo.setOut_refund_no(storeOrder.getOrderId());
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderRefundServiceImpl.java:101:        wxRefundVo.setTotal_fee(storeOrder.getPayPrice().multiply(BigDecimal.TEN).multiply(BigDecimal.TEN).intValue());
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderRefundServiceImpl.java:102:        wxRefundVo.setRefund_fee(request.getAmount().multiply(BigDecimal.TEN).multiply(BigDecimal.TEN).intValue());
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderRefundServiceImpl.java:103:        wxRefundVo.setNotify_url(apiDomain + PayConstants.WX_PAY_REFUND_NOTIFY_API_URI);
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderRefundServiceImpl.java:104:        String sign = WxPayUtil.getSign(wxRefundVo, signKey);
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderRefundServiceImpl.java:105:        wxRefundVo.setSign(sign);
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderRefundServiceImpl.java:107:        wechatNewService.payRefund(wxRefundVo, path);
+crmeb-service/src/main/java/com/zbkj/service/service/impl/OrderServiceImpl.java:226:            if (storeOrder.getRefundStatus() > 0 && !storeOrder.getRefundStatus().equals(2)) {
+crmeb-service/src/main/java/com/zbkj/service/service/impl/OrderServiceImpl.java:227:                throw new CrmebException("订单在退款流程中无法删除!");
+crmeb-service/src/main/java/com/zbkj/service/service/impl/OrderServiceImpl.java:229:            if (storeOrder.getRefundStatus().equals(0) && !storeOrder.getStatus().equals(3)) {
+crmeb-service/src/main/java/com/zbkj/service/service/impl/OrderServiceImpl.java:305:     * 订单退款申请
+crmeb-service/src/main/java/com/zbkj/service/service/impl/OrderServiceImpl.java:307:     * @param request OrderRefundApplyRequest 退款参数
+crmeb-service/src/main/java/com/zbkj/service/service/impl/OrderServiceImpl.java:310:    public Boolean refundApply(OrderRefundApplyRequest request) {
+crmeb-service/src/main/java/com/zbkj/service/service/impl/OrderServiceImpl.java:317:        if (existStoreOrder.getRefundStatus() == 1) {
+crmeb-service/src/main/java/com/zbkj/service/service/impl/OrderServiceImpl.java:318:            throw new CrmebException("正在申请退款中");
+crmeb-service/src/main/java/com/zbkj/service/service/impl/OrderServiceImpl.java:321:        if (existStoreOrder.getRefundStatus() == 2) {
+crmeb-service/src/main/java/com/zbkj/service/service/impl/OrderServiceImpl.java:322:            throw new CrmebException("订单已退款");
+crmeb-service/src/main/java/com/zbkj/service/service/impl/OrderServiceImpl.java:325:        if (existStoreOrder.getRefundStatus() == 3) {
+crmeb-service/src/main/java/com/zbkj/service/service/impl/OrderServiceImpl.java:326:            throw new CrmebException("订单退款中");
+crmeb-service/src/main/java/com/zbkj/service/service/impl/OrderServiceImpl.java:329:        existStoreOrder.setRefundStatus(1);
+crmeb-service/src/main/java/com/zbkj/service/service/impl/OrderServiceImpl.java:330:        existStoreOrder.setRefundReasonTime(CrmebDateUtil.nowDateTime());
+crmeb-service/src/main/java/com/zbkj/service/service/impl/OrderServiceImpl.java:331:        existStoreOrder.setRefundReasonWap(request.getText());
+crmeb-service/src/main/java/com/zbkj/service/service/impl/OrderServiceImpl.java:332:        existStoreOrder.setRefundReasonWapExplain(request.getExplain());
+crmeb-service/src/main/java/com/zbkj/service/service/impl/OrderServiceImpl.java:333:        existStoreOrder.setRefundReasonWapImg(systemAttachmentService.clearPrefix(request.getReasonImage()));
+crmeb-service/src/main/java/com/zbkj/service/service/impl/OrderServiceImpl.java:334:        existStoreOrder.setRefundPrice(BigDecimal.ZERO);
+crmeb-service/src/main/java/com/zbkj/service/service/impl/OrderServiceImpl.java:339:            storeOrderStatusService.createLog(existStoreOrder.getId(), Constants.ORDER_LOG_REFUND_APPLY, "用户申请退款原因：" + request.getExplain());
+crmeb-service/src/main/java/com/zbkj/service/service/impl/OrderServiceImpl.java:344:            // 发送用户退款管理员提醒短信
+crmeb-service/src/main/java/com/zbkj/service/service/impl/OrderServiceImpl.java:354:                        smsService.sendOrderRefundApplyNotice(admin.getPhone(), existStoreOrder.getOrderId(), admin.getRealName(), tempId);
+crmeb-service/src/main/java/com/zbkj/service/service/impl/OrderServiceImpl.java:359:        if (!execute) throw new CrmebException("申请退款失败");
+crmeb-service/src/main/java/com/zbkj/service/service/impl/OrderServiceImpl.java:364:     * 订单退款申请Task使用
+crmeb-service/src/main/java/com/zbkj/service/service/impl/OrderServiceImpl.java:366:     * @param applyList OrderRefundApplyRequest 退款参数
+crmeb-service/src/main/java/com/zbkj/service/service/impl/OrderServiceImpl.java:370:    public Boolean refundApplyTask(List<OrderRefundApplyRequest> applyList) {
+crmeb-service/src/main/java/com/zbkj/service/service/impl/OrderServiceImpl.java:379:        for (OrderRefundApplyRequest request : applyList) {
+crmeb-service/src/main/java/com/zbkj/service/service/impl/OrderServiceImpl.java:383:                logger.error("拼团自动处理订单申请退款：没有找到相关订单信息!");
+crmeb-service/src/main/java/com/zbkj/service/service/impl/OrderServiceImpl.java:386:            if (storeOrder.getRefundStatus() == 1) {
+crmeb-service/src/main/java/com/zbkj/service/service/impl/OrderServiceImpl.java:387:                logger.error("拼团自动处理订单申请退款：正在申请退款中!");
+crmeb-service/src/main/java/com/zbkj/service/service/impl/OrderServiceImpl.java:391:            if (storeOrder.getRefundStatus() == 2) {
+crmeb-service/src/main/java/com/zbkj/service/service/impl/OrderServiceImpl.java:392:                logger.error("拼团自动处理订单申请退款：订单已退款!");
+crmeb-service/src/main/java/com/zbkj/service/service/impl/OrderServiceImpl.java:396:            if (storeOrder.getRefundStatus() == 3) {
+crmeb-service/src/main/java/com/zbkj/service/service/impl/OrderServiceImpl.java:397:                logger.error("拼团自动处理订单申请退款：订单退款中!");
+crmeb-service/src/main/java/com/zbkj/service/service/impl/OrderServiceImpl.java:401:            storeOrder.setRefundReasonWapImg(systemAttachmentService.clearPrefix(request.getReasonImage()));
+crmeb-service/src/main/java/com/zbkj/service/service/impl/OrderServiceImpl.java:402:            storeOrder.setRefundStatus(1);
+crmeb-service/src/main/java/com/zbkj/service/service/impl/OrderServiceImpl.java:403:            storeOrder.setRefundReasonWapExplain(request.getExplain());
+crmeb-service/src/main/java/com/zbkj/service/service/impl/OrderServiceImpl.java:404:            storeOrder.setRefundReason(request.getText());
+crmeb-service/src/main/java/com/zbkj/service/service/impl/OrderServiceImpl.java:405:            storeOrder.setRefundPrice(BigDecimal.ZERO);
+crmeb-service/src/main/java/com/zbkj/service/service/impl/OrderServiceImpl.java:406:            storeOrder.setRefundReasonTime(CrmebDateUtil.nowDateTime());
+crmeb-service/src/main/java/com/zbkj/service/service/impl/OrderServiceImpl.java:410:            // 发送用户退款管理员提醒短信
+crmeb-service/src/main/java/com/zbkj/service/service/impl/OrderServiceImpl.java:413:                systemAdminList.forEach(admin -> smsService.sendOrderRefundApplyNotice(admin.getPhone(), storeOrder.getOrderId(), admin.getRealName(), tempId));
+crmeb-service/src/main/java/com/zbkj/service/service/impl/OrderServiceImpl.java:500:        if (storeOrder.getRefundStatus().equals(1)) {
+crmeb-service/src/main/java/com/zbkj/service/service/impl/OrderServiceImpl.java:501:            return "申请退款中";
+crmeb-service/src/main/java/com/zbkj/service/service/impl/OrderServiceImpl.java:503:        if (storeOrder.getRefundStatus().equals(2)) {
+crmeb-service/src/main/java/com/zbkj/service/service/impl/OrderServiceImpl.java:504:            return "已退款";
+crmeb-service/src/main/java/com/zbkj/service/service/impl/OrderServiceImpl.java:506:        if (storeOrder.getRefundStatus().equals(3)) {
+crmeb-service/src/main/java/com/zbkj/service/service/impl/OrderServiceImpl.java:507:            return "退款中";
+crmeb-service/src/main/java/com/zbkj/service/service/impl/OrderServiceImpl.java:596:        } else if (storeOrder.getRefundStatus() == 1) {
+crmeb-service/src/main/java/com/zbkj/service/service/impl/OrderServiceImpl.java:598:            record.set("title", "申请退款中");
+crmeb-service/src/main/java/com/zbkj/service/service/impl/OrderServiceImpl.java:600:        } else if (storeOrder.getRefundStatus() == 2) {
+crmeb-service/src/main/java/com/zbkj/service/service/impl/OrderServiceImpl.java:602:            record.set("title", "已退款");
+crmeb-service/src/main/java/com/zbkj/service/service/impl/OrderServiceImpl.java:603:            record.set("msg", "已为您退款,感谢您的支持");
+crmeb-service/src/main/java/com/zbkj/service/service/impl/OrderServiceImpl.java:604:        } else if (storeOrder.getRefundStatus() == 3) {
+crmeb-service/src/main/java/com/zbkj/service/service/impl/OrderServiceImpl.java:606:            record.set("title", "退款中");
+crmeb-service/src/main/java/com/zbkj/service/service/impl/OrderServiceImpl.java:607:            record.set("msg", "正在为您退款,感谢您的支持");
+crmeb-service/src/main/java/com/zbkj/service/service/impl/OrderServiceImpl.java:646:                    record.set("msg", "退款拒绝订单已发货");
+crmeb-service/src/main/java/com/zbkj/service/service/impl/OrderServiceImpl.java:700:            result.setRefundCount(0);
+crmeb-service/src/main/java/com/zbkj/service/service/impl/OrderServiceImpl.java:718:        // 退款中和已退款（只展示退款中）
+crmeb-service/src/main/java/com/zbkj/service/service/impl/OrderServiceImpl.java:719:        result.setRefundCount(storeOrderService.getTopDataUtil(Constants.ORDER_STATUS_H5_REFUNDING, userId));
+crmeb-service/src/main/java/com/zbkj/service/service/impl/OrderServiceImpl.java:724:     * 查询退款理由
+crmeb-service/src/main/java/com/zbkj/service/service/impl/OrderServiceImpl.java:726:     * @return 退款理由集合
+crmeb-service/src/main/java/com/zbkj/service/service/impl/OrderServiceImpl.java:729:    public List<String> getRefundReason() {
+crmeb-service/src/main/java/com/zbkj/service/service/impl/OrderServiceImpl.java:801:     * 获取申请订单退款信息
+crmeb-service/src/main/java/com/zbkj/service/service/impl/OrderServiceImpl.java:804:     * @return ApplyRefundOrderInfoResponse
+crmeb-service/src/main/java/com/zbkj/service/service/impl/OrderServiceImpl.java:807:    public ApplyRefundOrderInfoResponse applyRefundOrderInfo(String orderId) {
+crmeb-service/src/main/java/com/zbkj/service/service/impl/OrderServiceImpl.java:809:        ApplyRefundOrderInfoResponse response = new ApplyRefundOrderInfoResponse();
+crmeb-service/src/main/java/com/zbkj/service/service/impl/OrderServiceImpl.java:1856:        if (storeOrder.getRefundStatus() > 0 || storeOrder.getStatus() != 3) {
+crmeb-service/src/main/java/com/zbkj/service/service/StoreOrderStatusService.java:34:     * 保存订单退款记录
+crmeb-service/src/main/java/com/zbkj/service/service/StoreOrderStatusService.java:40:    Boolean saveRefund(Integer orderId, BigDecimal amount, String message);
+crmeb-service/src/main/java/com/zbkj/service/service/StoreOrderStatusService.java:66:     * 通过日期获取订单退款数量
+crmeb-service/src/main/java/com/zbkj/service/service/StoreOrderStatusService.java:70:    Integer getRefundOrderNumByDate(String date);
+crmeb-service/src/main/java/com/zbkj/service/service/StoreOrderStatusService.java:73:     * 通过日期获取订单退款金额
+crmeb-service/src/main/java/com/zbkj/service/service/StoreOrderStatusService.java:77:    BigDecimal getRefundOrderAmountByDate(String date);
+crmeb-service/src/main/java/com/zbkj/service/service/StoreOrderTaskService.java:24:    Boolean refundOrder(StoreOrder storeOrder);
+crmeb-service/src/main/java/com/zbkj/service/service/WechatNewService.java:138:     * 微信申请退款
+crmeb-service/src/main/java/com/zbkj/service/service/WechatNewService.java:139:     * @param wxRefundVo 微信申请退款对象
+crmeb-service/src/main/java/com/zbkj/service/service/WechatNewService.java:141:     * @return 申请退款结果对象
+crmeb-service/src/main/java/com/zbkj/service/service/WechatNewService.java:143:    WxRefundResponseVo payRefund(WxRefundVo wxRefundVo, String path);
+crmeb-service/src/main/java/com/zbkj/service/service/CallbackService.java:26:     * 微信退款回调
+crmeb-service/src/main/java/com/zbkj/service/service/CallbackService.java:30:    String weChatRefund(String request);
+
+## Order completion adapter call sites
+crmeb-service/src/main/java/com/zbkj/service/service/jiuzhoukang/commission/RetailOrderCommissionAdapter.java:27:    public void afterCrmebOrderCompleted(StoreOrder order) {
+crmeb-service/src/main/java/com/zbkj/service/service/impl/StoreOrderTaskServiceImpl.java:199:            try { retailOrderCommissionAdapter.afterCrmebOrderCompleted(storeOrder); } catch (Exception commissionException) { logger.error("九州康零售订单佣金适配失败，orderId={}", storeOrder.getId(), commissionException); }

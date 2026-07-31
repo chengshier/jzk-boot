@@ -12,6 +12,7 @@ import com.zbkj.service.service.jiuzhoukang.commission.WithdrawStateSupport;
 import com.zbkj.service.service.jiuzhoukang.commission.WithdrawValidationSupport;
 import com.zbkj.service.service.jiuzhoukang.context.JkUserContext;
 import com.zbkj.service.service.jiuzhoukang.context.JkUserContextService;
+import com.zbkj.service.service.jiuzhoukang.wechat.JkSubscriptionBusinessNotificationService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -34,6 +35,7 @@ public class WithdrawServiceImpl implements WithdrawService {
     @Autowired private FundAccountService fundAccountService;
     @Autowired private JkUserContextService userContextService;
     @Autowired private SystemConfigService systemConfigService;
+    @Autowired private JkSubscriptionBusinessNotificationService notificationService;
 
     /** 申请提现时立即把可提现资金转入提现中，避免同一余额被并发申请多次。 */
     @Override @Transactional
@@ -53,6 +55,7 @@ public class WithdrawServiceImpl implements WithdrawService {
                 .setIsDeleted(false).setVersion(0).setCreateTime(now).setUpdateTime(now);
         withdrawDao.insert(apply);
         log(apply, "APPLY", null, "SUBMITTED", userId, requestNo, "提交提现申请");
+        notifyStatus(apply, "已提交", "提现申请已提交，等待平台审核");
         return apply;
     }
 
@@ -71,6 +74,7 @@ public class WithdrawServiceImpl implements WithdrawService {
         apply.setStatus(after).setAuditUserId(operatorId).setAuditTime(new Date()).setRejectReason(approved ? null : remark).setUpdateTime(new Date());
         withdrawDao.updateById(apply);
         log(apply, action, before, after, operatorId, requestNo, remark);
+        notifyStatus(apply, approved ? "审核通过" : "审核驳回", remark);
         return apply;
     }
 
@@ -86,7 +90,19 @@ public class WithdrawServiceImpl implements WithdrawService {
         apply.setStatus("PAID").setPaidUserId(operatorId).setPaidTime(new Date()).setUpdateTime(new Date());
         withdrawDao.updateById(apply);
         log(apply, "CONFIRM_PAID", "APPROVED", "PAID", operatorId, requestNo, remark);
+        notifyStatus(apply, "已打款", remark);
         return apply;
+    }
+
+    private void notifyStatus(JkWithdrawApply apply, String status, String remark) {
+        notificationService.notifyWithdrawStatus(
+                apply.getId(),
+                apply.getWithdrawNo(),
+                apply.getUserId(),
+                apply.getAmount(),
+                status,
+                remark,
+                "pages/jk/withdraw/detail?id=" + apply.getId());
     }
 
     private void requirePayableIdentity(JkWithdrawApply apply) {

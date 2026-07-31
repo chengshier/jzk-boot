@@ -1,0 +1,27 @@
+status=FAIL
+build_exit=1
+guard_exit=1
+commit=9850e0dd49e680360b40a118d67f393ca17eb64d
+verified_at=2026-07-29T11:48:42Z
+--- compiler errors ---
+12028:[ERROR] COMPILATION ERROR : 
+12030:[ERROR] /home/runner/work/jzk-boot/jzk-boot/crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/context/JkBusinessContextOverviewServiceImpl.java:[92,40] cannot find symbol
+12044:[INFO] BUILD FAILURE
+12049:[ERROR] Failed to execute goal org.apache.maven.plugins:maven-compiler-plugin:3.6.1:compile (default-compile) on project crmeb-service: Compilation failure
+12050:[ERROR] /home/runner/work/jzk-boot/jzk-boot/crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/context/JkBusinessContextOverviewServiceImpl.java:[92,40] cannot find symbol
+12051:[ERROR]   symbol:   method getCommissionStatus()
+12052:[ERROR]   location: variable record of type com.zbkj.common.model.jiuzhoukang.JkCommissionRecord
+12053:[ERROR] -> [Help 1]
+12054:[ERROR] 
+12055:[ERROR] To see the full stack trace of the errors, re-run Maven with the -e switch.
+12056:[ERROR] Re-run Maven using the -X switch to enable full debug logging.
+12057:[ERROR] 
+12058:[ERROR] For more information about the errors and possible solutions, please read the following articles:
+12059:[ERROR] [Help 1] http://cwiki.apache.org/confluence/display/MAVEN/MojoFailureException
+12060:[ERROR] 
+12061:[ERROR] After correcting the problems, you can resume the build with the command
+12062:[ERROR]   mvn <args> -rf :crmeb-service
+--- guard errors ---
+sql/jiuzhoukang/v3.1-gapfix/02-jk-v31-attribution-menu-permission.sql:2:-- 真实字段：eb_system_menu.component/is_delete；jk_business_permission 不存在 parent_code。
+sql/jiuzhoukang/v3.1-gapfix/00-jk-v31-schema-precheck.sql:35:SELECT 'jk_business_permission.parent_code must not be used', IF(COUNT(*) = 0, 'OK', 'LEGACY_COLUMN_PRESENT')
+sql/jiuzhoukang/v3.1-gapfix/00-jk-v31-schema-precheck.sql:37:WHERE TABLE_SCHEMA = @schema_name AND TABLE_NAME = 'jk_business_permission' AND COLUMN_NAME = 'parent_code';
