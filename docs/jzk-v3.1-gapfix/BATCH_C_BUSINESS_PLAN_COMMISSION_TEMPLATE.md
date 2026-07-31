@@ -3,28 +3,29 @@
 ## 1. 修改文件清单
 
 ### 后端
-- `crmeb-common/.../jiuzhoukang/JkBusinessRulePlan.java`
-- `crmeb-common/.../jiuzhoukang/JkCommissionRule.java`
-- `crmeb-common/.../request/jiuzhoukang/JkBusinessRulePlanSaveRequest.java`
-- `crmeb-common/.../request/jiuzhoukang/JkBusinessRulePlanPublishRequest.java`
-- `crmeb-common/.../request/jiuzhoukang/JkCommissionTemplateSaveRequest.java`
-- `crmeb-common/.../request/jiuzhoukang/JkCommissionSourceTrialRequest.java`
-- `crmeb-common/.../request/jiuzhoukang/JkCommissionRuleSaveRequest.java`
-- `crmeb-common/.../request/jiuzhoukang/JkCommissionRuleTrialRequest.java`
-- `crmeb-service/.../dao/jiuzhoukang/JkBusinessRulePlanDao.java`
-- `crmeb-service/.../business/JkBusinessRulePlanService.java`
-- `crmeb-service/.../business/JkBusinessRulePlanServiceImpl.java`
-- `crmeb-service/.../commission/JkCommissionTemplateService.java`
-- `crmeb-service/.../commission/JkCommissionTemplateServiceImpl.java`
-- `crmeb-service/.../commission/JkCommissionSourceTrialService.java`
-- `crmeb-service/.../commission/JkCommissionSourceTrialServiceImpl.java`
-- `crmeb-service/.../commission/CommissionRuleServiceImpl.java`
-- `crmeb-service/.../commission/CommissionScenarioServiceImpl.java`
-- `crmeb-admin/.../JkBusinessRulePlanController.java`
-- `crmeb-admin/.../JkCommissionRuleController.java`
-- `crmeb-common/.../constants/jiuzhoukang/JkV31PermissionCodes.java`
+
+- `crmeb-common/src/main/java/com/zbkj/common/model/jiuzhoukang/JkBusinessRulePlan.java`
+- `crmeb-common/src/main/java/com/zbkj/common/model/jiuzhoukang/JkCommissionRule.java`
+- `crmeb-common/src/main/java/com/zbkj/common/request/jiuzhoukang/JkBusinessRulePlanSaveRequest.java`
+- `crmeb-common/src/main/java/com/zbkj/common/request/jiuzhoukang/JkBusinessRulePlanPublishRequest.java`
+- `crmeb-common/src/main/java/com/zbkj/common/request/jiuzhoukang/JkCommissionTemplateSaveRequest.java`
+- `crmeb-common/src/main/java/com/zbkj/common/request/jiuzhoukang/JkCommissionSourceTrialRequest.java`
+- `crmeb-common/src/main/java/com/zbkj/common/request/jiuzhoukang/JkCommissionRuleSaveRequest.java`
+- `crmeb-common/src/main/java/com/zbkj/common/request/jiuzhoukang/JkCommissionRuleTrialRequest.java`
+- `crmeb-service/src/main/java/com/zbkj/service/dao/jiuzhoukang/JkBusinessRulePlanDao.java`
+- `crmeb-service/src/main/java/com/zbkj/service/service/jiuzhoukang/business/JkBusinessRulePlanService.java`
+- `crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/business/JkBusinessRulePlanServiceImpl.java`
+- `crmeb-service/src/main/java/com/zbkj/service/service/jiuzhoukang/commission/JkCommissionTemplateService.java`
+- `crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/commission/JkCommissionTemplateServiceImpl.java`
+- `crmeb-service/src/main/java/com/zbkj/service/service/jiuzhoukang/commission/JkCommissionSourceTrialService.java`
+- `crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/commission/JkCommissionSourceTrialServiceImpl.java`
+- `crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/commission/CommissionRuleServiceImpl.java`
+- `crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/commission/CommissionScenarioServiceImpl.java`
+- `crmeb-admin/src/main/java/com/zbkj/admin/controller/jiuzhoukang/JkBusinessRulePlanController.java`
+- `crmeb-admin/src/main/java/com/zbkj/admin/controller/jiuzhoukang/JkCommissionRuleController.java`
 
 ### 管理端
+
 - `jzk-vue/src/api/jkGapfix.js`
 - `jzk-vue/src/views/jkBusiness/businessPlan/index.vue`
 - `jzk-vue/src/views/jkBusiness/commissionRule/index.vue`
@@ -35,15 +36,17 @@
 - `sql/jiuzhoukang/v3.1-gapfix/03-jk-v31-business-plan-template.sql`
 
 核心结构：
-- 新增 `jk_business_rule_plan` 不可变版本行；
-- 新增商业方案发布/停用日志表；
-- 收益奖励规则补 `plan_code`、`plan_version_no`、`template_code`、业务范围快照和 `income_nature`；
-- 模板数据不插入任何已启用或已发布规则；
-- 技术高级权限不自动授予普通运营角色。
+
+- `jk_business_rule_plan` 使用不可变版本行；
+- 商业方案发布和停用保留日志；
+- 奖励规则保存 `plan_code`、`plan_version_no`、`template_code`、业务范围快照和 `income_nature`；
+- 模板 SQL 不插入任何已启用或已发布规则；
+- 高级技术权限不自动授予普通运营角色。
 
 ## 3. 接口清单
 
 ### 商业方案
+
 - `GET /api/admin/jk/business-plan/list`
 - `GET /api/admin/jk/business-plan/{id}`
 - `GET /api/admin/jk/business-plan/role-cards`
@@ -53,42 +56,58 @@
 - `POST /api/admin/jk/business-plan/{id}/disable`
 
 ### 收益奖励规则
+
 - `GET /api/admin/jk/commission/rule/templates`
 - `POST /api/admin/jk/commission/rule/template/save`
 - `POST /api/admin/jk/commission/rule/trial/source`
-- 原底层 `save`、手工快照 `trial`、规则 item 接口改为高级权限；普通运营页面不调用。
+- 原底层 `save`、手工快照 `trial` 和规则 item 接口使用高级权限；普通运营页面不调用。
 
 ## 4. 页面清单
 
-- 新增“商业方案”角色卡片、版本列表、复制、发布、停用和历史详情页；
-- 重构“收益奖励规则”为业务模板向导；
+- 商业方案角色卡片、版本列表、复制、发布、停用和历史详情；
+- 收益奖励规则业务模板向导；
 - 普通运营不选择 `source_type`、`beneficiary_type`、`base_type`、`trigger_timing`、`stack_policy` 等技术字段；
 - 试算只输入真实订单号、线下销售单号、订货单号、调拨单号或业绩编号；
-- 删除无标签“快照用户”数字输入；
-- 规则金额为空时显示“未配置 / 未发布”，不显示 0 元。
+- 删除无标签快照用户数字输入；
+- 规则金额为空时显示“未配置 / 未发布”，不显示 `0` 元；
+- 页面增加规则总预算，并明确封顶和预算留空表示不限制。
 
-## 5. 自动化检查结果
+## 5. 已确认奖励规则口径
 
-- 新规则保存逻辑强制 `status=false`、`publish_status=DRAFT`；
-- 发布规则必须关联商业方案和不可变版本；
-- 佣金规则收益性质强制为 `PLATFORM_PAYABLE`；
-- `OFFLINE_REALIZED` 继续只在经营收益账本，不通过模板进入佣金账户；
-- 规则引擎增加商品、区域、周期门槛范围检查和 `TIER_PERCENT` 受控计算；
-- 真实业务试算服务从归属快照、线下销售、订货、调拨和业绩账本加载上下文，不接受运营手工拼装用户关系。
+- 线上零售基数为逐订单明细商品实付净额，优惠券、积分、满减和其他优惠按明细分摊，运费排除；
+- 比例、固定金额和阶梯奖励必须大于 `0` 才能保存为有效配置并发布；
+- 不预填具有真实业务含义的比例或金额；
+- 同一条规则中比例、固定金额和按数量金额互斥；
+- 单笔封顶、用户周期封顶和规则总预算留空表示不限制，填写后必须大于 `0`；
+- 生效开始时间必填、结束时间可空；
+- 发布版本不可直接编辑，只能复制新版本；
+- 新版本不自动重算历史业务，停用只影响后续匹配；
+- 所有新规则默认 `status=false`、`publish_status=DRAFT`；
+- 收益性质固定为 `PLATFORM_PAYABLE`，`OFFLINE_REALIZED` 继续只在经营收益账本。
 
-当前仍需以最新提交的完整编译和管理端生产构建结果为准；编译成功仅是开发自检。
+以上已经完成业务确认，不再列为待确认项；具体运营数值仍由有权限人员在草稿方案中配置，并需真实业务试算后发布。
 
-## 6. 未完成的真实环境验证
+## 6. 自动化检查结果
 
-- 未在真实 MySQL 5.7 创建商业方案表并验证旧规则兼容；
-- 未使用真实权限角色验证普通运营无法调用高级规则接口；
-- 未用真实订单、线下销售、订货、调拨和业绩记录逐模板执行试算；
-- 未验证周期封顶、总预算、阶梯多档和结算任务在真实并发数据下的最终扣减；
-- 未完成运营比例、固定金额、封顶和生效时间的商业确认；
-- 未发布任何默认模板。
+- 发布必须关联商业方案及不可变版本；
+- 奖励值、封顶和预算具有正数校验；
+- 计算方式字段互斥；
+- 规则引擎包含商品、区域、周期门槛和 `TIER_PERCENT` 受控计算；
+- 真实业务试算从不可变归属、线下销售、订货、调拨和业绩账本加载上下文，不接受手工拼装关系；
+- 管理端生产构建和页面守卫已通过。
 
-## 7. PR 描述更新
+以上为开发自检，不等于真实业务验收。
 
-- 后端 `jzk-boot#5` 与管理端 `jzk-vue#4` 增加商业方案、模板化奖励、真实业务试算和待验说明；
-- 小程序 `jzk-app#4` 标注本批次无新增佣金配置入口；
-- 三个 PR 继续保持 Draft，不以编译成功替代真实验收。
+## 7. 未完成的真实环境验证
+
+- 在真实 MySQL 5.7 创建商业方案表并验证旧规则兼容；
+- 使用真实权限角色验证普通运营无法调用高级规则接口；
+- 使用真实订单、线下销售、订货、调拨和业绩记录逐模板试算；
+- 验证多商品优惠、积分、满减、运费和尾差的真实计奖基数；
+- 验证周期封顶、规则总预算、阶梯多档和结算任务在并发数据下的最终扣减；
+- 由运营人员配置具体比例、金额、封顶和预算，并完成业务审批后再发布；
+- 不发布任何默认模板。
+
+## 8. PR 状态
+
+后端和管理端 PR 已增加确认后的奖励口径、代码约束和真实环境待验说明；小程序无佣金配置入口。三个 PR 继续保持 Draft。
