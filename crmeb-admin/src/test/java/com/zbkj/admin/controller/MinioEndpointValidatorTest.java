@@ -25,6 +25,11 @@ public class MinioEndpointValidatorTest {
     }
 
     @Test(expected = IllegalArgumentException.class)
+    public void rejectsIetfProtocolAssignmentAddress() {
+        new MinioEndpointValidator().validate("http://192.0.0.1");
+    }
+
+    @Test(expected = IllegalArgumentException.class)
     public void rejectsIpv6UniqueLocalAddress() throws Exception {
         new MinioEndpointValidator().validate("https://[fc00::1]");
     }
