@@ -24,6 +24,8 @@ import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * SystemAttachmentServiceImpl 接口实现
@@ -86,14 +88,14 @@ public class SystemAttachmentServiceImpl extends ServiceImpl<SystemAttachmentDao
      */
     @Override
     public String prefixImage(String path) {
-        if (isMinioUploadType()) return joinCdnPath(path);
+        if (isMinioUploadType()) return prefixMinioJson(path, UploadConstants.UPLOAD_FILE_KEYWORD + "/");
         // 如果那些域名不需要加，则跳过
         return path.replace(UploadConstants.UPLOAD_FILE_KEYWORD+"/", getCdnUrl() + "/"+ UploadConstants.UPLOAD_FILE_KEYWORD+"/");
     }
 
     @Override
     public String prefixUploadf(String path) {
-        if (isMinioUploadType()) return joinCdnPath(path);
+        if (isMinioUploadType()) return prefixMinioJson(path, "crmebimage/" + UploadConstants.UPLOAD_AFTER_FILE_KEYWORD + "/");
         // 如果那些域名不需要加，则跳过
         return path.replace("crmebimage/" + UploadConstants.UPLOAD_AFTER_FILE_KEYWORD+"/", getCdnUrl() + "/" +"crmebimage/" + UploadConstants.UPLOAD_AFTER_FILE_KEYWORD+"/");
     }
@@ -105,7 +107,7 @@ public class SystemAttachmentServiceImpl extends ServiceImpl<SystemAttachmentDao
      */
     @Override
     public String prefixFile(String path) {
-        if (isMinioUploadType()) return joinCdnPath(path);
+        if (isMinioUploadType()) return prefixMinioJson(path, "crmebimage/file/");
         if (path.contains(Constants.WECHAT_SOURCE_CODE_FILE_NAME)) {
             String cdnUrl = systemConfigService.getValueByKey("local" + "UploadUrl");
             return path.replace("crmebimage/", cdnUrl + "/crmebimage/");
@@ -119,6 +121,20 @@ public class SystemAttachmentServiceImpl extends ServiceImpl<SystemAttachmentDao
 
     private boolean isMinioUploadType() {
         return "6".equals(systemConfigService.getValueByKeyException(SysConfigConstants.CONFIG_UPLOAD_TYPE));
+    }
+
+    private String prefixMinioJson(String path, String marker) {
+        if (!path.contains("\"")) return joinCdnPath(path);
+        Pattern quotedValue = Pattern.compile("\\\"([^\\\"]*" + Pattern.quote(marker) + "[^\\\"]*)\\\"");
+        Matcher matcher = quotedValue.matcher(path);
+        StringBuffer result = new StringBuffer();
+        while (matcher.find()) {
+            String value = matcher.group(1);
+            String replacement = value.startsWith("http://") || value.startsWith("https://") ? value : joinCdnPath(value);
+            matcher.appendReplacement(result, Matcher.quoteReplacement("\"" + replacement + "\""));
+        }
+        matcher.appendTail(result);
+        return result.toString();
     }
 
     private String joinCdnPath(String path) {
