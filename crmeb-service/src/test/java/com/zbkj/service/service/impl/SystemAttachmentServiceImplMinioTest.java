@@ -18,6 +18,15 @@ public class SystemAttachmentServiceImplMinioTest {
         Assert.assertEquals("https://cdn.example.com", service.getCdnUrl());
     }
 
+    @Test
+    public void prefixesMinioObjectKeyWithoutInjectingCdnInsideConfiguredPrefix() {
+        SystemAttachmentServiceImpl service = new SystemAttachmentServiceImpl();
+        ReflectionTestUtils.setField(service, "systemConfigService", configService());
+
+        Assert.assertEquals("https://cdn.example.com/image-assets/crmebimage/public/product/photo.jpg",
+                service.prefixImage("image-assets/crmebimage/public/product/photo.jpg"));
+    }
+
     private SystemConfigService configService() {
         return (SystemConfigService) Proxy.newProxyInstance(getClass().getClassLoader(), new Class[]{SystemConfigService.class},
                 (proxy, method, args) -> {

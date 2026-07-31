@@ -86,12 +86,14 @@ public class SystemAttachmentServiceImpl extends ServiceImpl<SystemAttachmentDao
      */
     @Override
     public String prefixImage(String path) {
+        if (isMinioUploadType()) return joinCdnPath(path);
         // 如果那些域名不需要加，则跳过
         return path.replace(UploadConstants.UPLOAD_FILE_KEYWORD+"/", getCdnUrl() + "/"+ UploadConstants.UPLOAD_FILE_KEYWORD+"/");
     }
 
     @Override
     public String prefixUploadf(String path) {
+        if (isMinioUploadType()) return joinCdnPath(path);
         // 如果那些域名不需要加，则跳过
         return path.replace("crmebimage/" + UploadConstants.UPLOAD_AFTER_FILE_KEYWORD+"/", getCdnUrl() + "/" +"crmebimage/" + UploadConstants.UPLOAD_AFTER_FILE_KEYWORD+"/");
     }
@@ -103,6 +105,7 @@ public class SystemAttachmentServiceImpl extends ServiceImpl<SystemAttachmentDao
      */
     @Override
     public String prefixFile(String path) {
+        if (isMinioUploadType()) return joinCdnPath(path);
         if (path.contains(Constants.WECHAT_SOURCE_CODE_FILE_NAME)) {
             String cdnUrl = systemConfigService.getValueByKey("local" + "UploadUrl");
             return path.replace("crmebimage/", cdnUrl + "/crmebimage/");
@@ -112,6 +115,14 @@ public class SystemAttachmentServiceImpl extends ServiceImpl<SystemAttachmentDao
             return path.replace("crmebimage/downloadf/", cdnUrl + "/crmebimage/downloadf/");
         }
         return path.replace("crmebimage/file/", getCdnUrl() + "/crmebimage/file/");
+    }
+
+    private boolean isMinioUploadType() {
+        return "6".equals(systemConfigService.getValueByKeyException(SysConfigConstants.CONFIG_UPLOAD_TYPE));
+    }
+
+    private String joinCdnPath(String path) {
+        return StringUtils.removeEnd(getCdnUrl(), "/") + "/" + StringUtils.removeStart(path, "/");
     }
 
     /**
