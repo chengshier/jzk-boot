@@ -40,6 +40,7 @@ public class SystemConfigController {
     private SystemConfigService systemConfigService;
     @Autowired
     private JkS3CompatibleClient minioClient;
+    private MinioEndpointValidator minioEndpointValidator = new MinioEndpointValidator();
 
     @PreAuthorize("hasAuthority('admin:system:config:minio:test')")
     @ApiOperation(value = "测试 MinIO 连接")
@@ -50,6 +51,7 @@ public class SystemConfigController {
         String accessKey = required(request, "minioAccessKey");
         String secretKey = required(request, "minioSecretKey");
         String region = request.get("minioRegion");
+        minioEndpointValidator.validate(endpoint);
         minioClient.testWriteDelete(endpoint, bucket, accessKey, secretKey,
                 org.apache.commons.lang3.StringUtils.isBlank(region) ? "us-east-1" : region.trim());
         return CommonResult.success("MinIO 连接正常");

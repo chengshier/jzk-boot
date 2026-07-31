@@ -67,6 +67,13 @@ WHERE @minio_form_id IS NOT NULL
     SELECT 1 FROM `eb_system_config` config_item WHERE config_item.`name` = config_seed.`name`
   );
 
+-- 兼容已存在的 MinIO 配置项：只修复表单关联，绝不覆盖现有值。
+UPDATE `eb_system_config`
+SET `form_id` = @minio_form_id, `update_time` = @now
+WHERE @minio_form_id IS NOT NULL
+  AND `name` IN ('minioEndpoint', 'minioBucket', 'minioAccessKey', 'minioSecretKey', 'minioRegion', 'minioPrefix', 'minioUploadUrl')
+  AND (`form_id` IS NULL OR `form_id` <> @minio_form_id);
+
 -- 连接测试权限挂在既有“系统设置”菜单下，并赋予已有该菜单权限的角色。
 SET @system_config_menu_id = (
   SELECT `id` FROM `eb_system_menu`

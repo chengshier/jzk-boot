@@ -12,6 +12,24 @@ import java.util.Map;
 public class SystemConfigControllerMinioTest {
 
     @Test(expected = IllegalArgumentException.class)
+    public void minioConnectionTestRejectsLoopbackEndpointBeforeWriting() {
+        SystemConfigController controller = new SystemConfigController();
+        Map<String, String> request = new HashMap<String, String>();
+        request.put("minioEndpoint", "http://127.0.0.1:9000");
+        request.put("minioBucket", "uploads");
+        request.put("minioAccessKey", "access");
+        request.put("minioSecretKey", "secret");
+        ReflectionTestUtils.setField(controller, "minioClient", new JkS3CompatibleClient() {
+            @Override
+            public void testWriteDelete(String endpoint, String bucket, String accessKey, String secretKey, String region) {
+                Assert.fail("MinIO write must not run for a loopback endpoint");
+            }
+        });
+
+        controller.testMinio(request);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
     public void minioConnectionTestRequiresAllCredentials() {
         new SystemConfigController().testMinio(new HashMap<String, String>());
     }
@@ -24,6 +42,8 @@ public class SystemConfigControllerMinioTest {
         request.put("minioBucket", "uploads");
         request.put("minioAccessKey", "access");
         request.put("minioSecretKey", "top-secret");
+        ReflectionTestUtils.setField(controller, "minioEndpointValidator", new MinioEndpointValidator(
+                host -> new java.net.InetAddress[]{java.net.InetAddress.getByName("8.8.8.8")}));
         ReflectionTestUtils.setField(controller, "minioClient", new JkS3CompatibleClient() {
             @Override
             public void testWriteDelete(String endpoint, String bucket, String accessKey, String secretKey, String region) {
