@@ -1,28 +1,19 @@
 package com.zbkj.admin.controller;
 
-import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
 
-/** Validates MinIO endpoints before an administrative connection test can write to them. */
+/**
+ * Validates MinIO endpoints before an administrative connection test can write to them.
+ *
+ * The connection test intentionally accepts only public IP literals.  HttpURLConnection resolves
+ * host names when opening a connection, so accepting a DNS name after a one-time validation would
+ * allow a DNS-rebinding response to select a different destination.
+ */
 public class MinioEndpointValidator {
 
-    interface AddressResolver {
-        InetAddress[] resolve(String host) throws Exception;
-    }
-
-    private final AddressResolver addressResolver;
-
-    public MinioEndpointValidator() {
-        this(InetAddress::getAllByName);
-    }
-
-    MinioEndpointValidator(AddressResolver addressResolver) {
-        this.addressResolver = addressResolver;
-    }
-
-    public void validate(String endpoint) {
+    public String validate(String endpoint) {
         URI uri;
         try {
             uri = new URI(endpoint);
@@ -33,19 +24,35 @@ public class MinioEndpointValidator {
                 || uri.getHost() == null || uri.getUserInfo() != null) {
             throw rejected();
         }
+        InetAddress address = literalAddress(uri.getHost());
+        if (isDisallowed(address)) throw rejected();
+        return endpoint;
+    }
+
+    private InetAddress literalAddress(String host) {
+        String value = host;
+        if (value.startsWith("[") && value.endsWith("]")) {
+            value = value.substring(1, value.length() - 1);
+        }
+        if (!isIpv4Literal(value) && value.indexOf(':') < 0) throw rejected();
         try {
-            InetAddress[] addresses = addressResolver.resolve(uri.getHost());
-            if (addresses == null || addresses.length == 0) {
-                throw rejected();
-            }
-            for (InetAddress address : addresses) {
-                if (isDisallowed(address)) throw rejected();
-            }
-        } catch (IllegalArgumentException exception) {
-            throw exception;
+            return InetAddress.getByName(value);
         } catch (Exception exception) {
             throw rejected();
         }
+    }
+
+    private boolean isIpv4Literal(String value) {
+        String[] parts = value.split("\\.", -1);
+        if (parts.length != 4) return false;
+        for (String part : parts) {
+            if (part.isEmpty() || part.length() > 3) return false;
+            for (int index = 0; index < part.length(); index++) {
+                if (!Character.isDigit(part.charAt(index))) return false;
+            }
+            if (Integer.parseInt(part) > 255) return false;
+        }
+        return true;
     }
 
     private boolean isDisallowed(InetAddress address) {
@@ -53,14 +60,10 @@ public class MinioEndpointValidator {
                 || address.isLinkLocalAddress() || address.isMulticastAddress() || address.isSiteLocalAddress()) {
             return true;
         }
-        if (address instanceof Inet6Address) {
-            byte first = address.getAddress()[0];
-            return (first & 0xfe) == 0xfc;
-        }
-        return false;
+        return address.getAddress().length == 16 && (address.getAddress()[0] & 0xfe) == 0xfc;
     }
 
     private IllegalArgumentException rejected() {
-        return new IllegalArgumentException("MinIO Endpoint 必须是可访问的公共 HTTP/HTTPS 地址");
+        return new IllegalArgumentException("MinIO Endpoint 仅支持可访问的公共 HTTP/HTTPS IP 地址（不支持域名）");
     }
 }

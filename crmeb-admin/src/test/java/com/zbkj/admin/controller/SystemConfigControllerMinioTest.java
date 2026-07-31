@@ -38,15 +38,14 @@ public class SystemConfigControllerMinioTest {
     public void minioConnectionTestDoesNotEchoSecret() {
         SystemConfigController controller = new SystemConfigController();
         Map<String, String> request = new HashMap<String, String>();
-        request.put("minioEndpoint", "http://minio.example.com");
+        request.put("minioEndpoint", "http://8.8.8.8");
         request.put("minioBucket", "uploads");
         request.put("minioAccessKey", "access");
         request.put("minioSecretKey", "top-secret");
-        ReflectionTestUtils.setField(controller, "minioEndpointValidator", new MinioEndpointValidator(
-                host -> new java.net.InetAddress[]{java.net.InetAddress.getByName("8.8.8.8")}));
         ReflectionTestUtils.setField(controller, "minioClient", new JkS3CompatibleClient() {
             @Override
             public void testWriteDelete(String endpoint, String bucket, String accessKey, String secretKey, String region) {
+                Assert.assertEquals("http://8.8.8.8", endpoint);
                 Assert.assertEquals("top-secret", secretKey);
             }
         });

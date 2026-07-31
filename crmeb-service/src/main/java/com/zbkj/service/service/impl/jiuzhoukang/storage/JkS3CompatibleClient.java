@@ -62,6 +62,38 @@ public class JkS3CompatibleClient {
         if (cleanupFailure != null) throw new IllegalStateException("MinIO 连接测试对象清理失败：" + objectKey, cleanupFailure);
     }
 
+    /**
+     * Runs the administrative configuration test only for a literal IP endpoint.  The caller has
+     * already checked that the literal is public; using it unchanged prevents DNS rebinding during
+     * URL connection creation.
+     */
+    public void testWriteDeletePublicIp(String endpoint, String bucket, String accessKey, String secretKey, String region) {
+        requireLiteralHost(endpoint);
+        testWriteDelete(endpoint, bucket, accessKey, secretKey, region);
+    }
+
+    private void requireLiteralHost(String endpoint) {
+        URI uri;
+        try {
+            uri = URI.create(trimSlash(endpoint));
+        } catch (IllegalArgumentException error) {
+            throw new IllegalArgumentException("MinIO Endpoint 仅支持 IP 地址");
+        }
+        String host = uri.getHost();
+        if (host == null) throw new IllegalArgumentException("MinIO Endpoint 仅支持 IP 地址");
+        String value = host.startsWith("[") && host.endsWith("]") ? host.substring(1, host.length() - 1) : host;
+        if (value.indexOf(':') >= 0) return;
+        String[] parts = value.split("\\.", -1);
+        if (parts.length != 4) throw new IllegalArgumentException("MinIO Endpoint 仅支持 IP 地址");
+        for (String part : parts) {
+            if (part.isEmpty() || part.length() > 3) throw new IllegalArgumentException("MinIO Endpoint 仅支持 IP 地址");
+            for (int index = 0; index < part.length(); index++) {
+                if (!Character.isDigit(part.charAt(index))) throw new IllegalArgumentException("MinIO Endpoint 仅支持 IP 地址");
+            }
+            if (Integer.parseInt(part) > 255) throw new IllegalArgumentException("MinIO Endpoint 仅支持 IP 地址");
+        }
+    }
+
     private byte[] execute(String method, String endpoint, String bucket, String objectKey, byte[] body, String contentType,
                            String accessKey, String secretKey, String region, boolean returnBody) {
         HttpURLConnection connection = null;

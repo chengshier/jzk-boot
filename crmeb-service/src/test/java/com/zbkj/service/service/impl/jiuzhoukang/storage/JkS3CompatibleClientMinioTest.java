@@ -9,6 +9,38 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 public class JkS3CompatibleClientMinioTest {
 
+    @Test(expected = IllegalArgumentException.class)
+    public void connectionTestRejectsHostnameBeforeAnyWriteCanResolveItAgain() {
+        JkS3CompatibleClient client = new JkS3CompatibleClient() {
+            @Override
+            public void put(String endpoint, String bucket, String objectKey, byte[] bytes, String contentType,
+                            String accessKey, String secretKey, String region) {
+                Assert.fail("hostname must be rejected before opening a connection");
+            }
+        };
+
+        client.testWriteDeletePublicIp("http://rebinding.example.com", "bucket", "access", "secret", "us-east-1");
+    }
+
+    @Test
+    public void administrativeConnectionTestKeepsTheValidatedLiteralAddress() {
+        AtomicBoolean receivedLiteralEndpoint = new AtomicBoolean(false);
+        JkS3CompatibleClient client = new JkS3CompatibleClient() {
+            @Override
+            public void put(String endpoint, String bucket, String objectKey, byte[] bytes, String contentType,
+                            String accessKey, String secretKey, String region) {
+                receivedLiteralEndpoint.set("https://8.8.8.8:9443".equals(endpoint));
+            }
+
+            @Override
+            public void delete(String endpoint, String bucket, String objectKey, String accessKey, String secretKey, String region) { }
+        };
+
+        client.testWriteDeletePublicIp("https://8.8.8.8:9443", "bucket", "access", "secret", "us-east-1");
+
+        Assert.assertTrue(receivedLiteralEndpoint.get());
+    }
+
     @Test
     public void connectionTestReportsCleanupFailureAfterSuccessfulWrite() {
         JkS3CompatibleClient client = new JkS3CompatibleClient() {
