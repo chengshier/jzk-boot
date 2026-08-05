@@ -34,7 +34,7 @@ public class MinioEndpointValidator {
         if (value.startsWith("[") && value.endsWith("]")) {
             value = value.substring(1, value.length() - 1);
         }
-        if (!isIpv4Literal(value) && value.indexOf(':') < 0) throw rejected();
+        if (!isIpv4Literal(value)) throw rejected();
         try {
             return InetAddress.getByName(value);
         } catch (Exception exception) {
@@ -61,7 +61,7 @@ public class MinioEndpointValidator {
             return true;
         }
         if (address.getAddress().length == 4) return isNonGlobalIpv4(address.getAddress());
-        return address.getAddress().length == 16 && (address.getAddress()[0] & 0xfe) == 0xfc;
+        return false;
     }
 
     /** RFC 6890 special-use IPv4 ranges that must never be treated as public egress targets. */
@@ -85,6 +85,6 @@ public class MinioEndpointValidator {
     }
 
     private IllegalArgumentException rejected() {
-        return new IllegalArgumentException("MinIO Endpoint 仅支持可访问的公共 HTTP/HTTPS IP 地址（不支持域名）");
+        return new IllegalArgumentException("MinIO Endpoint 仅支持可访问的公共 HTTP/HTTPS IPv4 地址（不支持域名或 IPv6）");
     }
 }

@@ -30,6 +30,11 @@ public class MinioEndpointValidatorTest {
     }
 
     @Test(expected = IllegalArgumentException.class)
+    public void rejectsIpv6DocumentationAddress() {
+        new MinioEndpointValidator().validate("https://[2001:db8::1]");
+    }
+
+    @Test(expected = IllegalArgumentException.class)
     public void rejectsIpv6UniqueLocalAddress() throws Exception {
         new MinioEndpointValidator().validate("https://[fc00::1]");
     }
