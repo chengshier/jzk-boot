@@ -4,10 +4,32 @@ import com.sun.net.httpserver.HttpServer;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.net.HttpURLConnection;
 import java.net.InetSocketAddress;
+import java.net.URL;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public class JkS3CompatibleClientMinioTest {
+
+    @Test
+    public void objectRequestDisablesRedirectsBeforeA302Response() throws Exception {
+        RedirectConnection connection = new RedirectConnection();
+        JkS3CompatibleClient client = new JkS3CompatibleClient() {
+            @Override
+            protected HttpURLConnection openConnection(URL url) {
+                return connection;
+            }
+        };
+
+        try {
+            client.get("http://198.51.100.10", "bucket", "object", "access", "secret", "us-east-1");
+            Assert.fail("expected redirect response to fail");
+        } catch (IllegalStateException expected) {
+            Assert.assertTrue(expected.getMessage().contains("HTTP 302"));
+        }
+
+        Assert.assertTrue("redirect-to-loopback must not be followed", connection.redirectsDisabled);
+    }
 
     @Test(expected = IllegalArgumentException.class)
     public void connectionTestRejectsHostnameBeforeAnyWriteCanResolveItAgain() {
@@ -114,5 +136,34 @@ public class JkS3CompatibleClientMinioTest {
         } finally {
             server.stop(0);
         }
+    }
+
+    private static class RedirectConnection extends HttpURLConnection {
+        private boolean redirectsDisabled;
+
+        private RedirectConnection() throws Exception {
+            super(new URL("http://198.51.100.10"));
+        }
+
+        @Override
+        public void setInstanceFollowRedirects(boolean followRedirects) {
+            redirectsDisabled = !followRedirects;
+        }
+
+        @Override
+        public int getResponseCode() {
+            return 302;
+        }
+
+        @Override
+        public void disconnect() { }
+
+        @Override
+        public boolean usingProxy() {
+            return false;
+        }
+
+        @Override
+        public void connect() { }
     }
 }

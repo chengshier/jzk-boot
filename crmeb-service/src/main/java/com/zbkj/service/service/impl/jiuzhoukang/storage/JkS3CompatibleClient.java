@@ -5,6 +5,7 @@ import org.springframework.stereotype.Component;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
@@ -120,7 +121,8 @@ public class JkS3CompatibleClient {
             String authorization = "AWS4-HMAC-SHA256 Credential=" + accessKey + "/" + scope +
                     ", SignedHeaders=" + signedHeaders + ", Signature=" + signature;
 
-            connection = (HttpURLConnection) url.openConnection();
+            connection = openConnection(url);
+            connection.setInstanceFollowRedirects(false);
             connection.setRequestMethod(method);
             connection.setConnectTimeout(10000);
             connection.setReadTimeout(30000);
@@ -150,6 +152,10 @@ public class JkS3CompatibleClient {
         } finally {
             if (connection != null) connection.disconnect();
         }
+    }
+
+    protected HttpURLConnection openConnection(URL url) throws IOException {
+        return (HttpURLConnection) url.openConnection();
     }
 
     private byte[] signingKey(String secret, String date, String region) throws Exception {
