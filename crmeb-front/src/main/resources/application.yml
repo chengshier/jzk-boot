@@ -162,6 +162,8 @@ jk:
       app-id: ${JK_SINOCARE_APP_ID:}
       public-key: ${JK_SINOCARE_PUBLIC_KEY:}
       authorization-h5-url: ${JK_SINOCARE_AUTHORIZATION_H5_URL:}
+      # 只用于测试联调：输出字段结构、类型和数组长度，不输出任何健康数据值。
+      debug-structure-enabled: ${JK_SINOCARE_DEBUG_STRUCTURE_ENABLED:false}
       # 授权完成后的回跳地址由服务端固定配置，禁止接受客户端传入，避免开放跳转。
       redirect-url: ${JK_SINOCARE_REDIRECT_URL:}
 

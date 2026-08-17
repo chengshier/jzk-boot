@@ -45,4 +45,5 @@ jk:
       redirect-url: ${JK_SINOCARE_REDIRECT_URL:https://jzkapp.wit.cn/pages/health/index}
       # 三诺提供的测试环境公钥；生产环境必须用对方发放的生产公钥覆盖。
       public-key: ${JK_SINOCARE_PUBLIC_KEY:MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQCq4TVj8QA/GD5KxYxTftS8PdqW4lFYn+2QmRdgsAX+5YmAnL4BvN0BSh4J2fBpyNuSno5rJ6Zl/uxy9Fv8jkfwkEJ3OZf6MJmaanWzMHZKIgqTq9cEMON0vz/lKaRxpIhckSo1XXKoitlmn/RQklpe8jVfx46Hqpbux/FeiY4bXwIDAQAB}
+      debug-structure-enabled: ${JK_SINOCARE_DEBUG_STRUCTURE_ENABLED:false}
 
