@@ -13,6 +13,7 @@ import com.zbkj.service.service.jiuzhoukang.health.JkHealthService;
 import com.zbkj.service.service.jiuzhoukang.health.JkHealthSyncService;
 import com.zbkj.service.service.jiuzhoukang.support.JkHealthCsvExportSupport;
 import com.zbkj.common.response.jiuzhoukang.JkHealthIntegrationStatusResponse;
+import com.zbkj.common.response.jiuzhoukang.JkSinocareCallbackLogResponse;
 import javax.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -27,6 +28,7 @@ public class JkHealthAdminController {
     @Autowired private JkHealthService healthService;
     @Autowired private JkHealthSyncService syncService;
     @Autowired private com.zbkj.service.service.jiuzhoukang.health.JkHealthProviderService providerService;
+    @Autowired private com.zbkj.service.service.jiuzhoukang.health.SinocareCallbackService sinocareCallbackService;
     @Autowired private JkHealthCsvExportSupport csvExport;
     @Autowired private JkAdminActorService actor;
 
@@ -66,6 +68,14 @@ public class JkHealthAdminController {
     /** 人工补偿失败同步；重复成功数据由 externalNo 幂等保护。 */
     @PostMapping("/sync/{id}/retry") @PreAuthorize("hasAuthority('"+JkPermissionCodes.ADMIN_HEALTH_SYNC_RETRY+"')") @JkBizPermission(value=JkBizPermissionCodes.HEALTH_ADMIN_MANAGE)
     public CommonResult<JkHealthData> retrySync(@PathVariable Long id){return CommonResult.success(syncService.retry(id,operator()));}
+
+    /** 三诺回调日志只返回已脱敏的字段，密文与签名不可查看。 */
+    @GetMapping("/sinocare/callback/list") @PreAuthorize("hasAuthority('"+JkPermissionCodes.ADMIN_HEALTH_SYNC_LIST+"')") @JkBizPermission(value=JkBizPermissionCodes.HEALTH_ADMIN_MANAGE)
+    public CommonResult<CommonPage<JkSinocareCallbackLogResponse>> sinocareCallbacks(@RequestParam(required=false) String eventType,@RequestParam(required=false) String processStatus,@RequestParam(required=false) String uniqueId,PageParamRequest page){return CommonResult.success(CommonPage.restPage(sinocareCallbackService.list(eventType,processStatus,uniqueId,page)));}
+
+    /** 只允许人工重试失败的三诺回调。 */
+    @PostMapping("/sinocare/callback/{id}/retry") @PreAuthorize("hasAuthority('"+JkPermissionCodes.ADMIN_HEALTH_SYNC_RETRY+"')") @JkBizPermission(value=JkBizPermissionCodes.HEALTH_ADMIN_MANAGE)
+    public CommonResult<JkSinocareCallbackLogResponse> retrySinocareCallback(@PathVariable Long id){return CommonResult.success(sinocareCallbackService.retry(id));}
 
     /** 厂商接入配置。标准 REST/JSON 厂商可以通过配置同时支持回调和主动拉取。 */
     @GetMapping("/provider/list") @PreAuthorize("hasAuthority('"+JkPermissionCodes.ADMIN_HEALTH_PROVIDER_MANAGE+"')") @JkBizPermission(value=JkBizPermissionCodes.HEALTH_PROVIDER_MANAGE)

@@ -12,6 +12,9 @@ public class JkHealthIntegrationStatusResponse {
     private Boolean syncAutoRetryEnabled;
     private Integer retentionDays;
     private Boolean archiveEnabled;
+    private Boolean sinocareAppIdConfigured;
+    private Boolean sinocareAuthorizationH5UrlConfigured;
+    private Boolean sinocarePublicKeyConfigured;
     private String callbackPath;
     private String securityTip;
 }

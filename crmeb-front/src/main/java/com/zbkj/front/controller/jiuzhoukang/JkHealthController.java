@@ -10,6 +10,7 @@ import com.zbkj.common.response.jiuzhoukang.*;
 import com.zbkj.common.result.CommonResult;
 import com.zbkj.common.token.FrontTokenComponent;
 import com.zbkj.service.service.jiuzhoukang.health.JkHealthService;
+import com.zbkj.service.service.jiuzhoukang.health.SinocareAuthorizationService;
 import com.zbkj.service.service.jiuzhoukang.support.JkHealthCsvExportSupport;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
@@ -29,6 +30,7 @@ import javax.servlet.http.HttpServletResponse;
 public class JkHealthController {
     @Autowired private FrontTokenComponent token;
     @Autowired private JkHealthService healthService;
+    @Autowired private SinocareAuthorizationService sinocareAuthorizationService;
     @Autowired private JkHealthCsvExportSupport csvExport;
     private Long userId(){ return Long.valueOf(token.getUserId()); }
 
@@ -36,6 +38,13 @@ public class JkHealthController {
     @JkBizPermission(value = JkBizPermissionCodes.HEALTH_DATA_VIEW_SELF)
     @ApiOperation("本人健康首页")
     public CommonResult<JkHealthDashboardResponse> dashboard(){ return CommonResult.success(healthService.dashboard(userId())); }
+
+    /** 供小程序获取并携带至三诺 H5 的稳定服务商用户标识。 */
+    @PostMapping("/sinocare/authorization/prepare")
+    @JkBizPermission(value = JkBizPermissionCodes.HEALTH_DATA_VIEW_SELF)
+    public CommonResult<JkSinocareAuthorizationPrepareResponse> prepareSinocareAuthorization(){
+        return CommonResult.success(sinocareAuthorizationService.buildAuthorizationUrl(userId()));
+    }
 
     @GetMapping("/profile")
     @JkBizPermission(value = JkBizPermissionCodes.HEALTH_DATA_VIEW_SELF)

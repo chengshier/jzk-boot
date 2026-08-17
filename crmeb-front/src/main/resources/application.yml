@@ -157,4 +157,13 @@ jk:
     # 0 表示暂不自动清理；正式上线前应结合合规要求确定保留期和归档策略。
     retention-days: ${JK_HEALTH_RETENTION_DAYS:0}
     archive-enabled: ${JK_HEALTH_ARCHIVE_ENABLED:false}
+    sinocare:
+      # 三诺回调验签/公钥解密的公钥、应用标识与 H5 地址均由部署环境注入，禁止写入生产配置仓库。
+      app-id: ${JK_SINOCARE_APP_ID:}
+      public-key: ${JK_SINOCARE_PUBLIC_KEY:}
+      authorization-h5-url: ${JK_SINOCARE_AUTHORIZATION_H5_URL:}
+      # 只用于测试联调：输出字段结构、类型和数组长度，不输出任何健康数据值。
+      debug-structure-enabled: ${JK_SINOCARE_DEBUG_STRUCTURE_ENABLED:false}
+      # 授权完成后的回跳地址由服务端固定配置，禁止接受客户端传入，避免开放跳转。
+      redirect-url: ${JK_SINOCARE_REDIRECT_URL:}
 
