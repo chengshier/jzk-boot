@@ -228,8 +228,16 @@ public class JkUserContextServiceImpl implements JkUserContextService {
         context.setFreezeStatus(false);
         context.setRoles(Collections.singletonList(JkBizConstants.ROLE_NORMAL_USER));
         List<String> permissions = new ArrayList<>();
-        permissions.add("identity.apply.submit");
-        permissions.add(JkBizPermissionCodes.PRODUCT_TRADE_VIEW);
+        JkBusinessRole normalUser = enabledRoleMap.get(JkBizConstants.ROLE_NORMAL_USER);
+        if (normalUser != null) {
+            permissions.addAll(businessRoleService.getPermissionCodes(normalUser.getId()));
+        }
+        if (!permissions.contains("identity.apply.submit")) {
+            permissions.add("identity.apply.submit");
+        }
+        if (!permissions.contains(JkBizPermissionCodes.PRODUCT_TRADE_VIEW)) {
+            permissions.add(JkBizPermissionCodes.PRODUCT_TRADE_VIEW);
+        }
         context.setPermissions(permissions);
         context.setDataScopes(Collections.emptyList());
         context.setCanApplyRoles(JkPermissionContextSupport.resolveFrontApplyRoleCodes(enabledRoles));
