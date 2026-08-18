@@ -41,7 +41,6 @@ public class JkHealthController {
 
     /** 供小程序获取并携带至三诺 H5 的稳定服务商用户标识。 */
     @PostMapping("/sinocare/authorization/prepare")
-    @JkBizPermission(value = JkBizPermissionCodes.HEALTH_DATA_VIEW_SELF)
     public CommonResult<JkSinocareAuthorizationPrepareResponse> prepareSinocareAuthorization(){
         return CommonResult.success(sinocareAuthorizationService.buildAuthorizationUrl(userId()));
     }
