@@ -97,6 +97,6 @@ jobs:
           set -euo pipefail
           grep -q 'FOR UPDATE' crmeb-service/src/main/java/com/zbkj/service/dao/jiuzhoukang/JkCommissionLimitUsageDao.java
           grep -q 'RETAIL_ORDER", "OFFLINE_SALE' crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/performance/JkPerformancePeriodServiceImpl.java
-          grep -q 'recordRetailCompleted' crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/commission/CommissionScenarioServiceImpl.java
+          grep -q 'recordRetailCompleted' crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/commission/CommissionTriggerServiceImpl.java
           test -f sql/jiuzhoukang/v3.1-gapfix/00-jk-v31-schema-precheck.sql
           test -f sql/jiuzhoukang/v3.1-gapfix/05-jk-v31-promotion-effect.sql
