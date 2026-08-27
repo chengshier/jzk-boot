@@ -68,7 +68,16 @@ public class JkCommissionRule implements Serializable {
     private Date effectiveEndTime;
     private String publishStatus;
     private Long publishedBy;
+    /** 正式数据库列为 published_at。 */
     private Date publishedAt;
+
+    /**
+     * 兼容 Phase3 整合期间服务层曾使用的 publishedTime 命名；只转写 publishedAt，绝不映射第二个数据库列。
+     */
+    public JkCommissionRule setPublishedTime(Date publishedTime) {
+        this.publishedAt = publishedTime;
+        return this;
+    }
 
     @TableField(exist = false) private String sourceTypeText;
     @TableField(exist = false) private String receiverRoleName;
