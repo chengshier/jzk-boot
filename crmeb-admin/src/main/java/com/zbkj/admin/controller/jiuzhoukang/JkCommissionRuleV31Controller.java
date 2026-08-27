@@ -2,6 +2,7 @@ package com.zbkj.admin.controller.jiuzhoukang;
 
 import com.zbkj.common.annotation.jiuzhoukang.JkBizPermission;
 import com.zbkj.common.constants.jiuzhoukang.JkBizPermissionCodes;
+import com.zbkj.common.constants.jiuzhoukang.JkPermissionCodes;
 import com.zbkj.common.constants.jiuzhoukang.JkV31PermissionCodes;
 import com.zbkj.common.model.jiuzhoukang.JkCommissionRule;
 import com.zbkj.common.request.jiuzhoukang.JkCommissionRulePublishRequest;
@@ -32,7 +33,7 @@ public class JkCommissionRuleV31Controller {
     @Autowired private JkAdminActorService actorService;
 
     @GetMapping("/template/list")
-    @PreAuthorize("hasAuthority('" + JkV31PermissionCodes.ADMIN_COMMISSION_V31_LIST + "')")
+    @PreAuthorize("hasAuthority('" + JkPermissionCodes.ADMIN_COMMISSION_RULE_LIST + "')")
     @JkBizPermission(value = JkBizPermissionCodes.COMMISSION_RULE_MANAGE, checkDataScope = false)
     public CommonResult<List<JkCommissionRule>> templates(@RequestParam(required = false) String roleCode,
                                                            @RequestParam(required = false) String rewardType) {
@@ -41,7 +42,7 @@ public class JkCommissionRuleV31Controller {
 
     @PostMapping("/trial")
     @ApiOperation("按业务快照试算规则，不入账")
-    @PreAuthorize("hasAuthority('" + JkV31PermissionCodes.ADMIN_COMMISSION_V31_TRIAL + "')")
+    @PreAuthorize("hasAuthority('" + JkV31PermissionCodes.ADMIN_COMMISSION_RULE_TRIAL + "')")
     @JkBizPermission(value = JkBizPermissionCodes.COMMISSION_RULE_MANAGE, checkDataScope = false)
     public CommonResult<List<Map<String, Object>>> trial(@RequestBody @Validated JkCommissionRuleTrialRequest request) {
         return CommonResult.success(service.trial(request));
@@ -49,14 +50,14 @@ public class JkCommissionRuleV31Controller {
 
     @PostMapping("/publish")
     @ApiOperation("试算确认后发布，只影响生效时间之后的新业务")
-    @PreAuthorize("hasAuthority('" + JkV31PermissionCodes.ADMIN_COMMISSION_V31_PUBLISH + "')")
+    @PreAuthorize("hasAuthority('" + JkV31PermissionCodes.ADMIN_COMMISSION_RULE_PUBLISH + "')")
     @JkBizPermission(value = JkBizPermissionCodes.COMMISSION_RULE_MANAGE, checkDataScope = false)
     public CommonResult<JkCommissionRule> publish(@RequestBody @Validated JkCommissionRulePublishRequest request) {
         return CommonResult.success(service.publish(request, operator()));
     }
 
     @PostMapping("/disable")
-    @PreAuthorize("hasAuthority('" + JkV31PermissionCodes.ADMIN_COMMISSION_V31_PUBLISH + "')")
+    @PreAuthorize("hasAuthority('" + JkV31PermissionCodes.ADMIN_COMMISSION_RULE_PUBLISH + "')")
     @JkBizPermission(value = JkBizPermissionCodes.COMMISSION_RULE_MANAGE, checkDataScope = false)
     public CommonResult<JkCommissionRule> disable(@RequestParam Long ruleId, @RequestParam String reason) {
         return CommonResult.success(service.disable(ruleId, operator(), reason));
