@@ -92,6 +92,12 @@ public class CommissionTriggerServiceImpl implements CommissionTriggerService {
                 ? attribution.getItemPaidAmount() : safe(amount);
         Long ownerUserId = attribution.getReceiverUserId() == null ? receiverUserId : attribution.getReceiverUserId();
         String ownerRole = attribution.getReceiverRoleCode() == null ? role : attribution.getReceiverRoleCode();
+        try {
+            promotionEffectService.recordRetailCompleted(attribution, paidAmount, new Date());
+        } catch (Exception error) {
+            recordBusinessEvent("RETAIL_PROMOTION_EFFECT", orderId, orderNo, requestNo, "FAILED",
+                    "推广成交效果记录失败，不影响订单业绩和佣金：" + safeMessage(error));
+        }
         performanceService.record(new JkPerformanceRecord().setSourceType("RETAIL_ORDER").setSourceId(orderId)
                 .setSourceNo(orderNo).setSourceItemId(orderInfoId).setPerformanceType("RETAIL_ONLINE")
                 .setOwnerUserId(ownerUserId).setOwnerRoleCode(ownerRole).setSourceUserId(attribution.getBuyerUserId())
@@ -117,7 +123,7 @@ public class CommissionTriggerServiceImpl implements CommissionTriggerService {
         dispatchSafely(scenario, "COMMISSION:RETAIL_ORDER:" + orderInfoId, orderNo, requestNo,
                 "RETAIL_ONLINE_COMPLETED", orderId);
         recordBusinessEvent("RETAIL_ONLINE_COMPLETED", orderId, orderNo, requestNo, "SUCCESS",
-                "线上零售业绩已按下单归属快照生成；佣金仅按已发布规则处理");
+                "线上零售推广效果与业绩按下单归属快照处理；佣金仅按已发布规则处理");
     }
 
     @Override
