@@ -42,14 +42,4 @@ public class JkCommissionRuleTrialRequest {
     /** 业务发生时关系与来源快照，佣金入账后不得改读当前关系。 */
     private String relationSnapshotJson;
     private String sourceSnapshotJson;
-
-    /**
-     * 合并期兼容入口：正式佣金链路不再从请求 DTO 接收 ownerRoleCode，
-     * 角色匹配由 JkCommissionV31Service 基于受益人/关系快照推导。
-     * 遗留调用清理完成后应删除本方法，不新增冗余字段或数据库契约。
-     */
-    @Deprecated
-    public JkCommissionRuleTrialRequest setOwnerRoleCode(String ignoredOwnerRoleCode) {
-        return this;
-    }
 }
