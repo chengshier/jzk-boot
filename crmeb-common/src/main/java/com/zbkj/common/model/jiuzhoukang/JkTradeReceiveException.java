@@ -8,14 +8,10 @@ import lombok.Data;
 import lombok.experimental.Accessors;
 
 import java.io.Serializable;
+import java.math.BigDecimal;
 import java.util.Date;
 
-/**
- * 订货/调拨异常收货主记录。
- *
- * <p>V1 仅记录差异并阻断正常入库，不直接按实收数量入库。异常处理完成后恢复待收货状态，
- * 由收货人重新执行正常收货，避免在缺少补发、索赔和金额调整规则时产生错误库存或业绩。</p>
- */
+/** 订货/调拨异常收货主记录。V2 处理方案必须双向确认后才允许落库存和账本。 */
 @Data
 @Accessors(chain = true)
 @TableName("jk_trade_receive_exception")
@@ -39,6 +35,16 @@ public class JkTradeReceiveException implements Serializable {
     private String handleRemark;
     private Long handleUserId;
     private Date handleTime;
+
+    private String resolutionType;
+    private Integer normalReceivedQty;
+    private Integer exceptionQty;
+    private BigDecimal refundAmount;
+    private BigDecimal compensationAmount;
+    private String receiverConfirmStatus;
+    private String senderConfirmStatus;
+    private String resolutionSnapshotJson;
+
     private Boolean isDeleted;
     private Long createUserId;
     private Long updateUserId;
