@@ -33,11 +33,16 @@ public class JkCommissionRecord implements Serializable {
     private BigDecimal commissionAmount;
     private BigDecimal settledAmount;
     private BigDecimal reversedAmount;
+    /** 已提现/已结算后无法直接扣回部分使用负向抵扣，不得改写原记录。 */
+    private BigDecimal negativeOffsetAmount;
     private String status;
     private Date freezeEndTime;
     private Date settleTime;
     private String ruleSnapshotJson;
     private String beneficiarySnapshotJson;
+    /** 业务发生时关系快照；佣金结算和冲正禁止重新读取当前关系。 */
+    private String relationSnapshotJson;
+    private String sourceSnapshotJson;
     private String calculationSnapshotJson;
     private String idempotencyKey;
     private String commissionActionKey;
