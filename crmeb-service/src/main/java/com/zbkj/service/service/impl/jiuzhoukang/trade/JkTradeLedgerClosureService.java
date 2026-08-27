@@ -60,7 +60,7 @@ public class JkTradeLedgerClosureService {
                     .setSourceSnapshotJson(snapshot));
             commissionService.createForScenario(new JkCommissionRuleTrialRequest()
                     .setSourceType("PLATFORM_ORDER").setSourceId(orderId).setSourceItemId(item.getId()).setSourceNo(order.getPlatformOrderNo())
-                    .setOwnerUserId(order.getUserId()).setOwnerRoleCode(order.getRoleCode()).setPurchaserUserId(order.getUserId())
+                    .setOwnerUserId(order.getUserId()).setPurchaserUserId(order.getUserId())
                     .setCountyAgentUserId(order.getCountyAgentId()).setRegionCode(order.getRegionCode())
                     .setProductId(item.getProductId()).setSkuId(item.getSkuId()).setQuantity(item.getQuantity())
                     .setBaseAmount(item.getTotalAmount()).setRegisteredCustomer(true).setVoucherPresent(true).setAudited(true)
@@ -112,7 +112,7 @@ public class JkTradeLedgerClosureService {
                     .setRequestNo("PROFIT:STOCK_TRANSFER:" + transferId + ":" + item.getId()));
             commissionService.createForScenario(new JkCommissionRuleTrialRequest()
                     .setSourceType("STOCK_TRANSFER").setSourceId(transferId).setSourceItemId(item.getId()).setSourceNo(transfer.getTransferNo())
-                    .setOwnerUserId(transfer.getUserId()).setOwnerRoleCode(transfer.getRoleCode())
+                    .setOwnerUserId(transfer.getUserId())
                     .setSellerUserId(transfer.getCountyAgentId()).setPurchaserUserId(transfer.getUserId())
                     .setCountyAgentUserId(transfer.getCountyAgentId()).setRegionCode(transfer.getRegionCode())
                     .setProductId(item.getProductId()).setSkuId(item.getSkuId()).setQuantity(item.getQuantity())
