@@ -1,7 +1,7 @@
 package com.zbkj.front.controller.jiuzhoukang;
 
 import com.zbkj.common.annotation.jiuzhoukang.JkBizPermission;
-import com.zbkj.common.constants.jiuzhoukang.JkV31PermissionCodes;
+import com.zbkj.common.constants.jiuzhoukang.JkBizPermissionCodes;
 import com.zbkj.common.model.jiuzhoukang.JkOperationProfitRecord;
 import com.zbkj.common.model.jiuzhoukang.JkPerformanceRecord;
 import com.zbkj.common.page.CommonPage;
@@ -32,7 +32,7 @@ public class JkPerformanceOperationController {
     private Long userId() { return Long.valueOf(token.getUserId()); }
 
     @GetMapping("/performance/summary")
-    @JkBizPermission(value = JkV31PermissionCodes.PERFORMANCE_VIEW_SELF, checkDataScope = true)
+    @JkBizPermission(value = JkBizPermissionCodes.COMMISSION_VIEW_SELF, checkDataScope = true)
     public CommonResult<Map<String, BigDecimal>> performanceSummary() {
         Map<String, BigDecimal> result = new LinkedHashMap<String, BigDecimal>();
         result.put("validPerformanceAmount", performanceService.validAmount(userId()));
@@ -40,7 +40,7 @@ public class JkPerformanceOperationController {
     }
 
     @GetMapping("/performance/list")
-    @JkBizPermission(value = JkV31PermissionCodes.PERFORMANCE_VIEW_SELF, checkDataScope = true)
+    @JkBizPermission(value = JkBizPermissionCodes.COMMISSION_VIEW_SELF, checkDataScope = true)
     public CommonResult<CommonPage<JkPerformanceRecord>> performanceList(@RequestParam(required = false) String performanceType,
                                                                           @RequestParam(required = false) String sourceType,
                                                                           @RequestParam(required = false) String status,
@@ -49,7 +49,7 @@ public class JkPerformanceOperationController {
     }
 
     @GetMapping("/operation-profit/summary")
-    @JkBizPermission(value = JkV31PermissionCodes.OPERATION_PROFIT_VIEW_SELF, checkDataScope = true)
+    @JkBizPermission(value = JkBizPermissionCodes.COMMISSION_VIEW_SELF, checkDataScope = true)
     public CommonResult<Map<String, Object>> profitSummary() {
         Map<String, Object> result = new LinkedHashMap<String, Object>();
         result.put("incomeNature", "OFFLINE_REALIZED");
@@ -60,7 +60,7 @@ public class JkPerformanceOperationController {
     }
 
     @GetMapping("/operation-profit/list")
-    @JkBizPermission(value = JkV31PermissionCodes.OPERATION_PROFIT_VIEW_SELF, checkDataScope = true)
+    @JkBizPermission(value = JkBizPermissionCodes.COMMISSION_VIEW_SELF, checkDataScope = true)
     public CommonResult<CommonPage<JkOperationProfitRecord>> profitList(@RequestParam(required = false) String sourceType,
                                                                          @RequestParam(required = false) String status,
                                                                          PageParamRequest page) {
