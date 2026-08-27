@@ -2,7 +2,7 @@ name: JZK V3.1 gapfix guards
 
 on:
   push:
-    branches: [feat/jzk-v3.1-phase3-operations]
+    branches: [master, fix/jzk-v3.1-post-merge-hardening]
   pull_request:
     branches: [master]
   workflow_dispatch:
@@ -47,9 +47,26 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          if grep -R -n --include='*.sql' -E "template_code[^;]*(status[^;]*=[[:space:]]*1|PUBLISHED)" sql/jiuzhoukang/v3.1-gapfix; then
-            echo 'No commission template may be enabled or published by seed SQL' >&2; exit 1
-          fi
+          python3 - <<'PY'
+          import pathlib
+          import re
+
+          failures = []
+          for path in pathlib.Path('sql/jiuzhoukang/v3.1-gapfix').glob('*.sql'):
+              text = re.sub(r'--.*?$', '', path.read_text(encoding='utf-8'), flags=re.M)
+              for statement in [part.strip() for part in text.split(';') if part.strip()]:
+                  compact = re.sub(r'\s+', ' ', statement)
+                  # SELECT 审计语句允许查询已发布规则；仅禁止种子写入直接启用/发布模板。
+                  if not re.match(r'(?is)^(INSERT\s+INTO|UPDATE)\b', compact):
+                      continue
+                  if 'template_code' not in compact:
+                      continue
+                  if re.search(r'(?is)\bstatus\s*=\s*1\b|\bpublish_status\s*=\s*[\'\"]?PUBLISHED[\'\"]?', compact):
+                      failures.append(f'{path}: seed write enables or publishes commission template: {compact[:240]}')
+              
+          if failures:
+              raise SystemExit('\n'.join(failures))
+          PY
           grep -q 'rule.setStatus(false)' crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/commission/CommissionRuleServiceImpl.java
           grep -q 'setPublishStatus("DRAFT")' crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/commission/CommissionRuleServiceImpl.java
           grep -q '奖励数值必须大于 0' crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/commission/JkCommissionTemplateServiceImpl.java
