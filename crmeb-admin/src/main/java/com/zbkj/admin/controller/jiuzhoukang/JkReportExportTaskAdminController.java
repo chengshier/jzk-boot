@@ -2,7 +2,7 @@ package com.zbkj.admin.controller.jiuzhoukang;
 
 import com.zbkj.common.annotation.jiuzhoukang.JkBizPermission;
 import com.zbkj.common.constants.jiuzhoukang.JkBizPermissionCodes;
-import com.zbkj.common.constants.jiuzhoukang.JkV31PermissionCodes;
+import com.zbkj.common.constants.jiuzhoukang.JkPermissionCodes;
 import com.zbkj.common.model.jiuzhoukang.JkReportExportTask;
 import com.zbkj.common.page.CommonPage;
 import com.zbkj.common.request.PageParamRequest;
@@ -28,14 +28,14 @@ public class JkReportExportTaskAdminController {
     @Autowired private JkAdminActorService actorService;
 
     @PostMapping("/create")
-    @PreAuthorize("hasAuthority('" + JkV31PermissionCodes.ADMIN_REPORT_EXPORT_TASK + "')")
+    @PreAuthorize("hasAuthority('" + JkPermissionCodes.ADMIN_REPORT_EXPORT + "')")
     @JkBizPermission(value = JkBizPermissionCodes.REPORT_VIEW, checkDataScope = true)
     public CommonResult<JkReportExportTask> create(@RequestBody @Validated JkReportExportTaskCreateRequest request) {
         return CommonResult.success(service.create(operator(), request));
     }
 
     @GetMapping("/list")
-    @PreAuthorize("hasAuthority('" + JkV31PermissionCodes.ADMIN_REPORT_EXPORT_TASK + "')")
+    @PreAuthorize("hasAuthority('" + JkPermissionCodes.ADMIN_REPORT_EXPORT + "')")
     @JkBizPermission(value = JkBizPermissionCodes.REPORT_VIEW, checkDataScope = true)
     public CommonResult<CommonPage<JkReportExportTask>> list(@RequestParam(required = false) String reportType,
                                                               @RequestParam(required = false) String status,
@@ -45,21 +45,21 @@ public class JkReportExportTaskAdminController {
     }
 
     @PostMapping("/run")
-    @PreAuthorize("hasAuthority('" + JkV31PermissionCodes.ADMIN_REPORT_EXPORT_TASK + "')")
+    @PreAuthorize("hasAuthority('" + JkPermissionCodes.ADMIN_REPORT_EXPORT + "')")
     @JkBizPermission(value = JkBizPermissionCodes.REPORT_VIEW, checkDataScope = false)
     public CommonResult<Integer> run(@RequestParam(defaultValue = "10") int limit) {
         return CommonResult.success(service.runPending(limit));
     }
 
     @PostMapping("/{id}/retry")
-    @PreAuthorize("hasAuthority('" + JkV31PermissionCodes.ADMIN_REPORT_EXPORT_TASK + "')")
+    @PreAuthorize("hasAuthority('" + JkPermissionCodes.ADMIN_REPORT_EXPORT + "')")
     @JkBizPermission(value = JkBizPermissionCodes.REPORT_VIEW, checkDataScope = false)
     public CommonResult<JkReportExportTask> retry(@PathVariable Long id) {
         return CommonResult.success(service.runOne(id));
     }
 
     @GetMapping("/{id}/download")
-    @PreAuthorize("hasAuthority('" + JkV31PermissionCodes.ADMIN_REPORT_EXPORT_TASK + "')")
+    @PreAuthorize("hasAuthority('" + JkPermissionCodes.ADMIN_REPORT_EXPORT + "')")
     @JkBizPermission(value = JkBizPermissionCodes.REPORT_VIEW, checkDataScope = true)
     public CommonResult<JkReportExportTask> download(@PathVariable Long id) {
         return CommonResult.success(service.download(id, operator(), true));
