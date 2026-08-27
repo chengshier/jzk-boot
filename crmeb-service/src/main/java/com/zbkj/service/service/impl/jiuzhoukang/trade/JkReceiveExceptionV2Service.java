@@ -186,7 +186,7 @@ public class JkReceiveExceptionV2Service {
                     .setSourceSnapshotJson(entity.getResolutionSnapshotJson()));
             commissionService.createForScenario(new JkCommissionRuleTrialRequest().setSourceType("PLATFORM_ORDER")
                     .setSourceId(order.getId()).setSourceItemId(item.getId()).setSourceNo(order.getPlatformOrderNo())
-                    .setOwnerUserId(order.getUserId()).setOwnerRoleCode(order.getRoleCode()).setPurchaserUserId(order.getUserId())
+                    .setOwnerUserId(order.getUserId()).setPurchaserUserId(order.getUserId())
                     .setCountyAgentUserId(order.getCountyAgentId()).setRegionCode(order.getRegionCode())
                     .setProductId(item.getProductId()).setSkuId(item.getSkuId()).setQuantity(qty).setBaseAmount(amount)
                     .setRegisteredCustomer(true).setVoucherPresent(true).setAudited(true)
@@ -236,7 +236,7 @@ public class JkReceiveExceptionV2Service {
             }
             commissionService.createForScenario(new JkCommissionRuleTrialRequest().setSourceType("STOCK_TRANSFER")
                     .setSourceId(transfer.getId()).setSourceItemId(item.getId()).setSourceNo(transfer.getTransferNo())
-                    .setOwnerUserId(transfer.getUserId()).setOwnerRoleCode(transfer.getRoleCode())
+                    .setOwnerUserId(transfer.getUserId())
                     .setSellerUserId(transfer.getCountyAgentId()).setPurchaserUserId(transfer.getUserId())
                     .setCountyAgentUserId(transfer.getCountyAgentId()).setRegionCode(transfer.getRegionCode())
                     .setProductId(item.getProductId()).setSkuId(item.getSkuId()).setQuantity(qty)
