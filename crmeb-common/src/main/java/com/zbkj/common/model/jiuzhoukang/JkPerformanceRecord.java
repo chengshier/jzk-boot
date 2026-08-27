@@ -1,6 +1,7 @@
 package com.zbkj.common.model.jiuzhoukang;
 
 import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
@@ -10,6 +11,7 @@ import java.io.Serializable;
 import java.math.BigDecimal;
 import java.util.Date;
 
+/** 独立业绩账本。业绩与可提现佣金分开记录。 */
 @Data
 @Accessors(chain = true)
 @TableName("jk_performance_record")
@@ -41,7 +43,12 @@ public class JkPerformanceRecord implements Serializable {
     private Integer ruleVersionNo;
     private String relationSnapshotJson;
     private String sourceSnapshotJson;
+    private String actionKey;
     private Boolean isDeleted;
     private Date createTime;
     private Date updateTime;
+    @TableField(exist = false) private String ownerName;
+    @TableField(exist = false) private String ownerRoleName;
+    @TableField(exist = false) private String performanceTypeText;
+    @TableField(exist = false) private String statusText;
 }

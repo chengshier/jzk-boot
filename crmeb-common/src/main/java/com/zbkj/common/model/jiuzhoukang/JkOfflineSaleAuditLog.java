@@ -21,6 +21,6 @@ public class JkOfflineSaleAuditLog implements Serializable {
     private Long operatorUserId;
     private String operatorType;
     private String remark;
-    private String snapshotJson;
+    private String requestNo;
     private Date createTime;
 }

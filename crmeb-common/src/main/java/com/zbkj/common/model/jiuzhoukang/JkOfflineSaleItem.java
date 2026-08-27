@@ -27,9 +27,8 @@ public class JkOfflineSaleItem implements Serializable {
     private BigDecimal unitCost;
     private BigDecimal costAmount;
     private BigDecimal profitAmount;
-    private String costMethod;
+    private Long stockAccountId;
     private String costSnapshotJson;
-    private Integer returnedQty;
     private Boolean isDeleted;
     private Date createTime;
     private Date updateTime;

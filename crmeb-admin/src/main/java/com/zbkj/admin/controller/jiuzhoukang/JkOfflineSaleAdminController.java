@@ -8,9 +8,10 @@ import com.zbkj.common.page.CommonPage;
 import com.zbkj.common.request.PageParamRequest;
 import com.zbkj.common.request.jiuzhoukang.JkOfflineSaleAuditRequest;
 import com.zbkj.common.result.CommonResult;
-import com.zbkj.service.service.impl.jiuzhoukang.trade.JkOfflineSaleService;
 import com.zbkj.service.service.jiuzhoukang.audit.JkAdminActorService;
+import com.zbkj.service.service.jiuzhoukang.offline.JkOfflineSaleService;
 import io.swagger.annotations.Api;
+import io.swagger.annotations.ApiOperation;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
@@ -26,7 +27,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("api/admin/jk/offline-sale")
 @Api(tags = "九州康线下销售管理")
 public class JkOfflineSaleAdminController {
-    @Autowired private JkOfflineSaleService service;
+    @Autowired private JkOfflineSaleService saleService;
     @Autowired private JkAdminActorService actorService;
 
     @GetMapping("/list")
@@ -34,23 +35,23 @@ public class JkOfflineSaleAdminController {
     @JkBizPermission(value = JkBizPermissionCodes.STOCK_VIEW_ALL, checkDataScope = true)
     public CommonResult<CommonPage<JkOfflineSale>> list(@RequestParam(required = false) Long sellerUserId,
                                                          @RequestParam(required = false) String status,
-                                                         @RequestParam(required = false) String auditStatus,
                                                          PageParamRequest page) {
-        return CommonResult.success(CommonPage.restPage(service.list(sellerUserId, status, auditStatus, page)));
+        return CommonResult.success(CommonPage.restPage(saleService.list(sellerUserId, status, page)));
     }
 
     @GetMapping("/{id}")
     @PreAuthorize("hasAuthority('" + JkV31PermissionCodes.ADMIN_OFFLINE_SALE_LIST + "')")
     @JkBizPermission(value = JkBizPermissionCodes.STOCK_VIEW_ALL, checkDataScope = true)
     public CommonResult<JkOfflineSale> detail(@PathVariable Long id) {
-        return CommonResult.success(service.detail(id));
+        return CommonResult.success(saleService.detail(operator(), id, true));
     }
 
     @PostMapping("/audit")
+    @ApiOperation("审核线下销售并执行真实库存、业绩和收益闭环")
     @PreAuthorize("hasAuthority('" + JkV31PermissionCodes.ADMIN_OFFLINE_SALE_AUDIT + "')")
     @JkBizPermission(value = JkBizPermissionCodes.COMMISSION_RULE_MANAGE, checkDataScope = false)
     public CommonResult<JkOfflineSale> audit(@RequestBody @Validated JkOfflineSaleAuditRequest request) {
-        return CommonResult.success(service.audit(operator(), request));
+        return CommonResult.success(saleService.audit(operator(), request));
     }
 
     private Long operator() {

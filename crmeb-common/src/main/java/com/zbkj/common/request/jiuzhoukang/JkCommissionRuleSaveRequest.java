@@ -6,10 +6,12 @@ import java.io.Serializable;
 import java.math.BigDecimal;
 import java.util.Date;
 
+/** 佣金规则草稿保存请求；保存不等于发布。 */
 @Data
 public class JkCommissionRuleSaveRequest implements Serializable {
     private Long id;
     private Long planId;
+    private Integer versionNo;
     private String ruleCode;
     private String ruleName;
     private Integer ruleVersion;

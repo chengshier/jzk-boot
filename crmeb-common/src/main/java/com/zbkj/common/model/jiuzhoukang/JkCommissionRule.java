@@ -11,12 +11,12 @@ import java.io.Serializable;
 import java.math.BigDecimal;
 import java.util.Date;
 
+/** 可版本化、可试算、可审核发布的佣金规则。status 仅表示业务开关，publishStatus 控制是否允许真实入账。 */
 @Data
 @Accessors(chain = true)
 @TableName("jk_commission_rule")
 public class JkCommissionRule implements Serializable {
-    @TableId(value = "id", type = IdType.AUTO)
-    private Long id;
+    @TableId(value = "id", type = IdType.AUTO) private Long id;
     private String ruleNo;
     private String ruleName;
     private Integer ruleVersion;
@@ -34,8 +34,8 @@ public class JkCommissionRule implements Serializable {
     private Date updateTime;
     private Integer version;
 
-    /** V3.1 商业方案与规则版本。 */
     private Long planId;
+    private Integer versionNo;
     private String ruleCode;
     private String rewardType;
     private String performanceType;
@@ -56,12 +56,16 @@ public class JkCommissionRule implements Serializable {
     private Boolean requiresRegisteredCustomer;
     private Boolean requiresVoucher;
     private Boolean requiresAudit;
+    private Date effectiveStartTime;
+    private Date effectiveEndTime;
     private String publishStatus;
     private Long publishedBy;
-    private Date publishedTime;
+    private Date publishedAt;
 
     @TableField(exist = false) private String sourceTypeText;
     @TableField(exist = false) private String receiverRoleName;
     @TableField(exist = false) private String statusText;
     @TableField(exist = false) private String statusTag;
+    @TableField(exist = false) private String publishStatusText;
+    @TableField(exist = false) private String capabilityStatusText;
 }
