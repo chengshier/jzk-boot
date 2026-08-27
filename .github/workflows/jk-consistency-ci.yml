@@ -1,11 +1,13 @@
 name: Jiuzhoukang consistency CI
 
 on:
+  push:
+    branches:
+      - master
+      - fix/jzk-v3.1-post-merge-hardening
   pull_request:
     branches:
       - master
-      - feat/jzk-v3.1-phase1-closure
-      - feat/jzk-v3.1-phase2-business
   workflow_dispatch:
 
 concurrency:
