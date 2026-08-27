@@ -127,6 +127,9 @@ public class User implements Serializable {
     @ApiModelProperty(value = "下级人数")
     private Integer spreadCount;
 
+    @ApiModelProperty(value = "是否已开通九州康业务入口")
+    private Boolean jkEntryAccess;
+
     @ApiModelProperty(value = "自由文本详细地址；不得作为九州康标准区域编码")
     private String addres;
 

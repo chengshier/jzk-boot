@@ -1,5 +1,6 @@
 package com.zbkj.service.service.impl.jiuzhoukang.health;
 
+import cn.hutool.core.io.IoUtil;
 import cn.hutool.core.util.StrUtil;
 import com.alibaba.fastjson.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -8,6 +9,7 @@ import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import com.github.pagehelper.Page;
 import com.github.pagehelper.PageHelper;
 import com.github.pagehelper.PageInfo;
+//import com.zbkj.common.exception.CrmebException;
 import com.zbkj.common.exception.CrmebException;
 import com.zbkj.common.model.jiuzhoukang.*;
 import com.zbkj.common.model.user.User;
@@ -23,7 +25,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import javax.servlet.http.HttpServletResponse;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.math.BigDecimal;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.*;
@@ -45,6 +52,9 @@ public class JkHealthServiceImpl implements JkHealthService {
     @Autowired private JkHealthAlertRuleDao alertRuleDao;
     @Autowired private JkHealthAlertRecordDao alertRecordDao;
     @Autowired private JkHealthAccessLogDao accessLogDao;
+    @Autowired private JkSinocareAuthorizationDao sinocareAuthorizationDao;
+    @Autowired private JkSinocareDeviceSessionDao sinocareDeviceSessionDao;
+    @Autowired private JkSinocareReportDao sinocareReportDao;
     @Autowired private JkUserBusinessRoleDao userRoleDao;
     @Autowired private UserService userService;
     @Autowired private JkHealthSensitiveCodec codec;
@@ -71,6 +81,139 @@ public class JkHealthServiceImpl implements JkHealthService {
                 .eq(JkHealthDeviceBind::getUserId, userId).eq(JkHealthDeviceBind::getStatus, "ACTIVE")
                 .eq(JkHealthDeviceBind::getIsDeleted, false)));
         return response;
+    }
+
+    @Override
+    public JkSinocareDeviceStatusResponse deviceStatus(Long userId) {
+        JkSinocareDeviceStatusResponse response = new JkSinocareDeviceStatusResponse();
+        JkSinocareAuthorization authorization = sinocareAuthorizationDao.selectOne(new LambdaQueryWrapper<JkSinocareAuthorization>()
+                .eq(JkSinocareAuthorization::getUserId, userId).orderByDesc(JkSinocareAuthorization::getUpdateTime).last("limit 1"));
+        boolean authorized = authorization != null && "AUTHORIZED".equals(authorization.getStatus());
+        response.setAuthorized(authorized).setHasGlucoseData(false);
+        if (!authorized) return response;
+        JkSinocareDeviceSession session = sinocareDeviceSessionDao.selectOne(new LambdaQueryWrapper<JkSinocareDeviceSession>()
+                .eq(JkSinocareDeviceSession::getUniqueId, authorization.getUniqueId()).orderByDesc(JkSinocareDeviceSession::getUpdateTime).last("limit 1"));
+        if (session == null) return response;
+        response.setProductName(session.getProductName()).setDeviceSn(session.getDeviceSn()).setStatus(session.getStatus())
+                .setDetectionStartTime(session.getDetectionStartTime()).setDetectionEndTime(session.getDetectionEndTime())
+                .setLastDataAt(session.getLastDataAt()).setHasGlucoseData(session.getLastDataAt() != null);
+        return response;
+    }
+
+    @Override
+    public JkGlucoseTrendResponse glucoseTrend(Long userId, Date startAt, Date endAt) {
+        Date end = endAt == null ? new Date() : endAt;
+        Date start = startAt == null ? daysBefore(end, 14) : startAt;
+        if (start.after(end)) throw new CrmebException("趋势开始时间不能晚于结束时间");
+        List<JkHealthData> rows = dataDao.selectList(new LambdaQueryWrapper<JkHealthData>()
+                .eq(JkHealthData::getUserId, userId).eq(JkHealthData::getDataType, "GLUCOSE").eq(JkHealthData::getIsDeleted, false)
+                .ge(JkHealthData::getMeasuredAt, start).le(JkHealthData::getMeasuredAt, end).orderByAsc(JkHealthData::getMeasuredAt));
+        JkGlucoseTrendResponse response = new JkGlucoseTrendResponse();
+        response.setStartAt(start).setEndAt(end).setCount(rows.size());
+        List<JkGlucoseTrendResponse.Point> points = new ArrayList<>();
+        BigDecimal sum = BigDecimal.ZERO, min = null, max = null;
+        for (JkHealthData row : rows) {
+            if (row.getNumericValue() == null) continue;
+            JkGlucoseTrendResponse.Point point = new JkGlucoseTrendResponse.Point();
+            point.setMeasuredAt(row.getMeasuredAt()).setValue(row.getNumericValue()).setUnit(row.getUnit()); points.add(point);
+            sum = sum.add(row.getNumericValue()); min = min == null || row.getNumericValue().compareTo(min) < 0 ? row.getNumericValue() : min;
+            max = max == null || row.getNumericValue().compareTo(max) > 0 ? row.getNumericValue() : max;
+        }
+        response.setCount(points.size()).setPoints(points).setMinimum(min).setMaximum(max)
+                .setAverage(points.isEmpty() ? null : sum.divide(BigDecimal.valueOf(points.size()), 2, java.math.RoundingMode.HALF_UP));
+        logAccess(userId, userId, null, "VIEW_TREND", "GLUCOSE", "ALLOWED", null, "APP");
+        return response;
+    }
+
+    @Override
+    public List<JkSinocareReportResponse> sinocareReports(Long userId, String reportType) {
+        List<JkSinocareAuthorization> auths = sinocareAuthorizationDao.selectList(new LambdaQueryWrapper<JkSinocareAuthorization>()
+                .eq(JkSinocareAuthorization::getUserId, userId).eq(JkSinocareAuthorization::getStatus, "AUTHORIZED"));
+        if (auths.isEmpty()) return Collections.emptyList();
+        List<String> uniqueIds = auths.stream().map(JkSinocareAuthorization::getUniqueId).collect(Collectors.toList());
+        LambdaQueryWrapper<JkSinocareReport> q = new LambdaQueryWrapper<JkSinocareReport>()
+                .in(JkSinocareReport::getUniqueId, uniqueIds).orderByDesc(JkSinocareReport::getId);
+        if (StrUtil.isNotBlank(reportType)) q.eq(JkSinocareReport::getReportType, reportType);
+        return sinocareReportDao.selectList(q).stream().map(this::toSinocareReportSummary).collect(Collectors.toList());
+    }
+
+    @Override
+    public JkSinocareReportResponse sinocareReport(Long userId, Long reportId) {
+        JkSinocareReport report = sinocareReportDao.selectById(reportId);
+        if (report == null || sinocareAuthorizationDao.selectCount(new LambdaQueryWrapper<JkSinocareAuthorization>()
+                .eq(JkSinocareAuthorization::getUserId, userId).eq(JkSinocareAuthorization::getUniqueId, report.getUniqueId())
+                .eq(JkSinocareAuthorization::getStatus, "AUTHORIZED")) == 0) throw new CrmebException("健康报告不存在");
+        JkSinocareReportResponse response = toSinocareReportSummary(report);
+        response.setPayload(codec.decode(report.getPayloadCipher()));
+        logAccess(userId, userId, null, "VIEW_REPORT", "GLUCOSE", "ALLOWED", null, "APP");
+        return response;
+    }
+
+    @Override
+    public void downloadSinocareReportFile(Long userId, Long reportId, HttpServletResponse response) {
+        JkSinocareReport report = sinocareReportDao.selectById(reportId);
+        if (report == null || sinocareAuthorizationDao.selectCount(new LambdaQueryWrapper<JkSinocareAuthorization>()
+                .eq(JkSinocareAuthorization::getUserId, userId).eq(JkSinocareAuthorization::getUniqueId, report.getUniqueId())
+                .eq(JkSinocareAuthorization::getStatus, "AUTHORIZED")) == 0) throw new CrmebException("健康报告不存在");
+        String decoded = codec.decode(report.getPayloadCipher());
+        if (StrUtil.isBlank(decoded)) throw new CrmebException("报告文件不可用");
+        JSONObject p = JSONObject.parseObject(decoded);
+        String filePath = p == null ? null : p.getString("filePath");
+        if (StrUtil.isBlank(filePath)) throw new CrmebException("报告文件地址缺失");
+        HttpURLConnection conn = null;
+        try {
+            URL url = new URL(filePath);
+            conn = (HttpURLConnection) url.openConnection();
+            conn.setRequestMethod("GET");
+            conn.setConnectTimeout(10000);
+            conn.setReadTimeout(30000);
+            conn.connect();
+            if (conn.getResponseCode() != HttpURLConnection.HTTP_OK) {
+                throw new CrmebException("报告文件获取失败");
+            }
+            response.setContentType(StrUtil.isNotBlank(conn.getContentType()) ? conn.getContentType() : "application/pdf");
+            String name = p.getString("name");
+            if (StrUtil.isNotBlank(name)) {
+                response.setHeader("Content-Disposition", "inline; filename=\"" + name.replace("\"", "") + "\"");
+            }
+            try (InputStream in = conn.getInputStream(); OutputStream out = response.getOutputStream()) {
+                IoUtil.copy(in, out);
+                out.flush();
+            }
+        } catch (CrmebException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new CrmebException("报告文件下载失败：" + e.getMessage());
+        } finally {
+            if (conn != null) conn.disconnect();
+        }
+    }
+
+    private JkSinocareReportResponse toSinocareReportSummary(JkSinocareReport report) {
+        JkSinocareReportResponse resp = new JkSinocareReportResponse().setId(report.getId()).setDeviceSn(report.getDeviceSn())
+                .setReportType(report.getReportType()).setCreateTime(report.getCreateTime());
+        enrichFromPayload(resp, report.getPayloadCipher());
+        return resp;
+    }
+
+    private void enrichFromPayload(JkSinocareReportResponse resp, String cipher) {
+        if (StrUtil.isBlank(cipher)) return;
+        try {
+            String decoded = codec.decode(cipher);
+            if (StrUtil.isBlank(decoded)) return;
+            JSONObject p = JSONObject.parseObject(decoded);
+            if (p == null) return;
+            if ("PDF".equals(resp.getReportType())) {
+                resp.setFileName(p.getString("name"));
+                resp.setFileSize(p.getLong("size"));
+            } else {
+                String b = p.getString("beginDate");
+                String e = p.getString("endDate");
+                if (StrUtil.isNotBlank(b) && StrUtil.isNotBlank(e)) resp.setPeriodText(b + " 至 " + e);
+            }
+        } catch (Exception ignore) {
+            // 解密/解析异常不影响列表基础字段
+        }
     }
 
     @Override
@@ -436,7 +579,7 @@ public class JkHealthServiceImpl implements JkHealthService {
         throw new CrmebException(reason);
     }
 
-    private void evaluateAlerts(JkHealthData data) {
+    void evaluateAlerts(JkHealthData data) {
         if (!"GLUCOSE".equals(data.getDataType()) || data.getNumericValue() == null) return;
         List<JkHealthAlertRule> rules = alertRuleDao.selectList(new LambdaQueryWrapper<JkHealthAlertRule>()
                 .eq(JkHealthAlertRule::getDataType, "GLUCOSE").eq(JkHealthAlertRule::getEnabled, true)
@@ -540,6 +683,7 @@ public class JkHealthServiceImpl implements JkHealthService {
     }
 
     private Date startOfDay(Date date) { Calendar c = Calendar.getInstance(); c.setTime(date); c.set(Calendar.HOUR_OF_DAY,0); c.set(Calendar.MINUTE,0); c.set(Calendar.SECOND,0); c.set(Calendar.MILLISECOND,0); return c.getTime(); }
+    private Date daysBefore(Date date, int days) { Calendar c = Calendar.getInstance(); c.setTime(date); c.add(Calendar.DAY_OF_YEAR, -days); return c.getTime(); }
     private String displayName(User u) { if (u == null) return null; return StrUtil.isNotBlank(u.getRealName()) ? u.getRealName() : u.getNickname(); }
     private String maskPhone(String p) { return p == null || p.length() < 7 ? p : p.substring(0,3) + "****" + p.substring(p.length()-4); }
     private String safe(String s) { return s == null ? "" : s.replace("\\", "").replace("\"", ""); }

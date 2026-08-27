@@ -41,7 +41,7 @@ public class CommissionRuleServiceImplTest {
         ReflectionTestUtils.invokeMethod(service, "enrichRuleDisplays", Collections.singletonList(rule));
         ReflectionTestUtils.invokeMethod(service, "enrichRuleItemDisplays", Collections.singletonList(item));
 
-        Assert.assertEquals("零售订单", rule.getSourceTypeText());
+        Assert.assertEquals("线上零售", rule.getSourceTypeText());
         Assert.assertEquals("创客", rule.getReceiverRoleName());
         Assert.assertEquals("启用", rule.getStatusText());
         Assert.assertEquals("success", rule.getStatusTag());

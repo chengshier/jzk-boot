@@ -2,9 +2,11 @@ package com.zbkj.service.service.jiuzhoukang.stock;
 
 import com.zbkj.common.model.jiuzhoukang.JkStockFlow;
 import com.zbkj.common.model.jiuzhoukang.JkStockItem;
+import com.zbkj.common.model.jiuzhoukang.JkStockAccount;
 import com.zbkj.common.request.jiuzhoukang.JkStockActionRequest;
 import com.zbkj.service.dao.jiuzhoukang.JkStockFlowDao;
 import com.zbkj.service.dao.jiuzhoukang.JkStockItemDao;
+import com.zbkj.service.dao.jiuzhoukang.JkStockAccountDao;
 import com.zbkj.service.service.impl.jiuzhoukang.stock.StockFlowServiceImpl;
 import org.junit.Assert;
 import org.junit.Test;
@@ -57,6 +59,12 @@ public class StockFlowServiceImplTest {
         StockFlowServiceImpl service = new StockFlowServiceImpl();
         ReflectionTestUtils.setField(service, "stockItemDao", stockItemDao);
         ReflectionTestUtils.setField(service, "stockFlowDao", stockFlowDao);
+        ReflectionTestUtils.setField(service, "stockAccountDao", (JkStockAccountDao) Proxy.newProxyInstance(
+                JkStockAccountDao.class.getClassLoader(),
+                new Class[]{JkStockAccountDao.class},
+                (proxy, method, args) -> "selectById".equals(method.getName())
+                        ? new JkStockAccount().setStatus(true).setIsDeleted(false).setAccountType("PARTNER")
+                        : null));
 
         JkStockActionRequest request = new JkStockActionRequest()
                 .setBusinessType("PLATFORM_ORDER")

@@ -40,6 +40,7 @@ public class JkPermissionController {
                         Boolean.TRUE.equals(context.getFreezeStatus()), context.getFreezeReason());
         JkPermissionContextResponse response = new JkPermissionContextResponse();
         response.setUserId(context.getUserId());
+        response.setEntryAccess(context.getEntryAccess());
         response.setPrimaryRoleCode(context.getPrimaryRoleCode());
         response.setPrimaryRoleName(context.getPrimaryRoleName());
         response.setRoles(context.getRoles());

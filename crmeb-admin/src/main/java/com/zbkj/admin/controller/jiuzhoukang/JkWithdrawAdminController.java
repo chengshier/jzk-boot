@@ -142,6 +142,70 @@ public class JkWithdrawAdminController {
         return CommonResult.success(list);
     }
 
+    @GetMapping("/commission/account/{id}/detail")
+    @PreAuthorize("hasAuthority('" + JkPermissionCodes.ADMIN_COMMISSION_ACCOUNT_LIST + "')")
+    @JkBizPermission(value = JkBizPermissionCodes.COMMISSION_ACCOUNT_VIEW, checkDataScope = true)
+    public CommonResult<Map<String, Object>> commissionAccountDetail(@PathVariable Long id) {
+        JkCommissionAccount account = commissionAccountDao.selectById(id);
+        if (account == null || Boolean.TRUE.equals(account.getIsDeleted())) throw new IllegalArgumentException("佣金账户不存在");
+        assertOwnOrPlatform(account.getUserId());
+
+        return CommonResult.success(buildAccountDetail(account, null));
+    }
+
+    @GetMapping("/fund/account/{id}/detail")
+    @PreAuthorize("hasAuthority('" + JkPermissionCodes.ADMIN_FUND_ACCOUNT_LIST + "')")
+    @JkBizPermission(value = JkBizPermissionCodes.FUND_ACCOUNT_VIEW, checkDataScope = true)
+    public CommonResult<Map<String, Object>> fundAccountDetail(@PathVariable Long id) {
+        JkFundAccount fundAccount = fundAccountDao.selectById(id);
+        if (fundAccount == null || Boolean.TRUE.equals(fundAccount.getIsDeleted())) throw new IllegalArgumentException("资金账户不存在");
+        assertOwnOrPlatform(fundAccount.getUserId());
+        JkCommissionAccount commissionAccount = commissionAccountDao.selectOne(new LambdaQueryWrapper<JkCommissionAccount>()
+                .eq(JkCommissionAccount::getUserId, fundAccount.getUserId()).eq(JkCommissionAccount::getRoleCode, fundAccount.getRoleCode())
+                .eq(JkCommissionAccount::getIsDeleted, false).last("limit 1"));
+        if (commissionAccount == null) {
+            Map<String, Object> result = new LinkedHashMap<String, Object>();
+            result.put("account", null);
+            result.put("commissionRecords", Collections.emptyList());
+            result.put("commissionFlows", Collections.emptyList());
+            result.put("reverses", Collections.emptyList());
+            result.put("fundAccount", fundAccount);
+            result.put("fundFlows", fundFlowDao.selectList(new LambdaQueryWrapper<JkFundFlow>()
+                    .eq(JkFundFlow::getAccountId, fundAccount.getId()).orderByDesc(JkFundFlow::getId)));
+            return CommonResult.success(result);
+        }
+        return CommonResult.success(buildAccountDetail(commissionAccount, fundAccount));
+    }
+
+    private Map<String, Object> buildAccountDetail(JkCommissionAccount account, JkFundAccount providedFundAccount) {
+        List<JkCommissionRecord> records = recordDao.selectList(new LambdaQueryWrapper<JkCommissionRecord>()
+                .eq(JkCommissionRecord::getIsDeleted, false)
+                .eq(JkCommissionRecord::getReceiverUserId, account.getUserId())
+                .eq(JkCommissionRecord::getReceiverRoleCode, account.getRoleCode())
+                .orderByDesc(JkCommissionRecord::getId));
+        List<JkCommissionFlow> commissionFlows = commissionFlowDao.selectList(new LambdaQueryWrapper<JkCommissionFlow>()
+                .eq(JkCommissionFlow::getAccountId, account.getId()).orderByDesc(JkCommissionFlow::getId));
+        Set<Long> recordIds = records.stream().map(JkCommissionRecord::getId).filter(Objects::nonNull).collect(java.util.stream.Collectors.toSet());
+        List<JkCommissionReverse> reverses = recordIds.isEmpty() ? Collections.<JkCommissionReverse>emptyList()
+                : reverseDao.selectList(new LambdaQueryWrapper<JkCommissionReverse>()
+                .in(JkCommissionReverse::getOriginalCommissionRecordId, recordIds).orderByDesc(JkCommissionReverse::getId));
+        JkFundAccount fundAccount = providedFundAccount == null ? fundAccountDao.selectOne(new LambdaQueryWrapper<JkFundAccount>()
+                .eq(JkFundAccount::getUserId, account.getUserId()).eq(JkFundAccount::getRoleCode, account.getRoleCode())
+                .eq(JkFundAccount::getIsDeleted, false).last("limit 1")) : providedFundAccount;
+        List<JkFundFlow> fundFlows = fundAccount == null ? Collections.<JkFundFlow>emptyList()
+                : fundFlowDao.selectList(new LambdaQueryWrapper<JkFundFlow>()
+                .eq(JkFundFlow::getAccountId, fundAccount.getId()).orderByDesc(JkFundFlow::getId));
+
+        Map<String, Object> result = new LinkedHashMap<String, Object>();
+        result.put("account", account);
+        result.put("commissionRecords", records);
+        result.put("commissionFlows", commissionFlows);
+        result.put("reverses", reverses);
+        result.put("fundAccount", fundAccount);
+        result.put("fundFlows", fundFlows);
+        return result;
+    }
+
     @GetMapping("/fund/account/list")
     @PreAuthorize("hasAuthority('" + JkPermissionCodes.ADMIN_FUND_ACCOUNT_LIST + "')")
     @JkBizPermission(value = JkBizPermissionCodes.FUND_ACCOUNT_VIEW, checkDataScope = true)

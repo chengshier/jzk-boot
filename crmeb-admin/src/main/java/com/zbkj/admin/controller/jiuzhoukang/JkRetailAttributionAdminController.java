@@ -7,6 +7,7 @@ import com.zbkj.common.model.system.SystemAdmin;
 import com.zbkj.common.page.CommonPage;
 import com.zbkj.common.request.PageParamRequest;
 import com.zbkj.common.request.jiuzhoukang.JkRetailAttributionResolveRequest;
+import com.zbkj.common.response.jiuzhoukang.JkOptionResponse;
 import com.zbkj.common.result.CommonResult;
 import com.zbkj.service.service.jiuzhoukang.audit.JkAdminActorService;
 import com.zbkj.service.service.jiuzhoukang.order.JkRetailAttributionAdminService;
@@ -55,6 +56,21 @@ public class JkRetailAttributionAdminController {
     @PreAuthorize("hasAuthority('" + JkV31PermissionCodes.ADMIN_RETAIL_ATTRIBUTION_DETAIL + "')")
     public CommonResult<List<JkRetailOrderAttributionAdjustment>> adjustments(@PathVariable Long id) {
         return CommonResult.success(service.audit(id));
+    }
+
+    @GetMapping("/options/regions")
+    @PreAuthorize("hasAnyAuthority('" + JkV31PermissionCodes.ADMIN_RETAIL_ATTRIBUTION_RESOLVE + "','" + JkV31PermissionCodes.ADMIN_RETAIL_ATTRIBUTION_ADJUST + "')")
+    @ApiOperation("零售归属调整的最终区域选项")
+    public CommonResult<List<JkOptionResponse>> regionOptions(@RequestParam(required = false) String keyword) {
+        return CommonResult.success(service.listRegionOptions(keyword));
+    }
+
+    @GetMapping("/options/county-agents")
+    @PreAuthorize("hasAnyAuthority('" + JkV31PermissionCodes.ADMIN_RETAIL_ATTRIBUTION_RESOLVE + "','" + JkV31PermissionCodes.ADMIN_RETAIL_ATTRIBUTION_ADJUST + "')")
+    @ApiOperation("零售归属调整的区县代理选项")
+    public CommonResult<List<JkOptionResponse>> countyAgentOptions(@RequestParam String regionCode,
+                                                                    @RequestParam(required = false) String keyword) {
+        return CommonResult.success(service.listCountyAgentOptions(regionCode, keyword));
     }
 
     @PostMapping("/{id}/resolve")

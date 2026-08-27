@@ -29,10 +29,13 @@ CREATE TABLE IF NOT EXISTS `jk_sinocare_callback_log` (
 
 CREATE TABLE IF NOT EXISTS `jk_sinocare_device_session` (
  `id` bigint NOT NULL AUTO_INCREMENT, `unique_id` varchar(64) NOT NULL, `device_sn` varchar(32) NOT NULL,
- `status` tinyint NOT NULL COMMENT '1监测中 2已结束', `product_name` varchar(64) DEFAULT NULL,
- `detection_start_time` datetime DEFAULT NULL, `detection_end_time` datetime DEFAULT NULL,
+ `status` tinyint NOT NULL DEFAULT 1 COMMENT '1监测中 2已结束；1002 未传时默认监测中', `product_name` varchar(64) DEFAULT NULL,
+ `detection_start_time` datetime DEFAULT NULL, `detection_end_time` datetime DEFAULT NULL, `last_data_at` datetime DEFAULT NULL,
  `create_time` datetime NOT NULL, `update_time` datetime NOT NULL, PRIMARY KEY (`id`), UNIQUE KEY `uk_sino_device_session` (`unique_id`,`device_sn`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='三诺设备监测周期';
+
+ALTER TABLE `jk_sinocare_device_session` ADD COLUMN IF NOT EXISTS `last_data_at` datetime DEFAULT NULL COMMENT '首条或最近一次三诺血糖数据时间';
+ALTER TABLE `jk_sinocare_device_session` MODIFY COLUMN `status` tinyint NOT NULL DEFAULT 1 COMMENT '1监测中 2已结束；1002 未传时默认监测中';
 
 CREATE TABLE IF NOT EXISTS `jk_sinocare_report` (
  `id` bigint NOT NULL AUTO_INCREMENT, `event_id` varchar(64) NOT NULL, `unique_id` varchar(64) NOT NULL, `device_sn` varchar(32) DEFAULT NULL,

@@ -5,6 +5,7 @@ import com.zbkj.common.model.jiuzhoukang.JkRetailOrderAttribution;
 import com.zbkj.common.model.jiuzhoukang.JkRetailOrderAttributionAdjustment;
 import com.zbkj.common.request.PageParamRequest;
 import com.zbkj.common.request.jiuzhoukang.JkRetailAttributionResolveRequest;
+import com.zbkj.common.response.jiuzhoukang.JkOptionResponse;
 
 import java.util.List;
 import java.util.Map;
@@ -17,4 +18,6 @@ public interface JkRetailAttributionAdminService {
     JkRetailOrderAttribution resolve(Long id, Long operatorId, JkRetailAttributionResolveRequest request);
     JkRetailOrderAttributionAdjustment adjust(Long id, Long operatorId, JkRetailAttributionResolveRequest request);
     List<JkRetailOrderAttributionAdjustment> audit(Long id);
+    List<JkOptionResponse> listRegionOptions(String keyword);
+    List<JkOptionResponse> listCountyAgentOptions(String regionCode, String keyword);
 }

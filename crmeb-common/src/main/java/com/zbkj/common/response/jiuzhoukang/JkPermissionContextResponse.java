@@ -12,6 +12,7 @@ import java.util.List;
 public class JkPermissionContextResponse implements Serializable {
 
     private Long userId;
+    private Boolean entryAccess;
     private String primaryRoleCode;
     private String primaryRoleName;
     private List<String> roles;

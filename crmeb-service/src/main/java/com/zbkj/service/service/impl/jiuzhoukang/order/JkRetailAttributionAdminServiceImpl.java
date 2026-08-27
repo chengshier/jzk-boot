@@ -9,12 +9,16 @@ import com.zbkj.common.exception.CrmebException;
 import com.zbkj.common.model.jiuzhoukang.JkRegionAgent;
 import com.zbkj.common.model.jiuzhoukang.JkRetailOrderAttribution;
 import com.zbkj.common.model.jiuzhoukang.JkRetailOrderAttributionAdjustment;
+import com.zbkj.common.model.user.User;
 import com.zbkj.common.request.PageParamRequest;
 import com.zbkj.common.request.jiuzhoukang.JkRetailAttributionResolveRequest;
+import com.zbkj.common.response.jiuzhoukang.JkOptionResponse;
+import com.zbkj.common.response.jiuzhoukang.JkRegionOptionResponse;
 import com.zbkj.common.response.jiuzhoukang.JkRegionPathResponse;
 import com.zbkj.service.dao.jiuzhoukang.JkRegionAgentDao;
 import com.zbkj.service.dao.jiuzhoukang.JkRetailOrderAttributionAdjustmentDao;
 import com.zbkj.service.dao.jiuzhoukang.JkRetailOrderAttributionDao;
+import com.zbkj.service.service.UserService;
 import com.zbkj.service.service.jiuzhoukang.order.JkRetailAttributionAdminService;
 import com.zbkj.service.service.jiuzhoukang.region.JkRegionService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,6 +26,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Date;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -32,6 +39,7 @@ public class JkRetailAttributionAdminServiceImpl implements JkRetailAttributionA
     @Autowired private JkRetailOrderAttributionAdjustmentDao adjustmentDao;
     @Autowired private JkRegionAgentDao regionAgentDao;
     @Autowired private JkRegionService regionService;
+    @Autowired private UserService userService;
 
     @Override
     public PageInfo<JkRetailOrderAttribution> list(String orderNo, Long buyerUserId, String regionSourceType,
@@ -107,6 +115,48 @@ public class JkRetailAttributionAdminServiceImpl implements JkRetailAttributionA
         return adjustmentDao.selectList(new LambdaQueryWrapper<JkRetailOrderAttributionAdjustment>()
                 .eq(JkRetailOrderAttributionAdjustment::getAttributionId, id)
                 .orderByDesc(JkRetailOrderAttributionAdjustment::getId));
+    }
+
+    @Override
+    public List<JkOptionResponse> listRegionOptions(String keyword) {
+        List<JkRegionOptionResponse> regions = regionService.listRegionOptions(null, 3, true, keyword);
+        List<JkOptionResponse> result = new ArrayList<JkOptionResponse>();
+        for (JkRegionOptionResponse region : regions) {
+            result.add(new JkOptionResponse().setValue(region.getValue())
+                    .setLabel(region.getLabel() + "（" + region.getValue() + "）")
+                    .setRegionCode(region.getValue()).setDisabled(region.getDisabled()));
+        }
+        return result;
+    }
+
+    @Override
+    public List<JkOptionResponse> listCountyAgentOptions(String regionCode, String keyword) {
+        if (!hasText(regionCode)) return Collections.emptyList();
+        List<JkRegionAgent> agents = regionAgentDao.selectList(new LambdaQueryWrapper<JkRegionAgent>()
+                .eq(JkRegionAgent::getRegionCode, regionCode.trim())
+                .eq(JkRegionAgent::getStatus, true).eq(JkRegionAgent::getIsDeleted, false)
+                .orderByDesc(JkRegionAgent::getId));
+        if (agents.isEmpty()) return Collections.emptyList();
+        List<Long> userIds = new ArrayList<Long>();
+        for (JkRegionAgent agent : agents) if (agent.getCountyAgentUserId() != null) userIds.add(agent.getCountyAgentUserId());
+        if (userIds.isEmpty()) return Collections.emptyList();
+        LambdaQueryWrapper<User> query = new LambdaQueryWrapper<User>().in(User::getUid, userIds).eq(User::getStatus, true);
+        if (hasText(keyword)) {
+            String key = keyword.trim();
+            query.and(q -> q.like(User::getNickname, key).or().like(User::getRealName, key).or().like(User::getPhone, key));
+        }
+        Map<Long, User> users = new HashMap<Long, User>();
+        for (User user : userService.list(query)) users.put(Long.valueOf(user.getUid()), user);
+        List<JkOptionResponse> result = new ArrayList<JkOptionResponse>();
+        for (JkRegionAgent agent : agents) {
+            User user = users.get(agent.getCountyAgentUserId());
+            if (user == null) continue;
+            String name = hasText(user.getRealName()) ? user.getRealName() : user.getNickname();
+            result.add(new JkOptionResponse().setValue(String.valueOf(user.getUid()))
+                    .setLabel(name + " / " + (hasText(user.getPhone()) ? user.getPhone() : "无手机号") + "（ID:" + user.getUid() + "）")
+                    .setRegionCode(regionCode.trim()).setRoleCode("county_agent").setRoleName("区县代理").setDisabled(false));
+        }
+        return result;
     }
 
     private void applyRegion(JkRetailOrderAttribution row, JkRetailAttributionResolveRequest request) {

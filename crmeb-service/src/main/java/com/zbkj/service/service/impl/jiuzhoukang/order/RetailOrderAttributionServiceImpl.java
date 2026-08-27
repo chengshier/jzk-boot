@@ -175,6 +175,18 @@ public class RetailOrderAttributionServiceImpl implements RetailOrderAttribution
     }
 
     @Override
+    public void lockByOrder(Long orderId, String orderNo) {
+        if (orderId == null || orderNo == null) return;
+        attributionDao.update(null, new LambdaUpdateWrapper<JkRetailOrderAttribution>()
+                .eq(JkRetailOrderAttribution::getOrderId, orderId)
+                .eq(JkRetailOrderAttribution::getOrderNo, orderNo)
+                .eq(JkRetailOrderAttribution::getIsDeleted, false)
+                .ne(JkRetailOrderAttribution::getLockStatus, "LOCKED")
+                .set(JkRetailOrderAttribution::getLockStatus, "LOCKED")
+                .set(JkRetailOrderAttribution::getUpdateTime, new Date()));
+    }
+
+    @Override
     public List<JkRetailOrderAttribution> listByOrder(Long orderId, String orderNo) {
         LambdaQueryWrapper<JkRetailOrderAttribution> query = new LambdaQueryWrapper<JkRetailOrderAttribution>()
                 .eq(JkRetailOrderAttribution::getIsDeleted, false)
