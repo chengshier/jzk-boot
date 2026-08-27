@@ -8,11 +8,13 @@ import com.zbkj.common.request.PageParamRequest;
 import com.zbkj.common.request.jiuzhoukang.JkAgentRelationChangeApplyRequest;
 import com.zbkj.common.response.jiuzhoukang.JkOptionResponse;
 import com.zbkj.common.response.jiuzhoukang.JkPromotionQrcodeResponse;
+import com.zbkj.common.response.jiuzhoukang.JkRelationQuotaResponse;
 import com.zbkj.common.response.jiuzhoukang.JkTeamSummaryResponse;
 import com.zbkj.common.result.CommonResult;
 import com.zbkj.common.token.FrontTokenComponent;
 import com.zbkj.service.service.jiuzhoukang.region.JkAgentRelationChangeService;
 import com.zbkj.service.service.jiuzhoukang.region.JkAgentTeamService;
+import com.zbkj.service.service.jiuzhoukang.region.JkRelationQuotaService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -35,6 +37,7 @@ public class JkAgentTeamController {
     @Autowired private FrontTokenComponent token;
     @Autowired private JkAgentTeamService teamService;
     @Autowired private JkAgentRelationChangeService changeService;
+    @Autowired private JkRelationQuotaService quotaService;
 
     private Long userId() { return Long.valueOf(token.getUserId()); }
 
@@ -42,6 +45,13 @@ public class JkAgentTeamController {
     @JkBizPermission(value = JkBizPermissionCodes.TEAM_VIEW, checkDataScope = true)
     @ApiOperation("本人上级、直属团队和关系历史")
     public CommonResult<JkTeamSummaryResponse> summary() { return CommonResult.success(teamService.summary(userId())); }
+
+    @GetMapping("/quota")
+    @JkBizPermission(value = JkBizPermissionCodes.TEAM_VIEW, checkDataScope = true)
+    @ApiOperation("本人当前直属下级人数额度")
+    public CommonResult<JkRelationQuotaResponse> quota(@RequestParam(required = false) Long childUserId) {
+        return CommonResult.success(quotaService.quota(userId(), childUserId));
+    }
 
     @GetMapping("/member/{memberUserId}")
     @JkBizPermission(value = JkBizPermissionCodes.TEAM_VIEW, checkDataScope = true)

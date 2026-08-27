@@ -4,6 +4,9 @@ on:
   pull_request:
     branches:
       - master
+      - feat/jzk-v3.1-phase1-closure
+      - feat/jzk-v3.1-phase2-business
+      - feat/jzk-v3.1-phase3-operations
   workflow_dispatch:
 
 concurrency:
