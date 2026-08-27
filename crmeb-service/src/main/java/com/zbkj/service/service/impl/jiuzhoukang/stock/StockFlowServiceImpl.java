@@ -7,6 +7,7 @@ import com.zbkj.common.constants.jiuzhoukang.JkBizConstants;
 import com.zbkj.common.exception.CrmebException;
 import com.zbkj.common.model.jiuzhoukang.JkStockAccount;
 import com.zbkj.common.model.jiuzhoukang.JkStockBatchReservation;
+import com.zbkj.common.model.jiuzhoukang.JkStockCheck;
 import com.zbkj.common.model.jiuzhoukang.JkStockFlow;
 import com.zbkj.common.model.jiuzhoukang.JkStockItem;
 import com.zbkj.common.model.product.StoreProduct;
@@ -14,6 +15,7 @@ import com.zbkj.common.model.product.StoreProductAttrValue;
 import com.zbkj.common.request.jiuzhoukang.JkStockActionRequest;
 import com.zbkj.service.dao.jiuzhoukang.JkStockAccountDao;
 import com.zbkj.service.dao.jiuzhoukang.JkStockBatchReservationDao;
+import com.zbkj.service.dao.jiuzhoukang.JkStockCheckDao;
 import com.zbkj.service.dao.jiuzhoukang.JkStockFlowDao;
 import com.zbkj.service.dao.jiuzhoukang.JkStockItemDao;
 import com.zbkj.service.service.StoreProductAttrValueService;
@@ -39,6 +41,7 @@ public class StockFlowServiceImpl implements StockFlowService {
     @Autowired private JkStockFlowDao stockFlowDao;
     @Autowired private JkStockAccountDao stockAccountDao;
     @Autowired private JkStockBatchReservationDao batchReservationDao;
+    @Autowired private JkStockCheckDao stockCheckDao;
     @Autowired private StockBatchService stockBatchService;
     @Autowired private StoreProductService productService;
     @Autowired private StoreProductAttrValueService skuService;
@@ -78,14 +81,13 @@ public class StockFlowServiceImpl implements StockFlowService {
         String key = StockActionKey.build(request.getBusinessType(), request.getBusinessId(), action,
                 request.getStockAccountId(), request.getProductId(), request.getSkuId());
         if (stockFlowDao.selectOne(new LambdaQueryWrapper<JkStockFlow>()
-                .eq(JkStockFlow::getIdempotencyKey, key).last("limit 1")) != null) {
-            return;
-        }
+                .eq(JkStockFlow::getIdempotencyKey, key).last("limit 1")) != null) return;
 
         JkStockAccount account = stockAccountDao.selectById(request.getStockAccountId());
         if (account == null || Boolean.TRUE.equals(account.getIsDeleted()) || !Boolean.TRUE.equals(account.getStatus())) {
             throw new CrmebException("库存账户不存在或已停用");
         }
+        assertNotFrozenByStockCheck(request);
         boolean platformAccount = JkBizConstants.STOCK_ACCOUNT_PLATFORM.equals(account.getAccountType());
 
         JkStockItem item;
@@ -99,32 +101,17 @@ public class StockFlowServiceImpl implements StockFlowService {
         if (item == null) throw new CrmebException("库存明细不存在");
 
         JkStockFlow flow = new JkStockFlow()
-                .setFlowNo("SF" + IdWorker.getIdStr())
-                .setIdempotencyKey(key)
-                .setBusinessNo(request.getBusinessNo())
-                .setBusinessType(request.getBusinessType())
-                .setBusinessId(request.getBusinessId())
-                .setStockAccountId(request.getStockAccountId())
-                .setStockItemId(item.getId())
-                .setProductId(request.getProductId())
-                .setSkuId(request.getSkuId())
-                .setSkuCode(request.getSkuCode())
-                .setFlowType(action)
-                .setChangeQty(request.getQuantity())
-                .setBeforeAvailableQty(item.getAvailableQty())
-                .setBeforeFrozenQty(item.getFrozenQty())
-                .setAfterAvailableQty(item.getAvailableQty())
-                .setAfterFrozenQty(item.getFrozenQty())
-                .setRemark(request.getRemark())
-                .setStatus(true)
-                .setIsDeleted(false)
-                .setCreateUserId(request.getOperatorUserId())
-                .setUpdateUserId(request.getOperatorUserId());
-        try {
-            stockFlowDao.insert(flow);
-        } catch (DuplicateKeyException duplicate) {
-            // 平台库存可能已在当前事务内调整。并发命中幂等键时必须抛异常，
-            // 让 Spring 回滚 CRMEB 主库存和镜像库存，不能直接 return。
+                .setFlowNo("SF" + IdWorker.getIdStr()).setIdempotencyKey(key)
+                .setBusinessNo(request.getBusinessNo()).setBusinessType(request.getBusinessType())
+                .setBusinessId(request.getBusinessId()).setStockAccountId(request.getStockAccountId())
+                .setStockItemId(item.getId()).setProductId(request.getProductId()).setSkuId(request.getSkuId())
+                .setSkuCode(request.getSkuCode()).setFlowType(action).setChangeQty(request.getQuantity())
+                .setBeforeAvailableQty(item.getAvailableQty()).setBeforeFrozenQty(item.getFrozenQty())
+                .setAfterAvailableQty(item.getAvailableQty()).setAfterFrozenQty(item.getFrozenQty())
+                .setRemark(request.getRemark()).setStatus(true).setIsDeleted(false)
+                .setCreateUserId(request.getOperatorUserId()).setUpdateUserId(request.getOperatorUserId());
+        try { stockFlowDao.insert(flow); }
+        catch (DuplicateKeyException duplicate) {
             throw new CrmebException("库存动作正在处理，请勿重复提交");
         }
         if (setTemplate == null) return;
@@ -136,8 +123,6 @@ public class StockFlowServiceImpl implements StockFlowService {
         if (conditionTemplate != null) update.apply(conditionTemplate.replace("{q}", String.valueOf(request.getQuantity())));
         if (stockItemDao.update(null, update) != 1) throw new CrmebException("库存不足");
 
-        // 代理库存继续维护完整批次账。平台库存的新动作以 CRMEB 为主账，不再生成第二套平台批次；
-        // 升级前已存在批次冻结的单据，仍按旧批次预留完成释放或出库，避免历史单据卡死。
         if (!platformAccount || shouldConsumeLegacyPlatformReservation(request, action)) {
             if ("FREEZE".equals(action)) stockBatchService.freeze(request);
             else if ("RELEASE".equals(action)) stockBatchService.release(request);
@@ -151,8 +136,19 @@ public class StockFlowServiceImpl implements StockFlowService {
     }
 
     /**
-     * 调整 CRMEB 主库存并返回九州康镜像执行当前动作前应设置的 available_qty。
+     * 盘点提交后，所有非盘点库存动作在唯一写入口被阻断。这样订货、调拨、线下销售、退货
+     * 即使遗漏页面判断，也不能绕过盘点冻结。
      */
+    private void assertNotFrozenByStockCheck(JkStockActionRequest request) {
+        if ("STOCK_CHECK".equals(request.getBusinessType())) return;
+        JkStockCheck active = stockCheckDao.selectOne(new LambdaQueryWrapper<JkStockCheck>()
+                .eq(JkStockCheck::getStockAccountId, request.getStockAccountId())
+                .eq(JkStockCheck::getFreezeStatus, "FROZEN")
+                .eq(JkStockCheck::getStatus, "SUBMITTED")
+                .eq(JkStockCheck::getIsDeleted, false).last("limit 1"));
+        if (active != null) throw new CrmebException("库存账户正在盘点，审核完成前禁止库存变更，盘点单：" + active.getCheckNo());
+    }
+
     private int prepareCrmebPlatformStock(JkStockActionRequest request, String action) {
         int quantity = request.getQuantity();
         if ("FREEZE".equals(action)) {
@@ -174,19 +170,11 @@ public class StockFlowServiceImpl implements StockFlowService {
             if (sku == null || Boolean.TRUE.equals(sku.getIsDel()) || !productId.equals(sku.getProductId())) {
                 throw new CrmebException("商品规格不存在或不属于所选商品");
             }
-            if ("sub".equals(operation) && (sku.getStock() == null || sku.getStock() < quantity)) {
-                throw new CrmebException("平台商品规格库存不足");
-            }
-            if (!Boolean.TRUE.equals(skuService.operationStock(skuId, quantity, operation, sku.getVersion()))) {
-                throw new CrmebException("平台商品规格库存发生变化，请重试");
-            }
+            if ("sub".equals(operation) && (sku.getStock() == null || sku.getStock() < quantity)) throw new CrmebException("平台商品规格库存不足");
+            if (!Boolean.TRUE.equals(skuService.operationStock(skuId, quantity, operation, sku.getVersion()))) throw new CrmebException("平台商品规格库存发生变化，请重试");
         }
-        if ("sub".equals(operation) && (product.getStock() == null || product.getStock() < quantity)) {
-            throw new CrmebException("平台商品库存不足");
-        }
-        if (!Boolean.TRUE.equals(productService.operationStock(productId, quantity, operation, product.getVersion()))) {
-            throw new CrmebException("平台商品库存发生变化，请重试");
-        }
+        if ("sub".equals(operation) && (product.getStock() == null || product.getStock() < quantity)) throw new CrmebException("平台商品库存不足");
+        if (!Boolean.TRUE.equals(productService.operationStock(productId, quantity, operation, product.getVersion()))) throw new CrmebException("平台商品库存发生变化，请重试");
     }
 
     private int currentCrmebAvailable(Integer productId, Integer skuId) {
@@ -202,33 +190,18 @@ public class StockFlowServiceImpl implements StockFlowService {
         JkStockItem item = findItem(request);
         if (item == null) {
             try {
-                stockItemDao.insert(new JkStockItem()
-                        .setBusinessNo("CRMEB_PLATFORM_MIRROR")
-                        .setStockAccountId(request.getStockAccountId())
-                        .setProductId(request.getProductId())
-                        .setSkuId(request.getSkuId())
-                        .setSkuCode(request.getSkuCode())
-                        .setAvailableQty(availableBeforeAction)
-                        .setFrozenQty(0)
-                        .setTotalInQty(0)
-                        .setTotalOutQty(0)
-                        .setStatus(true)
-                        .setIsDeleted(false)
-                        .setCreateUserId(request.getOperatorUserId())
-                        .setUpdateUserId(request.getOperatorUserId())
-                        .setVersion(0));
-            } catch (DuplicateKeyException ignored) {
-                // 并发创建时重新读取。
-            }
+                stockItemDao.insert(new JkStockItem().setBusinessNo("CRMEB_PLATFORM_MIRROR")
+                        .setStockAccountId(request.getStockAccountId()).setProductId(request.getProductId())
+                        .setSkuId(request.getSkuId()).setSkuCode(request.getSkuCode()).setAvailableQty(availableBeforeAction)
+                        .setFrozenQty(0).setTotalInQty(0).setTotalOutQty(0).setStatus(true).setIsDeleted(false)
+                        .setCreateUserId(request.getOperatorUserId()).setUpdateUserId(request.getOperatorUserId()).setVersion(0));
+            } catch (DuplicateKeyException ignored) { }
             item = findItem(request);
         }
         if (item == null) throw new CrmebException("平台库存镜像初始化失败");
-        stockItemDao.update(null, new UpdateWrapper<JkStockItem>()
-                .eq("id", item.getId())
-                .set("available_qty", availableBeforeAction)
-                .set("sku_code", request.getSkuCode())
-                .set("update_user_id", request.getOperatorUserId())
-                .setSql("version = version + 1, update_time = NOW()"));
+        stockItemDao.update(null, new UpdateWrapper<JkStockItem>().eq("id", item.getId())
+                .set("available_qty", availableBeforeAction).set("sku_code", request.getSkuCode())
+                .set("update_user_id", request.getOperatorUserId()).setSql("version = version + 1, update_time = NOW()"));
         return stockItemDao.selectById(item.getId());
     }
 
@@ -248,8 +221,7 @@ public class StockFlowServiceImpl implements StockFlowService {
     private JkStockItem findItem(JkStockActionRequest request) {
         LambdaQueryWrapper<JkStockItem> query = new LambdaQueryWrapper<JkStockItem>()
                 .eq(JkStockItem::getStockAccountId, request.getStockAccountId())
-                .eq(JkStockItem::getProductId, request.getProductId())
-                .eq(JkStockItem::getIsDeleted, false);
+                .eq(JkStockItem::getProductId, request.getProductId()).eq(JkStockItem::getIsDeleted, false);
         if (request.getSkuId() == null) query.isNull(JkStockItem::getSkuId);
         else query.eq(JkStockItem::getSkuId, request.getSkuId());
         return stockItemDao.selectOne(query.last("limit 1"));
@@ -257,24 +229,12 @@ public class StockFlowServiceImpl implements StockFlowService {
 
     private JkStockItem createInboundItem(JkStockActionRequest request) {
         try {
-            stockItemDao.insert(new JkStockItem()
-                    .setBusinessNo(request.getBusinessNo())
-                    .setStockAccountId(request.getStockAccountId())
-                    .setProductId(request.getProductId())
-                    .setSkuId(request.getSkuId())
-                    .setSkuCode(request.getSkuCode())
-                    .setAvailableQty(0)
-                    .setFrozenQty(0)
-                    .setTotalInQty(0)
-                    .setTotalOutQty(0)
-                    .setStatus(true)
-                    .setIsDeleted(false)
-                    .setCreateUserId(request.getOperatorUserId())
-                    .setUpdateUserId(request.getOperatorUserId())
-                    .setVersion(0));
-        } catch (DuplicateKeyException ignored) {
-            // 唯一键保证同一库存主体、商品、SKU 只有一条总账。
-        }
+            stockItemDao.insert(new JkStockItem().setBusinessNo(request.getBusinessNo())
+                    .setStockAccountId(request.getStockAccountId()).setProductId(request.getProductId())
+                    .setSkuId(request.getSkuId()).setSkuCode(request.getSkuCode()).setAvailableQty(0).setFrozenQty(0)
+                    .setTotalInQty(0).setTotalOutQty(0).setStatus(true).setIsDeleted(false)
+                    .setCreateUserId(request.getOperatorUserId()).setUpdateUserId(request.getOperatorUserId()).setVersion(0));
+        } catch (DuplicateKeyException ignored) { }
         return findItem(request);
     }
 
