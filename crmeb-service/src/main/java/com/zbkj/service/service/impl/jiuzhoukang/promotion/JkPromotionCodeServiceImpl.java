@@ -52,7 +52,7 @@ public class JkPromotionCodeServiceImpl implements JkPromotionCodeService {
             query.and(q -> q.like(JkPromotionScene::getSceneCode, keyword)
                     .or().like(JkPromotionScene::getSceneName, keyword));
         }
-        if (status != null) query.eq(JkPromotionScene::getStatus, status);
+        if (status != null) query.eq(JkPromotionScene::getStatus, Boolean.TRUE.equals(status) ? "ACTIVE" : "DISABLED");
         return CommonPage.copyPageInfo(page, sceneDao.selectList(query));
     }
 
@@ -77,7 +77,8 @@ public class JkPromotionCodeServiceImpl implements JkPromotionCodeService {
         value.setSceneCode(request.getSceneCode().trim()).setSceneName(request.getSceneName().trim())
                 .setPagePath(request.getPagePath().trim()).setRoleCodes(request.getRoleCodes())
                 .setSceneTemplate(request.getSceneTemplate().trim()).setVersionNo(request.getVersionNo())
-                .setStatus(Boolean.TRUE.equals(request.getStatus())).setRemark(request.getRemark()).setUpdateTime(now);
+                .setStatus(Boolean.TRUE.equals(request.getStatus()) ? "ACTIVE" : "DISABLED")
+                .setRemark(request.getRemark()).setUpdateTime(now);
         if (value.getId() == null) sceneDao.insert(value); else sceneDao.updateById(value);
         return value;
     }
@@ -89,7 +90,7 @@ public class JkPromotionCodeServiceImpl implements JkPromotionCodeService {
         if (StrUtil.isBlank(sceneCode)) throw new CrmebException("推广场景不能为空");
         if (StrUtil.isBlank(requestNo)) throw new CrmebException("requestNo不能为空");
         JkPromotionScene scene = sceneDao.selectOne(new LambdaQueryWrapper<JkPromotionScene>()
-                .eq(JkPromotionScene::getSceneCode, sceneCode).eq(JkPromotionScene::getStatus, true)
+                .eq(JkPromotionScene::getSceneCode, sceneCode).eq(JkPromotionScene::getStatus, "ACTIVE")
                 .eq(JkPromotionScene::getIsDeleted, false).orderByDesc(JkPromotionScene::getVersionNo).last("limit 1"));
         if (scene == null) throw new CrmebException("推广场景未启用");
         assertRole(scene.getRoleCodes(), ownerRoleCode);
@@ -143,7 +144,7 @@ public class JkPromotionCodeServiceImpl implements JkPromotionCodeService {
         result.put("wechat", tokenService.status());
         result.put("storage", storageService.status());
         Integer enabledSceneCount = sceneDao.selectCount(new LambdaQueryWrapper<JkPromotionScene>()
-                .eq(JkPromotionScene::getStatus, true).eq(JkPromotionScene::getIsDeleted, false));
+                .eq(JkPromotionScene::getStatus, "ACTIVE").eq(JkPromotionScene::getIsDeleted, false));
         result.put("enabledSceneCount", enabledSceneCount == null ? 0 : enabledSceneCount);
         result.put("ready", Boolean.TRUE.equals(tokenService.status().get("ready"))
                 && Boolean.TRUE.equals(storageService.status().get("ready"))
