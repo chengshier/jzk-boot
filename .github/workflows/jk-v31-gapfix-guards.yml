@@ -21,17 +21,29 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          files=$(find sql/jiuzhoukang/v3.1-gapfix -type f -name '*.sql' -print)
-          if grep -n -E 'INSERT[[:space:]]+INTO[[:space:]]+eb_system_menu[^;]*(\bpath\b|\bis_del\b)' $files; then
-            echo 'V3.1 SQL must use component/is_delete for eb_system_menu' >&2; exit 1
-          fi
-          if grep -n -E 'jk_business_permission[^;]*parent_code' $files; then
-            echo 'jk_business_permission has no parent_code' >&2; exit 1
-          fi
+          python3 - <<'PY'
+          import pathlib
+          import re
+
+          failures = []
+          for path in pathlib.Path('sql/jiuzhoukang/v3.1-gapfix').glob('*.sql'):
+              text = path.read_text(encoding='utf-8')
+              # 预检查脚本允许提及旧字段；仅禁止 INSERT/UPDATE 等真实写入继续使用错误列。
+              code = re.sub(r'--.*?$', '', text, flags=re.M)
+              statements = [part.strip() for part in code.split(';') if part.strip()]
+              for statement in statements:
+                  compact = re.sub(r'\s+', ' ', statement)
+                  if re.search(r'(?is)\b(?:INSERT\s+INTO|UPDATE)\s+eb_system_menu\b.*?\b(?:path|is_del)\b', compact):
+                      failures.append(f'{path}: eb_system_menu write uses path/is_del')
+                  if re.search(r'(?is)\bINSERT\s+INTO\s+jk_business_permission\b\s*\([^)]*\bparent_code\b', compact):
+                      failures.append(f'{path}: jk_business_permission insert uses parent_code')
+          if failures:
+              raise SystemExit('\n'.join(failures))
+          PY
           if grep -R -n -E 'jk_user_region_profile|用户服务区域' sql/jiuzhoukang/v3.1-gapfix crmeb-*; then
             echo 'Do not create an independent user service-region table/page' >&2; exit 1
           fi
-      - name: Enforce disabled commission templates
+      - name: Enforce disabled and valid commission templates
         shell: bash
         run: |
           set -euo pipefail
@@ -40,6 +52,9 @@ jobs:
           fi
           grep -q 'rule.setStatus(false)' crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/commission/CommissionRuleServiceImpl.java
           grep -q 'setPublishStatus("DRAFT")' crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/commission/CommissionRuleServiceImpl.java
+          grep -q '奖励数值必须大于 0' crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/commission/JkCommissionTemplateServiceImpl.java
+          grep -q 'totalBudget' crmeb-common/src/main/java/com/zbkj/common/request/jiuzhoukang/JkCommissionTemplateSaveRequest.java
+          grep -q '生效开始时间不能为空' crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/commission/CommissionRuleServiceImpl.java
       - name: Enforce snapshot attribution and financial separation
         shell: bash
         run: |
@@ -50,6 +65,15 @@ jobs:
             echo 'OFFLINE_REALIZED must not be emitted by commission services' >&2; exit 1
           fi
           grep -q 'PENDING_COMPENSATION' crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/order/JkRetailAttributionAdminServiceImpl.java
+      - name: Enforce refund net effect and menu safety
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q 'recordRetailRefund' crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/commission/CommissionTriggerServiceImpl.java
+          grep -q 'RETAIL_REFUND' crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/promotion/JkPromotionEffectServiceImpl.java
+          grep -q 'visitorConversionRate' crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/promotion/JkPromotionEffectServiceImpl.java
+          grep -q "component LIKE '/operation/jzk/group/%'" sql/jiuzhoukang/fix/jk_v31_phase3_menu_permission_patch.sql
+          grep -q 'c.id IS NULL' sql/jiuzhoukang/fix/jk_v31_phase3_menu_permission_patch.sql
       - name: Enforce real business closure markers
         shell: bash
         run: |
