@@ -17,6 +17,8 @@ public class JkUserContext implements Serializable {
     private String freezeReason;
     private String regionCode;
     private Long belongCountyAgentId;
+    /** 入口授权独立于业务身份；普通新用户默认不可见。 */
+    private Boolean entryAccess;
     private List<String> roles = new ArrayList<>();
     private List<String> permissions = new ArrayList<>();
     private List<JkUserDataScope> dataScopes = new ArrayList<>();

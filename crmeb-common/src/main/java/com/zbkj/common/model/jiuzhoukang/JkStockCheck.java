@@ -8,6 +8,7 @@ import lombok.Data;
 import lombok.experimental.Accessors;
 
 import java.io.Serializable;
+import java.math.BigDecimal;
 import java.util.Date;
 import java.util.List;
 
@@ -20,24 +21,26 @@ public class JkStockCheck implements Serializable {
     private String requestNo;
     private Long stockAccountId;
     private Long ownerUserId;
-    private String scopeType;
+    private String ownerRoleCode;
+    private String regionCode;
+    private String checkType;
     private String status;
-    private String freezeStatus;
-    private Integer bookTotalQty;
-    private Integer actualTotalQty;
-    private Integer profitQty;
-    private Integer lossQty;
+    private Date snapshotTime;
+    private Date submittedAt;
     private Long auditUserId;
     private Date auditTime;
     private String auditRemark;
-    private String adjustActionKey;
-    private Date completedTime;
+    private Integer differenceQuantity;
+    private BigDecimal differenceAmount;
     private Boolean isDeleted;
     private Long createUserId;
     private Long updateUserId;
     private Date createTime;
     private Date updateTime;
-
+    private Integer version;
+    @TableField(exist = false) private String ownerName;
+    @TableField(exist = false) private String statusText;
+    @TableField(exist = false) private String statusTag;
     @TableField(exist = false) private List<JkStockCheckItem> items;
-    @TableField(exist = false) private List<JkStockCheckAuditLog> auditLogs;
+    @TableField(exist = false) private List<JkStockCheckLog> logs;
 }

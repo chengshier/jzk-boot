@@ -1,13 +1,13 @@
 package com.zbkj.admin.controller.jiuzhoukang;
 
 import com.zbkj.common.constants.jiuzhoukang.JkPermissionCodes;
+import com.zbkj.common.exception.CrmebException;
 import com.zbkj.common.model.jiuzhoukang.JkTradeReceiveException;
 import com.zbkj.common.page.CommonPage;
 import com.zbkj.common.request.PageParamRequest;
 import com.zbkj.common.request.jiuzhoukang.JkTradeReceiveExceptionHandleRequest;
 import com.zbkj.common.response.jiuzhoukang.JkTradeReceiveExceptionDetailResponse;
 import com.zbkj.common.result.CommonResult;
-import com.zbkj.service.service.impl.jiuzhoukang.trade.JkReceiveExceptionV2Service;
 import com.zbkj.service.service.jiuzhoukang.audit.JkAdminActorService;
 import com.zbkj.service.service.jiuzhoukang.trade.JkTradeReceiveExceptionService;
 import io.swagger.annotations.Api;
@@ -29,17 +29,18 @@ import org.springframework.web.bind.annotation.RestController;
 @Api(tags = "九州康异常收货处理")
 public class JkTradeReceiveExceptionAdminController {
     @Autowired private JkTradeReceiveExceptionService service;
-    @Autowired private JkReceiveExceptionV2Service v2Service;
     @Autowired private JkAdminActorService actor;
 
     @GetMapping("/list")
     @ApiOperation("异常收货列表")
     @PreAuthorize("hasAuthority('" + JkPermissionCodes.ADMIN_RECEIVE_EXCEPTION_LIST + "')")
-    public CommonResult<CommonPage<JkTradeReceiveException>> list(@RequestParam(required = false) String status,
-                                                                   @RequestParam(required = false) String businessType,
-                                                                   @RequestParam(required = false) Long receiverUserId,
-                                                                   PageParamRequest page) {
-        return CommonResult.success(CommonPage.restPage(service.listAdmin(status, businessType, receiverUserId, page)));
+    public CommonResult<CommonPage<JkTradeReceiveException>> list(
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String businessType,
+            @RequestParam(required = false) Long receiverUserId,
+            PageParamRequest page) {
+        return CommonResult.success(CommonPage.restPage(
+                service.listAdmin(status, businessType, receiverUserId, page)));
     }
 
     @GetMapping("/{id}")
@@ -50,14 +51,12 @@ public class JkTradeReceiveExceptionAdminController {
     }
 
     @PostMapping("/handle")
-    @ApiOperation("标记处理中、驳回，或提出 V2 处理方案")
+    @ApiOperation("标记处理中或驳回；完成必须使用异常收货V2分项方案")
     @PreAuthorize("hasAuthority('" + JkPermissionCodes.ADMIN_RECEIVE_EXCEPTION_HANDLE + "')")
-    public CommonResult<JkTradeReceiveExceptionDetailResponse> handle(@RequestBody @Validated JkTradeReceiveExceptionHandleRequest request) {
-        if ("RESOLVED".equals(request.getAction())) {
-            throw new IllegalArgumentException("V3.1 禁止直接标记处理完成，请使用 PROPOSE_RESOLUTION 提出处理方案");
-        }
-        if ("PROPOSE_RESOLUTION".equals(request.getAction())) {
-            return CommonResult.success(v2Service.propose(operatorId(), request));
+    public CommonResult<JkTradeReceiveExceptionDetailResponse> handle(
+            @RequestBody @Validated JkTradeReceiveExceptionHandleRequest request) {
+        if ("RESOLVED".equalsIgnoreCase(request.getAction())) {
+            throw new CrmebException("异常处理完成必须通过 V2 分 SKU 方案，旧接口禁止直接完成");
         }
         return CommonResult.success(service.handle(operatorId(), request));
     }
@@ -65,7 +64,9 @@ public class JkTradeReceiveExceptionAdminController {
     private Long operatorId() {
         Long linked = actor.getLinkedFrontUserId(actor.getCurrentAdmin());
         if (linked != null) return linked;
-        if (actor.isPlatformSuperAdmin(actor.getCurrentAdmin())) return -Long.valueOf(actor.getCurrentAdmin().getId());
+        if (actor.isPlatformSuperAdmin(actor.getCurrentAdmin())) {
+            return -Long.valueOf(actor.getCurrentAdmin().getId());
+        }
         throw new IllegalStateException("后台管理员未绑定业务用户");
     }
 }

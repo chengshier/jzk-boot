@@ -13,6 +13,9 @@ public interface RetailOrderAttributionService {
     /** 读取订单创建时快照；没有快照时不得使用当前关系兜底分佣。 */
     List<JkRetailOrderAttribution> listByOrder(Long orderId, String orderNo);
 
+    /** 订单最终完成后锁定创建时归属，之后只能走补偿调整，不能直接改写。 */
+    void lockByOrder(Long orderId, String orderNo);
+
     /** 按退款金额在仍可退款的明细实付基数之间分摊，并累计退款基数。 */
     List<RefundAllocation> allocateRefund(String orderNo, BigDecimal refundAmount, String requestNo);
 

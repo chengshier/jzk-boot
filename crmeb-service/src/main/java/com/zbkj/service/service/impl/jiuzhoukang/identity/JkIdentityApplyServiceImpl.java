@@ -11,10 +11,12 @@ import com.zbkj.common.exception.jiuzhoukang.JkBizException;
 import com.zbkj.common.model.jiuzhoukang.JkAuditLog;
 import com.zbkj.common.model.jiuzhoukang.JkBusinessRole;
 import com.zbkj.common.model.jiuzhoukang.JkIdentityApply;
+import com.zbkj.common.model.user.User;
 import com.zbkj.common.request.PageParamRequest;
 import com.zbkj.common.request.jiuzhoukang.JkIdentityApplyAuditRequest;
 import com.zbkj.common.request.jiuzhoukang.JkIdentityApplyRequest;
 import com.zbkj.common.request.jiuzhoukang.JkIdentityApplySearchRequest;
+import com.zbkj.common.request.jiuzhoukang.JkAgentRelationBindRequest;
 import com.zbkj.common.response.jiuzhoukang.JkIdentityApplyResponse;
 import com.zbkj.common.response.jiuzhoukang.JkIdentityApplyDetailResponse;
 import com.zbkj.common.response.jiuzhoukang.JkAuditLogResponse;
@@ -27,6 +29,8 @@ import com.zbkj.service.service.jiuzhoukang.identity.JkIdentityApplyService;
 import com.zbkj.service.service.jiuzhoukang.permission.JkBusinessRoleService;
 import com.zbkj.service.service.jiuzhoukang.permission.JkPermissionCacheVersionService;
 import com.zbkj.service.service.jiuzhoukang.scope.JkAdminDataScopeService;
+import com.zbkj.service.service.jiuzhoukang.region.JkAgentRelationService;
+import com.zbkj.service.service.UserService;
 import com.zbkj.service.service.jiuzhoukang.support.JkDisplayEnrichmentSupport;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -58,10 +62,18 @@ public class JkIdentityApplyServiceImpl extends ServiceImpl<JkIdentityApplyDao, 
     private JkDisplayEnrichmentSupport displayEnrichmentSupport;
     @Autowired
     private JkAdminDataScopeService adminDataScopeService;
+    @Autowired
+    private JkAgentRelationService agentRelationService;
+    @Autowired
+    private UserService userService;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public JkIdentityApplyResponse submitApply(Long userId, JkIdentityApplyRequest request) {
+        User user = userService.getById(userId.intValue());
+        if (user == null || !Boolean.TRUE.equals(user.getJkEntryAccess())) {
+            throw new JkBizException("请先由后台开通九州康入口或扫描业务二维码");
+        }
         validateFrontApplyRole(request.getApplyRoleCode());
         JkIdentityApply sameRequest = getOne(new LambdaQueryWrapper<JkIdentityApply>()
                 .eq(JkIdentityApply::getRequestNo, request.getRequestNo())
@@ -174,6 +186,7 @@ public class JkIdentityApplyServiceImpl extends ServiceImpl<JkIdentityApplyDao, 
             apply.setUpdateTime(DateUtil.date());
             updateById(apply);
             identityEffectiveService.effectiveIdentity(apply, adminId, adminName, request.getAuditRemark());
+            bindPromotionRelationAfterApproval(apply, adminId);
             permissionCacheVersionService.refreshUserCacheVersion(apply.getUserId(), JkBizConstants.CACHE_CHANGE_IDENTITY_STATUS, "identity pass", adminId);
             return true;
         }
@@ -218,6 +231,22 @@ public class JkIdentityApplyServiceImpl extends ServiceImpl<JkIdentityApplyDao, 
         if (role == null) {
             throw new JkBizException("该身份暂不支持前台申请");
         }
+    }
+
+    /**
+     * 推广码只把邀请人写入申请单；只有身份审核通过后，才允许形成正式上下级关系。
+     * 这与 CRMEB 登录阶段的 spreadPid/bindSpread 完全解耦。
+     */
+    private void bindPromotionRelationAfterApproval(JkIdentityApply apply, Long adminId) {
+        if (apply.getParentUserId() == null) return;
+        JkAgentRelationBindRequest relation = new JkAgentRelationBindRequest();
+        relation.setUserId(apply.getUserId());
+        relation.setParentUserId(apply.getParentUserId());
+        relation.setRelationType("DIRECT");
+        relation.setBindSource("JK_PROMOTION_APPROVED");
+        relation.setSourceCode(apply.getApplyNo());
+        relation.setChangeReason("九州康推广身份申请审核通过");
+        agentRelationService.bind(relation, adminId);
     }
 
     private String generateApplyNo() {

@@ -3,6 +3,7 @@ package com.zbkj.service.service.impl.jiuzhoukang.product;
 import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.zbkj.common.constants.Constants;
+import com.zbkj.common.constants.jiuzhoukang.JkBizConstants;
 import com.zbkj.common.exception.CrmebException;
 import com.zbkj.common.model.product.StoreProduct;
 import com.zbkj.common.model.product.StoreProductAttrValue;
@@ -53,6 +54,13 @@ public class ProductTradeViewServiceImpl implements ProductTradeViewService {
         response.setStock(stockVisibilityService.resolveStock(productId, selectedSku == null ? null : selectedSku.getId(), context, tradeIdentity));
 
         JkTradeViewSupport.ActionFlags actionFlags = JkTradeViewSupport.resolveActionFlags(tradeIdentity, context == null ? null : context.getPermissions());
+        if (actionFlags.getCanOrderFromPlatform()
+                && response.getStock() != null
+                && JkBizConstants.STOCK_SOURCE_PLATFORM_ORDERABLE.equals(response.getStock().getSource())
+                && response.getStock().getVisibleQty() != null
+                && response.getStock().getVisibleQty() <= 0) {
+            actionFlags.setPlatformOrderDisabledReason("OUT_OF_STOCK");
+        }
         JkProductTradeViewResponse.ActionInfo actionInfo = new JkProductTradeViewResponse.ActionInfo();
         actionInfo.setCanRetailBuy(actionFlags.getCanRetailBuy());
         actionInfo.setCanApplyTransfer(actionFlags.getCanApplyTransfer());

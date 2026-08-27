@@ -1,0 +1,51 @@
+name: jk-v31-e-wire-promotion-completed
+on:
+  push:
+    branches: [feat/jzk-v3.1-phase3-operations]
+    paths: ['.github/workflows/jk-v31-e-wire-promotion-completed.yml']
+permissions:
+  contents: write
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/jzk-v3.1-phase3-operations
+          fetch-depth: 0
+      - name: Wire backend retail completed promotion event
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/commission/CommissionScenarioServiceImpl.java')
+          s=p.read_text(encoding='utf-8')
+          old='import com.zbkj.common.model.jiuzhoukang.JkCommissionRuleMatchLog;\n'
+          new=old+'import com.zbkj.common.model.jiuzhoukang.JkRetailOrderAttribution;\n'
+          if old not in s: raise SystemExit('model import anchor missing')
+          s=s.replace(old,new,1)
+          old='import com.zbkj.service.dao.jiuzhoukang.JkCommissionRuleMatchLogDao;\n'
+          new=old+'import com.zbkj.service.dao.jiuzhoukang.JkRetailOrderAttributionDao;\n'
+          if old not in s: raise SystemExit('dao import anchor missing')
+          s=s.replace(old,new,1)
+          old='import com.zbkj.service.service.jiuzhoukang.commission.JkCommissionLimitService;\n'
+          new=old+'import com.zbkj.service.service.jiuzhoukang.promotion.JkPromotionEffectService;\n'
+          if old not in s: raise SystemExit('service import anchor missing')
+          s=s.replace(old,new,1)
+          old='    @Autowired private JkCommissionLimitService limitService;\n'
+          new=old+'    @Autowired private JkRetailOrderAttributionDao attributionDao;\n    @Autowired private JkPromotionEffectService promotionEffectService;\n'
+          if old not in s: raise SystemExit('field anchor missing')
+          s=s.replace(old,new,1)
+          old='''        String eventKey = sourceType + ":" + (sourceItemId == null ? 0L : sourceItemId) + ":" + requestNo;\n        JkCommissionBusinessEvent event = eventDao.selectOne(new LambdaQueryWrapper<JkCommissionBusinessEvent>()\n'''
+          new='''        String eventKey = sourceType + ":" + (sourceItemId == null ? 0L : sourceItemId) + ":" + requestNo;\n        if ("RETAIL_ORDER".equals(sourceType) && sourceItemId != null\n                && request.getScenario() != null && request.getScenario().contains("COMPLETED")) {\n            JkRetailOrderAttribution attribution = attributionDao.selectOne(\n                    new LambdaQueryWrapper<JkRetailOrderAttribution>()\n                            .eq(JkRetailOrderAttribution::getOrderInfoId, sourceItemId)\n                            .eq(JkRetailOrderAttribution::getIsDeleted, false).last("limit 1"));\n            if (attribution != null) {\n                promotionEffectService.recordRetailCompleted(attribution, request.getBaseAmount(), request.getBusinessTime());\n            }\n        }\n        JkCommissionBusinessEvent event = eventDao.selectOne(new LambdaQueryWrapper<JkCommissionBusinessEvent>()\n'''
+          if old not in s: raise SystemExit('dispatch event anchor missing')
+          p.write_text(s.replace(old,new,1),encoding='utf-8')
+          PY
+      - name: Commit and remove workflow
+        run: |
+          rm -f .github/workflows/jk-v31-e-wire-promotion-completed.yml
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/commission/CommissionScenarioServiceImpl.java .github/workflows/jk-v31-e-wire-promotion-completed.yml
+          git commit -m 'feat(jzk-v3.1-e): 从零售完成归属快照记录推广成交效果'
+          git push origin HEAD:feat/jzk-v3.1-phase3-operations

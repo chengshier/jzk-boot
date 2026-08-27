@@ -1,6 +1,9 @@
 package com.zbkj.service.service.jiuzhoukang.region;
 
 import com.zbkj.common.model.jiuzhoukang.JkRegion;
+import com.baomidou.mybatisplus.core.MybatisConfiguration;
+import com.baomidou.mybatisplus.core.conditions.AbstractWrapper;
+import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
 import com.zbkj.common.request.jiuzhoukang.JkRegionSaveRequest;
 import com.zbkj.common.response.jiuzhoukang.JkRegionPathResponse;
 import com.zbkj.common.response.jiuzhoukang.JkRegionTreeNodeResponse;
@@ -21,7 +24,9 @@ import com.zbkj.service.dao.jiuzhoukang.JkUserBusinessRoleDao;
 import com.zbkj.service.dao.jiuzhoukang.JkUserDataScopeDao;
 import com.zbkj.service.service.impl.jiuzhoukang.region.JkRegionServiceImpl;
 import org.junit.Assert;
+import org.junit.BeforeClass;
 import org.junit.Test;
+import org.apache.ibatis.builder.MapperBuilderAssistant;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.lang.reflect.Method;
@@ -29,12 +34,20 @@ import java.lang.reflect.Proxy;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.stream.Collectors;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class JkRegionServiceImplTest {
+
+    @BeforeClass
+    public static void initializeLambdaCache() {
+        TableInfoHelper.initTableInfo(new MapperBuilderAssistant(new MybatisConfiguration(), ""), JkRegion.class);
+    }
 
     @Test
     public void listsOnlyDirectChildrenAndCalculatesChildSummary() {
@@ -106,6 +119,9 @@ public class JkRegionServiceImplTest {
             if ("selectById".equals(name)) {
                 return Long.valueOf(3L).equals(args[0]) ? existing : null;
             }
+            if ("selectCount".equals(name)) {
+                return Integer.valueOf(findList((com.baomidou.mybatisplus.core.conditions.Wrapper<JkRegion>) args[0], regions).size());
+            }
             if ("selectOne".equals(name)) {
                 return findOne((com.baomidou.mybatisplus.core.conditions.Wrapper<JkRegion>) args[0], regions);
             }
@@ -122,8 +138,8 @@ public class JkRegionServiceImplTest {
             }
             return null;
         }));
-        ReflectionTestUtils.setField(service, "userBusinessRoleDao", countDao(JkUserBusinessRoleDao.class, 1L));
         wireZeroUsageDaos(service);
+        ReflectionTestUtils.setField(service, "userBusinessRoleDao", countDao(JkUserBusinessRoleDao.class, 1L));
 
         JkRegionSaveRequest request = new JkRegionSaveRequest();
         request.setId(3L);
@@ -159,6 +175,9 @@ public class JkRegionServiceImplTest {
                     }
                 }
                 return null;
+            }
+            if ("selectCount".equals(name)) {
+                return Integer.valueOf(findList((com.baomidou.mybatisplus.core.conditions.Wrapper<JkRegion>) args[0], regions).size());
             }
             if ("updateById".equals(name) || "insert".equals(name)) {
                 return 1;
@@ -207,9 +226,18 @@ public class JkRegionServiceImplTest {
         String sql = String.valueOf(wrapper.getSqlSegment());
         List<JkRegion> result = new ArrayList<JkRegion>();
         for (JkRegion region : source) {
-            if (matches(region, sql)) {
+            if (matches(region, wrapper, sql)) {
                 result.add(region);
             }
+        }
+        if (sql.contains("ORDER BY")) {
+            Collections.sort(result, new Comparator<JkRegion>() {
+                @Override
+                public int compare(JkRegion left, JkRegion right) {
+                    int levelCompare = left.getRegionLevel().compareTo(right.getRegionLevel());
+                    return levelCompare != 0 ? levelCompare : left.getRegionCode().compareTo(right.getRegionCode());
+                }
+            });
         }
         return result;
     }
@@ -219,7 +247,7 @@ public class JkRegionServiceImplTest {
         return rows.isEmpty() ? null : rows.get(0);
     }
 
-    private boolean matches(JkRegion region, String sql) {
+    private boolean matches(JkRegion region, com.baomidou.mybatisplus.core.conditions.Wrapper<JkRegion> wrapper, String sql) {
         if (sql == null) {
             return true;
         }
@@ -239,37 +267,35 @@ public class JkRegionServiceImplTest {
         if (sql.contains("region_level = ?") && !sql.contains(String.valueOf(region.getRegionLevel()))) {
             return false;
         }
-        List<Object> params = wrapperParams(sql);
-        if (sql.contains("parent_region_code = ?")) {
-            String parentCode = String.valueOf(params.get(0));
+        Object parentParameter = parameterFor(wrapper, sql, "parent_region_code");
+        if (parentParameter != null) {
+            String parentCode = String.valueOf(parentParameter);
             if (!parentCode.equals(region.getParentRegionCode())) {
                 return false;
             }
         }
+        Object regionCodeParameter = parameterFor(wrapper, sql, "region_code");
+        if (regionCodeParameter != null && !String.valueOf(regionCodeParameter).equals(region.getRegionCode())) {
+            return false;
+        }
         return true;
     }
 
-    private List<Object> wrapperParams(String sql) {
-        List<Object> params = new ArrayList<Object>();
-        int idx = sql.indexOf('{');
-        while (idx >= 0) {
-            int end = sql.indexOf('}', idx);
-            if (end < 0) {
-                break;
-            }
-            String token = sql.substring(idx + 1, end);
-            int eq = token.indexOf('=');
-            if (eq > -1) {
-                params.add(token.substring(eq + 1));
-            }
-            idx = sql.indexOf('{', end + 1);
+    private Object parameterFor(com.baomidou.mybatisplus.core.conditions.Wrapper<JkRegion> wrapper, String sql, String column) {
+        Matcher matcher = Pattern.compile("(?<![a-z_])" + Pattern.quote(column) + "\\s*=\\s*#\\{ew\\.paramNameValuePairs\\.([A-Z0-9]+)\\}").matcher(sql);
+        if (!matcher.find() || !(wrapper instanceof AbstractWrapper)) {
+            return null;
         }
-        return params;
+        Map<String, Object> params = ((AbstractWrapper<?, ?, ?>) wrapper).getParamNameValuePairs();
+        return params.get(matcher.group(1));
     }
 
     private <T> T countDao(Class<T> type, Long count) {
         return proxy(type, (method, args) -> {
             if ("selectCount".equals(method.getName())) {
+                if (Integer.class.equals(method.getReturnType()) || Integer.TYPE.equals(method.getReturnType())) {
+                    return Integer.valueOf(count.intValue());
+                }
                 return count;
             }
             if ("selectList".equals(method.getName())) {

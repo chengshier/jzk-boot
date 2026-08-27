@@ -2,6 +2,8 @@ package com.zbkj.service.service.impl.jiuzhoukang.commission;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.IdWorker;
+import cn.hutool.json.JSONUtil;
+import cn.hutool.json.JSONObject;
 import com.zbkj.common.model.jiuzhoukang.JkCommissionMatchLog;
 import com.zbkj.common.model.jiuzhoukang.JkCommissionRecord;
 import com.zbkj.common.model.jiuzhoukang.JkCommissionRule;
@@ -12,6 +14,7 @@ import com.zbkj.service.dao.jiuzhoukang.JkCommissionRecordDao;
 import com.zbkj.service.dao.jiuzhoukang.JkCommissionRuleDao;
 import com.zbkj.service.service.jiuzhoukang.commission.CommissionAccountService;
 import com.zbkj.service.service.jiuzhoukang.commission.CommissionScenarioService;
+import com.zbkj.service.service.jiuzhoukang.commission.JkCommissionLimitService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
@@ -36,6 +39,7 @@ public class CommissionScenarioServiceImpl implements CommissionScenarioService 
     @Autowired private JkCommissionRecordDao recordDao;
     @Autowired private JkCommissionMatchLogDao matchLogDao;
     @Autowired private CommissionAccountService accountService;
+    @Autowired private JkCommissionLimitService limitService;
 
     @Override
     public List<JkCommissionRuleTrialResponse> trial(JkCommissionRuleTrialRequest request) {
@@ -69,11 +73,22 @@ public class CommissionScenarioServiceImpl implements CommissionScenarioService 
         for (JkCommissionRuleTrialResponse trial : trials) {
             writeMatchLog(eventKey + ":" + trial.getRuleId(), request, trial);
             if (!"MATCHED".equals(trial.getMatchStatus()) || money(trial.getCappedAmount()).signum() <= 0) continue;
-            hasPayableMatch = true;
             String actionKey = request.getSourceType() + ":" + request.getSourceItemId() + ":" + trial.getBeneficiaryUserId()
                     + ":" + trial.getRewardType() + ":" + trial.getRuleId() + ":" + trial.getRuleVersionNo();
             if (recordDao.selectOne(new LambdaQueryWrapper<JkCommissionRecord>()
                     .eq(JkCommissionRecord::getIdempotencyKey, actionKey).last("limit 1")) != null) continue;
+            JkCommissionRule matchedRule = ruleDao.selectById(trial.getRuleId());
+            JkCommissionLimitService.ReservationResult reservation = limitService.reserve(matchedRule,
+                    trial.getBeneficiaryUserId(), request.getBusinessTime(), trial.getCappedAmount(), "COMMISSION_LIMIT:" + actionKey);
+            BigDecimal approvedAmount = money(reservation.getApprovedAmount());
+            trial.getExplanations().add(reservation.getResultMessage());
+            if (approvedAmount.signum() <= 0) {
+                trial.setMatchStatus("LIMIT_EXHAUSTED").setReasonCode(reservation.getResultCode()).setCappedAmount(BigDecimal.ZERO);
+                writeMatchLog(eventKey + ":LIMIT:" + trial.getRuleId(), request, trial);
+                continue;
+            }
+            trial.setCappedAmount(approvedAmount);
+            hasPayableMatch = true;
             Date now = new Date();
             JkCommissionRecord record = new JkCommissionRecord().setCommissionNo("CM" + IdWorker.getIdStr())
                     .setSourceType(request.getSourceType()).setSourceId(request.getSourceId()).setSourceNo(sourceNo)
@@ -115,6 +130,8 @@ public class CommissionScenarioServiceImpl implements CommissionScenarioService 
         if (Boolean.TRUE.equals(rule.getRequiresRegisteredCustomer()) && !Boolean.TRUE.equals(request.getRegisteredCustomer())) return reject(response, "REGISTERED_CUSTOMER_REQUIRED", "规则要求注册客户");
         if (Boolean.TRUE.equals(rule.getRequiresVoucher()) && !Boolean.TRUE.equals(request.getVoucherPresent())) return reject(response, "VOUCHER_REQUIRED", "规则要求凭证");
         if (Boolean.TRUE.equals(rule.getRequiresAudit()) && !Boolean.TRUE.equals(request.getAudited())) return reject(response, "AUDIT_REQUIRED", "规则要求审核通过");
+        String scopeReject = scopeReject(rule, request);
+        if (scopeReject != null) return reject(response, "BUSINESS_SCOPE_NOT_MATCH", scopeReject);
         Long beneficiary = beneficiary(rule.getBeneficiaryType(), request);
         if (beneficiary == null) return reject(response, "BENEFICIARY_NOT_FOUND", "业务快照无法解析受益人");
         response.setBeneficiaryUserId(beneficiary).setBeneficiaryRoleCode(rule.getReceiverRoleCode());
@@ -163,6 +180,27 @@ public class CommissionScenarioServiceImpl implements CommissionScenarioService 
         if ("FIXED_PER_ORDER".equals(type)) return rule.getFixedAmount();
         if ("FIXED_PER_ITEM".equals(type)) return rule.getFixedAmount() == null ? null : rule.getFixedAmount().multiply(new BigDecimal(Math.max(1, request.getQuantity() == null ? 1 : request.getQuantity())));
         if ("FIXED_PER_QUANTITY".equals(type)) return rule.getUnitAmount() == null ? null : rule.getUnitAmount().multiply(new BigDecimal(Math.max(0, request.getQuantity() == null ? 0 : request.getQuantity())));
+        if ("TIER_PERCENT".equals(type)) return rule.getRate() == null ? null : base.multiply(rule.getRate()).divide(new BigDecimal("100"), 6, RoundingMode.HALF_UP);
+        return null;
+    }
+
+    private String scopeReject(JkCommissionRule rule, JkCommissionRuleTrialRequest request) {
+        if (!notBlank(rule.getScopeConfigJson())) return null;
+        try {
+            JSONObject scope = JSONUtil.parseObj(rule.getScopeConfigJson());
+            java.util.List<Integer> productIds = scope.getJSONArray("productIds") == null
+                    ? new java.util.ArrayList<Integer>()
+                    : JSONUtil.toList(scope.getJSONArray("productIds"), Integer.class);
+            if (!productIds.isEmpty() && (request.getProductId() == null || !productIds.contains(request.getProductId()))) return "商品不在规则适用范围";
+            java.util.List<String> regionCodes = scope.getJSONArray("regionCodes") == null
+                    ? new java.util.ArrayList<String>()
+                    : JSONUtil.toList(scope.getJSONArray("regionCodes"), String.class);
+            if (!regionCodes.isEmpty() && (request.getRegionCode() == null || !regionCodes.contains(request.getRegionCode()))) return "区域不在规则适用范围";
+            BigDecimal threshold = scope.getBigDecimal("performanceThreshold");
+            if (threshold != null && threshold.signum() > 0 && money(request.getBaseAmount()).compareTo(threshold) < 0) return "有效业绩未达到配置门槛";
+        } catch (Exception ex) {
+            return "规则业务范围快照无法解析";
+        }
         return null;
     }
 

@@ -1,0 +1,47 @@
+name: jk-v31-capture-backend-compile
+on:
+  push:
+    branches: [feat/jzk-v3.1-phase3-operations]
+    paths: ['.github/workflows/jk-v31-capture-backend-compile.yml']
+permissions:
+  contents: write
+jobs:
+  compile:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/jzk-v3.1-phase3-operations
+          fetch-depth: 0
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '8'
+          cache: maven
+      - name: Compile and capture result
+        shell: bash
+        run: |
+          set +e
+          mvn -B -ntp -DskipTests package > /tmp/jk-v31-compile.log 2>&1
+          code=$?
+          mkdir -p docs/jzk-v3.1-gapfix
+          {
+            echo "exit_code=$code"
+            echo "captured_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            echo '--- errors ---'
+            grep -n -E '\[ERROR\]|COMPILATION ERROR|BUILD FAILURE|BUILD SUCCESS' /tmp/jk-v31-compile.log | tail -n 220
+            echo '--- tail ---'
+            tail -n 120 /tmp/jk-v31-compile.log
+          } > docs/jzk-v3.1-gapfix/last-backend-compile-result.txt
+          exit 0
+      - name: Commit result and remove workflow
+        shell: bash
+        run: |
+          rm -f .github/workflows/jk-v31-capture-backend-compile.yml
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add docs/jzk-v3.1-gapfix/last-backend-compile-result.txt .github/workflows/jk-v31-capture-backend-compile.yml
+          git commit -m 'test(jzk-v3.1): 记录后端完整编译结果'
+          git push origin HEAD:feat/jzk-v3.1-phase3-operations

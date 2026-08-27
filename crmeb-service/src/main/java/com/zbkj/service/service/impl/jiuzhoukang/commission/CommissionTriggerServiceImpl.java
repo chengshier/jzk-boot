@@ -7,8 +7,8 @@ import com.zbkj.common.model.jiuzhoukang.JkCommissionAccount;
 import com.zbkj.common.model.jiuzhoukang.JkCommissionRecord;
 import com.zbkj.common.model.jiuzhoukang.JkCommissionReverse;
 import com.zbkj.common.model.jiuzhoukang.JkFundAccount;
-import com.zbkj.common.model.jiuzhoukang.JkPerformanceRecord;
 import com.zbkj.common.model.jiuzhoukang.JkOperationProfitRecord;
+import com.zbkj.common.model.jiuzhoukang.JkPerformanceRecord;
 import com.zbkj.common.model.jiuzhoukang.JkPlatformOrder;
 import com.zbkj.common.model.jiuzhoukang.JkPlatformOrderItem;
 import com.zbkj.common.model.jiuzhoukang.JkRetailOrderAttribution;
@@ -38,6 +38,7 @@ import com.zbkj.service.service.jiuzhoukang.commission.FundAccountService;
 import com.zbkj.service.service.jiuzhoukang.order.RetailOrderAttributionService;
 import com.zbkj.service.service.jiuzhoukang.performance.JkPerformanceService;
 import com.zbkj.service.service.jiuzhoukang.profit.JkOperationProfitService;
+import com.zbkj.service.service.jiuzhoukang.promotion.JkPromotionEffectService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
@@ -64,6 +65,7 @@ public class CommissionTriggerServiceImpl implements CommissionTriggerService {
     @Autowired private CommissionScenarioService scenarioService;
     @Autowired private JkPerformanceService performanceService;
     @Autowired private JkOperationProfitService profitService;
+    @Autowired private JkPromotionEffectService promotionEffectService;
     @Autowired private JkCommissionRecordDao recordDao;
     @Autowired private JkCommissionReverseDao reverseDao;
     @Autowired private JkCommissionAccountDao commissionAccountDao;
@@ -213,6 +215,9 @@ public class CommissionTriggerServiceImpl implements CommissionTriggerService {
         List<RetailOrderAttributionService.RefundAllocation> allocations = attributionService.allocateRefund(no, refundAmount, requestNo);
         for (RetailOrderAttributionService.RefundAllocation allocation : allocations) {
             JkRetailOrderAttribution attribution = allocation.getAttribution();
+            promotionEffectService.recordRetailRefund(attribution,
+                    allocation.getRefundBaseAmount(), allocation.getBeforeRefundedAmount(),
+                    requestNo, new Date());
             BigDecimal remainingBaseBefore = safe(attribution.getItemPaidAmount())
                     .subtract(safe(allocation.getBeforeRefundedAmount())).max(BigDecimal.ZERO);
             if (remainingBaseBefore.signum() <= 0) continue;
@@ -234,7 +239,7 @@ public class CommissionTriggerServiceImpl implements CommissionTriggerService {
             }
         }
         recordBusinessEvent("RETAIL_ORDER_REFUNDED", id, no, requestNo, "SUCCESS",
-                "退款已按下单快照冲正业绩和佣金，refundAmount=" + refundAmount);
+                "退款已按下单快照冲正业绩、佣金和推广净效果，refundAmount=" + refundAmount);
     }
 
     @Override

@@ -122,7 +122,7 @@ public class SysConfigConstants {
     public static final String CONFIG_RECHARGE_ATTENTION = "recharge_attention";
 
 
-    /** 图片上传类型 1本地 2七牛云 3OSS 4COS 5京东, 默认本地 */
+    /** 图片上传类型 1本地 2七牛云 3OSS 4COS 5京东 6MinIO, 默认本地 */
     public static final String CONFIG_UPLOAD_TYPE = "uploadType";
     /** 文件上传是否保存本地 */
     public static final String CONFIG_FILE_IS_SAVE = "file_is_save";
@@ -182,5 +182,20 @@ public class SysConfigConstants {
     public static final String CONFIG_JD_CLOUD_SIGNING_REGION = "jdSigningRegion";
     /** 京东云存储端点 */
     public static final String CONFIG_JD_CLOUD_ENDPOINT = "jdEndpoint";
+
+    /** MinIO 服务端点 */
+    public static final String CONFIG_MINIO_ENDPOINT = "minioEndpoint";
+    /** MinIO 存储桶 */
+    public static final String CONFIG_MINIO_BUCKET = "minioBucket";
+    /** MinIO Access Key */
+    public static final String CONFIG_MINIO_ACCESS_KEY = "minioAccessKey";
+    /** MinIO Secret Key */
+    public static final String CONFIG_MINIO_SECRET_KEY = "minioSecretKey";
+    /** MinIO S3 区域 */
+    public static final String CONFIG_MINIO_REGION = "minioRegion";
+    /** MinIO 对象键前缀 */
+    public static final String CONFIG_MINIO_PREFIX = "minioPrefix";
+    /** MinIO 公共/CDN 域名 */
+    public static final String CONFIG_MINIO_UPLOAD_URL = "minioUploadUrl";
 
 }

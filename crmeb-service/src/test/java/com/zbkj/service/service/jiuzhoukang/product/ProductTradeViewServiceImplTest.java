@@ -1,5 +1,6 @@
 package com.zbkj.service.service.jiuzhoukang.product;
 
+import com.zbkj.common.constants.jiuzhoukang.JkBizConstants;
 import com.zbkj.common.model.product.StoreProduct;
 import com.zbkj.common.model.product.StoreProductAttrValue;
 import com.zbkj.common.response.jiuzhoukang.JkProductTradeViewResponse;
@@ -16,6 +17,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.math.BigDecimal;
+import java.util.Arrays;
 import java.util.Collections;
 
 public class ProductTradeViewServiceImplTest {
@@ -52,6 +54,55 @@ public class ProductTradeViewServiceImplTest {
         Assert.assertEquals("大瓶装", response.getProduct().getSkuName());
         Assert.assertEquals("规格:大瓶装", response.getProduct().getSkuText());
         Assert.assertEquals("SKU202", response.getProduct().getSkuCode());
+    }
+
+    @Test
+    public void marksPlatformOrderOutOfStockForAuthorizedCountyAgent() {
+        ProductTradeViewServiceImpl service = tradeViewServiceWithStock(0);
+
+        JkProductTradeViewResponse response = service.getTradeView(101, "202", countyAgentContext());
+
+        Assert.assertTrue(response.getActions().getCanOrderFromPlatform());
+        Assert.assertEquals("OUT_OF_STOCK", response.getActions().getPlatformOrderDisabledReason());
+    }
+
+    @Test
+    public void keepsPlatformOrderAvailableWhenPlatformStockIsPositive() {
+        ProductTradeViewServiceImpl service = tradeViewServiceWithStock(1);
+
+        JkProductTradeViewResponse response = service.getTradeView(101, "202", countyAgentContext());
+
+        Assert.assertTrue(response.getActions().getCanOrderFromPlatform());
+        Assert.assertNull(response.getActions().getPlatformOrderDisabledReason());
+    }
+
+    private ProductTradeViewServiceImpl tradeViewServiceWithStock(int visibleQty) {
+        ProductTradeViewServiceImpl service = new ProductTradeViewServiceImpl();
+        ReflectionTestUtils.setField(service, "storeProductService", proxy(StoreProductService.class, (method, args) -> {
+            if ("getById".equals(method.getName())) return new StoreProduct().setId(101);
+            return null;
+        }));
+        ReflectionTestUtils.setField(service, "productAttrValueService", proxy(StoreProductAttrValueService.class, (method, args) -> {
+            if ("getListByProductIdAndType".equals(method.getName())) {
+                return Collections.singletonList(new StoreProductAttrValue().setId(202).setUnique("SKU202").setStock(20));
+            }
+            return Collections.emptyList();
+        }));
+        ReflectionTestUtils.setField(service, "priceCalculateService", proxy(PriceCalculateService.class, (method, args) -> new JkProductTradeViewResponse.PriceInfo()));
+        ReflectionTestUtils.setField(service, "stockVisibilityService", proxy(StockVisibilityService.class, (method, args) -> {
+            JkProductTradeViewResponse.StockInfo stockInfo = new JkProductTradeViewResponse.StockInfo();
+            stockInfo.setSource(JkBizConstants.STOCK_SOURCE_PLATFORM_ORDERABLE);
+            stockInfo.setVisibleQty(visibleQty);
+            return stockInfo;
+        }));
+        return service;
+    }
+
+    private JkUserContext countyAgentContext() {
+        JkUserContext context = new JkUserContext();
+        context.setPrimaryRoleCode(JkBizConstants.ROLE_COUNTY_AGENT);
+        context.setPermissions(Arrays.asList(JkBizConstants.PERMISSION_STOCK_PLATFORM_ORDER));
+        return context;
     }
 
     private <T> T proxy(Class<T> type, Invocation invocation) {

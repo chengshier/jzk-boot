@@ -34,8 +34,11 @@ import com.zbkj.common.vo.StoreOrderInfoOldVo;
 import com.zbkj.common.vo.DateLimitUtilVo;
 import com.zbkj.service.dao.StoreProductReplyDao;
 import com.zbkj.service.service.*;
+import com.zbkj.service.service.jiuzhoukang.commission.RetailOrderCommissionAdapter;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -63,6 +66,8 @@ import java.util.stream.Collectors;
 public class StoreProductReplyServiceImpl extends ServiceImpl<StoreProductReplyDao, StoreProductReply>
         implements StoreProductReplyService {
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(StoreProductReplyServiceImpl.class);
+
     @Resource
     private StoreProductReplyDao dao;
 
@@ -86,6 +91,9 @@ public class StoreProductReplyServiceImpl extends ServiceImpl<StoreProductReplyD
 
     @Autowired
     private TransactionTemplate transactionTemplate;
+
+    @Autowired
+    private RetailOrderCommissionAdapter retailOrderCommissionAdapter;
 
 
     /**
@@ -473,6 +481,11 @@ public class StoreProductReplyServiceImpl extends ServiceImpl<StoreProductReplyD
             storeOrder.setStatus(Constants.ORDER_STATUS_INT_COMPLETE);
             storeOrder.setUpdateTime(DateUtil.date());
             storeOrderService.updateById(storeOrder);
+            try {
+                retailOrderCommissionAdapter.afterCrmebOrderCompleted(storeOrder);
+            } catch (Exception commissionException) {
+                LOGGER.error("九州康零售订单完成后分佣触发失败，orderId={}", storeOrder.getId(), commissionException);
+            }
             redisUtil.lPush(Constants.ORDER_TASK_REDIS_KEY_AFTER_COMPLETE_BY_USER, storeOrder.getId());
         }
     }

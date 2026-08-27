@@ -6,6 +6,7 @@ import com.zbkj.common.request.PageParamRequest;
 import com.zbkj.common.request.jiuzhoukang.*;
 import com.zbkj.common.response.jiuzhoukang.*;
 import java.util.List;
+import javax.servlet.http.HttpServletResponse;
 
 /**
  * 第五阶段健康数据业务总入口。
@@ -16,6 +17,19 @@ import java.util.List;
 public interface JkHealthService {
     /** 汇总本人最近血糖、今日记录、预警和设备数量。 */
     JkHealthDashboardResponse dashboard(Long userId);
+
+    /** 三诺授权、设备监测和首条血糖同步状态。 */
+    JkSinocareDeviceStatusResponse deviceStatus(Long userId);
+
+    /** 指定时间范围内的血糖曲线及汇总值。 */
+    JkGlucoseTrendResponse glucoseTrend(Long userId, java.util.Date startAt, java.util.Date endAt);
+
+    List<JkSinocareReportResponse> sinocareReports(Long userId, String reportType);
+
+    JkSinocareReportResponse sinocareReport(Long userId, Long reportId);
+
+    /** 校验授权归属后将第三方 PDF 报告以文件流透传给前端（不暴露第三方地址）。 */
+    void downloadSinocareReportFile(Long userId, Long reportId, HttpServletResponse response);
 
     /** 保存本人健康档案；敏感备注由实现层加密后落库。 */
     JkHealthProfile saveProfile(Long userId, JkHealthProfileSaveRequest request);

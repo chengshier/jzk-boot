@@ -26,6 +26,7 @@ public class RetailOrderCommissionAdapter {
 
     public void afterCrmebOrderCompleted(StoreOrder order) {
         if (order == null || order.getId() == null || order.getOrderId() == null) return;
+        attributionService.lockByOrder(order.getId().longValue(), order.getOrderId());
         List<JkRetailOrderAttribution> snapshots = attributionService.listByOrder(order.getId().longValue(), order.getOrderId());
         if (snapshots == null || snapshots.isEmpty()) {
             LOGGER.error("九州康零售订单缺少下单归属快照，已停止分佣以避免错归属，orderId={}, orderNo={}", order.getId(), order.getOrderId());

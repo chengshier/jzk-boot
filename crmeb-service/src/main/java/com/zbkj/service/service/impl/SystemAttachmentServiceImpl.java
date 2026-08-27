@@ -1,6 +1,9 @@
 package com.zbkj.service.service.impl;
 
 import cn.hutool.core.date.DateUtil;
+import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.JSONArray;
+import com.alibaba.fastjson.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
@@ -86,12 +89,14 @@ public class SystemAttachmentServiceImpl extends ServiceImpl<SystemAttachmentDao
      */
     @Override
     public String prefixImage(String path) {
+        if (isMinioUploadType()) return prefixMinioJson(path, UploadConstants.UPLOAD_FILE_KEYWORD + "/");
         // 如果那些域名不需要加，则跳过
         return path.replace(UploadConstants.UPLOAD_FILE_KEYWORD+"/", getCdnUrl() + "/"+ UploadConstants.UPLOAD_FILE_KEYWORD+"/");
     }
 
     @Override
     public String prefixUploadf(String path) {
+        if (isMinioUploadType()) return prefixMinioJson(path, "crmebimage/" + UploadConstants.UPLOAD_AFTER_FILE_KEYWORD + "/");
         // 如果那些域名不需要加，则跳过
         return path.replace("crmebimage/" + UploadConstants.UPLOAD_AFTER_FILE_KEYWORD+"/", getCdnUrl() + "/" +"crmebimage/" + UploadConstants.UPLOAD_AFTER_FILE_KEYWORD+"/");
     }
@@ -103,6 +108,7 @@ public class SystemAttachmentServiceImpl extends ServiceImpl<SystemAttachmentDao
      */
     @Override
     public String prefixFile(String path) {
+        if (isMinioUploadType()) return prefixMinioJson(path, "crmebimage/file/");
         if (path.contains(Constants.WECHAT_SOURCE_CODE_FILE_NAME)) {
             String cdnUrl = systemConfigService.getValueByKey("local" + "UploadUrl");
             return path.replace("crmebimage/", cdnUrl + "/crmebimage/");
@@ -112,6 +118,50 @@ public class SystemAttachmentServiceImpl extends ServiceImpl<SystemAttachmentDao
             return path.replace("crmebimage/downloadf/", cdnUrl + "/crmebimage/downloadf/");
         }
         return path.replace("crmebimage/file/", getCdnUrl() + "/crmebimage/file/");
+    }
+
+    private boolean isMinioUploadType() {
+        return "6".equals(systemConfigService.getValueByKeyException(SysConfigConstants.CONFIG_UPLOAD_TYPE));
+    }
+
+    private String prefixMinioJson(String path, String marker) {
+        if (!path.contains("\"")) return joinCdnPath(path);
+        try {
+            Object value = JSON.parse(path);
+            rewriteMinioValues(value, marker);
+            return JSON.toJSONString(value);
+        } catch (Exception ignored) {
+            return path;
+        }
+    }
+
+    private void rewriteMinioValues(Object value, String marker) {
+        if (value instanceof JSONObject) {
+            JSONObject object = (JSONObject) value;
+            for (String key : object.keySet()) {
+                Object child = object.get(key);
+                if (child instanceof String && isMinioObjectKey((String) child, marker)) object.put(key, joinCdnPath((String) child));
+                else rewriteMinioValues(child, marker);
+            }
+            return;
+        }
+        if (value instanceof JSONArray) {
+            JSONArray array = (JSONArray) value;
+            for (int i = 0; i < array.size(); i++) {
+                Object child = array.get(i);
+                if (child instanceof String && isMinioObjectKey((String) child, marker)) array.set(i, joinCdnPath((String) child));
+                else rewriteMinioValues(child, marker);
+            }
+        }
+    }
+
+    private boolean isMinioObjectKey(String value, String marker) {
+        return value.indexOf(marker) >= 0 && !value.startsWith("http://") && !value.startsWith("https://")
+                && value.indexOf(' ') < 0 && value.indexOf('"') < 0 && value.indexOf('\\') < 0;
+    }
+
+    private String joinCdnPath(String path) {
+        return StringUtils.removeEnd(getCdnUrl(), "/") + "/" + StringUtils.removeStart(path, "/");
     }
 
     /**
@@ -193,6 +243,9 @@ public class SystemAttachmentServiceImpl extends ServiceImpl<SystemAttachmentDao
                 break;
             case 5:
                 uploadUrl = SysConfigConstants.CONFIG_JD_UPLOAD_URL;
+                break;
+            case 6:
+                uploadUrl = SysConfigConstants.CONFIG_MINIO_UPLOAD_URL;
                 break;
             default:
                 break;

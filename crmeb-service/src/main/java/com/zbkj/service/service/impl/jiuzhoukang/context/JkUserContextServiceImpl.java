@@ -13,6 +13,7 @@ import com.zbkj.common.model.jiuzhoukang.JkIdentityApply;
 import com.zbkj.common.model.jiuzhoukang.JkUserBusinessRole;
 import com.zbkj.common.model.jiuzhoukang.JkUserDataScope;
 import com.zbkj.common.model.system.SystemAdmin;
+import com.zbkj.common.model.user.User;
 import com.zbkj.common.token.FrontTokenComponent;
 import com.zbkj.common.utils.RedisUtil;
 import com.zbkj.service.service.jiuzhoukang.audit.JkAdminActorService;
@@ -24,6 +25,7 @@ import com.zbkj.service.service.jiuzhoukang.permission.JkBusinessRoleService;
 import com.zbkj.service.service.jiuzhoukang.permission.JkPermissionCacheVersionService;
 import com.zbkj.service.service.jiuzhoukang.scope.JkUserDataScopeService;
 import com.zbkj.service.service.jiuzhoukang.support.JkPermissionContextSupport;
+import com.zbkj.service.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.context.request.RequestContextHolder;
@@ -62,6 +64,8 @@ public class JkUserContextServiceImpl implements JkUserContextService {
     private JkAdminActorService adminActorService;
     @Autowired
     private JkIdentityApplyService identityApplyService;
+    @Autowired
+    private UserService userService;
 
     @Override
     public JkUserContext getFrontContext(Long userId) {
@@ -141,6 +145,9 @@ public class JkUserContextServiceImpl implements JkUserContextService {
     private JkUserContext buildContext(Long userId) {
         JkUserContext context = new JkUserContext();
         context.setUserId(userId);
+        User user = userService.getById(userId.intValue());
+        // 已生效业务身份天然保留入口；普通用户必须由后台或固定入口码显式开通。
+        context.setEntryAccess(user != null && Boolean.TRUE.equals(user.getJkEntryAccess()));
         List<JkUserBusinessRole> roleBindings = userBusinessRoleService.getUserRoles(userId);
         List<JkBusinessRole> enabledRoles = businessRoleService.getEnabledRoleList();
         Map<String, JkBusinessRole> enabledRoleMap = enabledRoles.stream()
@@ -160,6 +167,7 @@ public class JkUserContextServiceImpl implements JkUserContextService {
         context.setCanApplyRoles(resolveCanApplyRoles(userId, enabledRoles, roleBindings));
 
         if (!effectiveRoleBindings.isEmpty()) {
+            context.setEntryAccess(true);
             JkUserBusinessRole primary = effectiveRoleBindings.get(0);
             context.setPrimaryRoleCode(primary.getRoleCode());
             context.setPrimaryRoleName(roleName(primary.getRoleCode(), enabledRoleMap));
@@ -228,10 +236,31 @@ public class JkUserContextServiceImpl implements JkUserContextService {
         context.setFreezeStatus(false);
         context.setRoles(Collections.singletonList(JkBizConstants.ROLE_NORMAL_USER));
         List<String> permissions = new ArrayList<>();
-        permissions.add("identity.apply.submit");
-        permissions.add(JkBizPermissionCodes.PRODUCT_TRADE_VIEW);
+        JkBusinessRole normalUser = enabledRoleMap.get(JkBizConstants.ROLE_NORMAL_USER);
+        if (normalUser != null) {
+            permissions.addAll(businessRoleService.getPermissionCodes(normalUser.getId()));
+        }
+        if (!permissions.contains("identity.apply.submit")) {
+            permissions.add("identity.apply.submit");
+        }
+        if (!permissions.contains(JkBizPermissionCodes.PRODUCT_TRADE_VIEW)) {
+            permissions.add(JkBizPermissionCodes.PRODUCT_TRADE_VIEW);
+        }
         context.setPermissions(permissions);
-        context.setDataScopes(Collections.emptyList());
+        // 已登录普通用户（无业务角色绑定，走匿名兜底）也应有 SELF 数据范围，否则会被 @JkBizPermission(checkDataScope=true) 拦在"无数据范围权限"。
+        // 不落库：SELF 是登录用户的天然权利，随上下文缓存即可；匿名用户（userId<=0）保持空列表。
+        Long uid = context.getUserId();
+        if (uid != null && uid > 0) {
+            JkUserDataScope selfScope = new JkUserDataScope();
+            selfScope.setUserId(uid);
+            selfScope.setScopeType(JkBizConstants.SCOPE_SELF);
+            selfScope.setEnabled(true);
+            selfScope.setStatus(true);
+            selfScope.setIsDeleted(false);
+            context.setDataScopes(Collections.singletonList(selfScope));
+        } else {
+            context.setDataScopes(Collections.emptyList());
+        }
         context.setCanApplyRoles(JkPermissionContextSupport.resolveFrontApplyRoleCodes(enabledRoles));
         JkPermissionContextSupport.IdentityVisualState visualState =
                 JkPermissionContextSupport.resolveIdentityVisualState("普通用户", JkBizConstants.AUDIT_STATUS_EFFECTIVE, false, null);

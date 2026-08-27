@@ -146,7 +146,7 @@ public class JkAgentRelationServiceImpl implements JkAgentRelationService {
         assertNoCycle(request.getUserId(), request.getParentUserId());
         quotaService.occupy(request.getParentUserId(), request.getUserId(), operatorId);
         JkAgentRelation created = createRelation(request, null, operatorId);
-        updateSpreadUid(request.getUserId(), request.getParentUserId());
+        // 九州康关系以 jk_agent_relation 为唯一事实来源，不能再回写 CRMEB spreadUid。
         quotaService.syncUsage(request.getParentUserId(), operatorId);
         saveAudit(created, "INITIAL_BIND", null, request.getParentUserId(), request.getChangeReason(), operatorId);
         refresh(request.getUserId(), "首次绑定上下级关系", operatorId);
@@ -167,7 +167,7 @@ public class JkAgentRelationServiceImpl implements JkAgentRelationService {
         quotaService.consume(reservationRequestNo, request.getParentUserId(), request.getUserId(), operatorId);
         Long oldParentUserId = current.getParentUserId();
         JkAgentRelation created = replaceCurrent(current, request, operatorId);
-        updateSpreadUid(request.getUserId(), request.getParentUserId());
+        // 换绑同样只维护九州康关系，避免重新启用 CRMEB 推广链路。
         quotaService.syncUsage(oldParentUserId, operatorId);
         quotaService.syncUsage(request.getParentUserId(), operatorId);
         saveAudit(created, "CHANGE_APPROVED", oldParentUserId, request.getParentUserId(), request.getChangeReason(), operatorId);
@@ -199,7 +199,7 @@ public class JkAgentRelationServiceImpl implements JkAgentRelationService {
         quotaService.occupy(request.getParentUserId(), request.getUserId(), operatorId);
         Long oldParentUserId = current == null ? null : current.getParentUserId();
         JkAgentRelation created = current == null ? createRelation(bind, null, operatorId) : replaceCurrent(current, bind, operatorId);
-        updateSpreadUid(request.getUserId(), request.getParentUserId());
+        // 管理员调整不与 CRMEB 分销字段耦合。
         quotaService.syncUsage(oldParentUserId, operatorId);
         quotaService.syncUsage(request.getParentUserId(), operatorId);
         saveAudit(created, "ADMIN_FORCE_ADJUST", oldParentUserId, request.getParentUserId(), request.getReason(), operatorId);
@@ -219,7 +219,7 @@ public class JkAgentRelationServiceImpl implements JkAgentRelationService {
         entity.setStatus(false).setExpireTime(now).setChangeReason(reason.trim()).setUpdateUserId(operatorId).setUpdateTime(now);
         int result = relationDao.updateById(entity);
         if (result != 1) throw new IllegalStateException("关系状态已变化，请刷新后重试");
-        updateSpreadUid(entity.getUserId(), null);
+        // 作废九州康关系不触碰 CRMEB spreadUid。
         quotaService.syncUsage(oldParentUserId, operatorId);
         saveAudit(entity, "INVALIDATE", oldParentUserId, null, reason, operatorId);
         refresh(entity.getUserId(), "上下级关系失效", operatorId);
@@ -260,13 +260,6 @@ public class JkAgentRelationServiceImpl implements JkAgentRelationService {
                 .setCreateTime(now).setUpdateTime(now).setTenantId("000000");
         relationDao.insert(entity);
         return entity;
-    }
-
-    private void updateSpreadUid(Long userId, Long parentUserId) {
-        User user = userService.getById(userId.intValue());
-        if (user == null) throw new IllegalArgumentException("下级用户不存在");
-        user.setSpreadUid(parentUserId == null ? 0 : Math.toIntExact(parentUserId));
-        if (!userService.updateById(user)) throw new IllegalStateException("CRMEB 上下级关系同步失败，关系调整已回滚");
     }
 
     private void saveAudit(JkAgentRelation relation, String action, Long oldParentUserId, Long newParentUserId,

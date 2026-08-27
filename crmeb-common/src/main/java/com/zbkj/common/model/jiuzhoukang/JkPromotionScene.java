@@ -13,17 +13,15 @@ import java.util.Date;
 @Accessors(chain = true)
 @TableName("jk_promotion_scene")
 public class JkPromotionScene implements Serializable {
-    @TableId(value = "id", type = IdType.AUTO) private Long id;
+    @TableId(value="id",type=IdType.AUTO) private Long id;
     private String sceneCode;
-    private Long promoterUserId;
-    private String promoterRoleCode;
-    private String regionCode;
+    private String sceneName;
     private String pagePath;
-    private String sceneValue;
-    private String objectKey;
-    private String status;
-    private String disabledReason;
-    private Date expireTime;
+    private String roleCodes;
+    private String sceneTemplate;
+    private Integer versionNo;
+    private Boolean status;
+    private String remark;
     private Boolean isDeleted;
     private Date createTime;
     private Date updateTime;

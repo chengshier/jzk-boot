@@ -43,6 +43,9 @@ public class JkHealthAdminServiceImpl implements JkHealthAdminService {
     @Value("${jk.health.sync-auto-retry-enabled:false}") private boolean syncAutoRetryEnabled;
     @Value("${jk.health.retention-days:0}") private int retentionDays;
     @Value("${jk.health.archive-enabled:false}") private boolean archiveEnabled;
+    @Value("${jk.health.sinocare.app-id:}") private String sinocareAppId;
+    @Value("${jk.health.sinocare.authorization-h5-url:}") private String sinocareAuthorizationH5Url;
+    @Value("${jk.health.sinocare.public-key:}") private String sinocarePublicKey;
 
 
     @Override
@@ -151,6 +154,9 @@ public class JkHealthAdminServiceImpl implements JkHealthAdminService {
         r.setSyncAutoRetryEnabled(syncAutoRetryEnabled);
         r.setRetentionDays(retentionDays);
         r.setArchiveEnabled(archiveEnabled);
+        r.setSinocareAppIdConfigured(StrUtil.isNotBlank(sinocareAppId));
+        r.setSinocareAuthorizationH5UrlConfigured(StrUtil.isNotBlank(sinocareAuthorizationH5Url));
+        r.setSinocarePublicKeyConfigured(StrUtil.isNotBlank(sinocarePublicKey));
         r.setCallbackPath("/api/front/jk/health/device/callback");
         r.setSecurityTip("生产环境必须配置回调密钥和健康数据加密密钥；本页永不回显密钥明文。");
         return r;

@@ -1,0 +1,85 @@
+name: JZK V3.1 gapfix guards
+
+on:
+  push:
+    branches: [feat/jzk-v3.1-phase3-operations]
+  pull_request:
+    branches: [master]
+  workflow_dispatch:
+
+concurrency:
+  group: jk-v31-gapfix-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  prohibited-patterns:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate V3.1 SQL against real schema
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import pathlib
+          import re
+
+          failures = []
+          for path in pathlib.Path('sql/jiuzhoukang/v3.1-gapfix').glob('*.sql'):
+              text = path.read_text(encoding='utf-8')
+              # 预检查脚本允许提及旧字段；仅禁止 INSERT/UPDATE 等真实写入继续使用错误列。
+              code = re.sub(r'--.*?$', '', text, flags=re.M)
+              statements = [part.strip() for part in code.split(';') if part.strip()]
+              for statement in statements:
+                  compact = re.sub(r'\s+', ' ', statement)
+                  if re.search(r'(?is)\b(?:INSERT\s+INTO|UPDATE)\s+eb_system_menu\b.*?\b(?:path|is_del)\b', compact):
+                      failures.append(f'{path}: eb_system_menu write uses path/is_del')
+                  if re.search(r'(?is)\bINSERT\s+INTO\s+jk_business_permission\b\s*\([^)]*\bparent_code\b', compact):
+                      failures.append(f'{path}: jk_business_permission insert uses parent_code')
+          if failures:
+              raise SystemExit('\n'.join(failures))
+          PY
+          if grep -R -n -E 'jk_user_region_profile|用户服务区域' sql/jiuzhoukang/v3.1-gapfix crmeb-*; then
+            echo 'Do not create an independent user service-region table/page' >&2; exit 1
+          fi
+      - name: Enforce disabled and valid commission templates
+        shell: bash
+        run: |
+          set -euo pipefail
+          if grep -R -n --include='*.sql' -E "template_code[^;]*(status[^;]*=[[:space:]]*1|PUBLISHED)" sql/jiuzhoukang/v3.1-gapfix; then
+            echo 'No commission template may be enabled or published by seed SQL' >&2; exit 1
+          fi
+          grep -q 'rule.setStatus(false)' crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/commission/CommissionRuleServiceImpl.java
+          grep -q 'setPublishStatus("DRAFT")' crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/commission/CommissionRuleServiceImpl.java
+          grep -q '奖励数值必须大于 0' crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/commission/JkCommissionTemplateServiceImpl.java
+          grep -q 'totalBudget' crmeb-common/src/main/java/com/zbkj/common/request/jiuzhoukang/JkCommissionTemplateSaveRequest.java
+          grep -q '生效开始时间不能为空' crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/commission/CommissionRuleServiceImpl.java
+      - name: Enforce snapshot attribution and financial separation
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q 'RetailOrderAttribution' crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/commission/CommissionTriggerServiceImpl.java
+          grep -q 'PLATFORM_PAYABLE' crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/commission/CommissionRuleServiceImpl.java
+          if grep -R -n --include='*.java' 'setIncomeNature("OFFLINE_REALIZED")' crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/commission; then
+            echo 'OFFLINE_REALIZED must not be emitted by commission services' >&2; exit 1
+          fi
+          grep -q 'PENDING_COMPENSATION' crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/order/JkRetailAttributionAdminServiceImpl.java
+      - name: Enforce refund net effect and menu safety
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q 'recordRetailRefund' crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/commission/CommissionTriggerServiceImpl.java
+          grep -q 'RETAIL_REFUND' crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/promotion/JkPromotionEffectServiceImpl.java
+          grep -q 'visitorConversionRate' crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/promotion/JkPromotionEffectServiceImpl.java
+          grep -q "component LIKE '/operation/jzk/group/%'" sql/jiuzhoukang/fix/jk_v31_phase3_menu_permission_patch.sql
+          grep -q 'c.id IS NULL' sql/jiuzhoukang/fix/jk_v31_phase3_menu_permission_patch.sql
+      - name: Enforce real business closure markers
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q 'FOR UPDATE' crmeb-service/src/main/java/com/zbkj/service/dao/jiuzhoukang/JkCommissionLimitUsageDao.java
+          grep -q 'RETAIL_ORDER", "OFFLINE_SALE' crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/performance/JkPerformancePeriodServiceImpl.java
+          grep -q 'recordRetailCompleted' crmeb-service/src/main/java/com/zbkj/service/service/impl/jiuzhoukang/commission/CommissionScenarioServiceImpl.java
+          test -f sql/jiuzhoukang/v3.1-gapfix/00-jk-v31-schema-precheck.sql
+          test -f sql/jiuzhoukang/v3.1-gapfix/05-jk-v31-promotion-effect.sql
