@@ -86,8 +86,7 @@ public class JkOperationProfitServiceImpl implements JkOperationProfitService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void reverse(String sourceType, Long sourceId, Long sourceItemId, BigDecimal amount, String requestNo, String reason) {
-        LambdaQueryWrapper<JkOperationProfitRecord> query = sourceQuery(sourceType, sourceId, sourceItemId);
-        List<JkOperationProfitRecord> rows = recordDao.selectList(query);
+        List<JkOperationProfitRecord> rows = recordDao.selectList(sourceQuery(sourceType, sourceId, sourceItemId));
         BigDecimal total = totalRemaining(rows);
         BigDecimal target = amount == null ? total : amount.min(total).max(BigDecimal.ZERO);
         reverseRows(sourceType, sourceId, rows, total, target, requestNo, reason);
@@ -95,14 +94,15 @@ public class JkOperationProfitServiceImpl implements JkOperationProfitService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public void reverseByRatio(String sourceType, Long sourceId, Long sourceItemId, BigDecimal ratio, String requestNo, String reason) {
+    public BigDecimal reverseByRatio(String sourceType, Long sourceId, Long sourceItemId, BigDecimal ratio, String requestNo, String reason) {
         BigDecimal safeRatio = ratio == null ? BigDecimal.ONE : ratio.max(BigDecimal.ZERO).min(BigDecimal.ONE);
-        if (safeRatio.signum() <= 0) return;
+        if (safeRatio.signum() <= 0) return BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
         List<JkOperationProfitRecord> rows = recordDao.selectList(sourceQuery(sourceType, sourceId, sourceItemId));
         BigDecimal total = totalRemaining(rows);
-        if (total.signum() <= 0) return;
+        if (total.signum() <= 0) return BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
         BigDecimal target = total.multiply(safeRatio).setScale(2, RoundingMode.HALF_UP).min(total);
         reverseRows(sourceType, sourceId, rows, total, target, requestNo, reason);
+        return target;
     }
 
     private void reverseRows(String sourceType, Long sourceId, List<JkOperationProfitRecord> rows,
