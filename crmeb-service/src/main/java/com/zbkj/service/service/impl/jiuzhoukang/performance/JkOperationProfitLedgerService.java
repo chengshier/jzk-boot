@@ -1,19 +1,14 @@
 package com.zbkj.service.service.impl.jiuzhoukang.performance;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import com.github.pagehelper.PageInfo;
 import com.zbkj.common.model.jiuzhoukang.JkOperationProfitRecord;
 import com.zbkj.common.request.PageParamRequest;
-import com.zbkj.service.dao.jiuzhoukang.JkOperationProfitRecordDao;
 import com.zbkj.service.service.jiuzhoukang.profit.JkOperationProfitService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.util.List;
 
 /**
  * 经营收益账本兼容适配层。
@@ -26,7 +21,6 @@ import java.util.List;
 @Deprecated
 public class JkOperationProfitLedgerService {
     @Autowired private JkOperationProfitService profitService;
-    @Autowired private JkOperationProfitRecordDao recordDao;
 
     /**
      * 兼容旧调用方以 requestNo 作为幂等键的约定。
@@ -52,38 +46,14 @@ public class JkOperationProfitLedgerService {
     }
 
     /**
-     * 兼容旧的按来源比例冲正接口。
-     * 比例只用于换算实际冲正金额，写账、并发控制和负数审计明细统一交给正式 Service。
+     * 兼容旧的按来源比例冲正接口，比例语义已收口到正式 Service。
+     * 旧接口缺少业务 requestNo，因此仅作为迁移期兼容入口；关键退款/退货链路应直接调用正式接口并传确定性幂等键。
      */
-    @Transactional(rollbackFor = Exception.class)
     public BigDecimal reverseBySource(String sourceType, Long sourceId, BigDecimal ratio, String reason) {
         BigDecimal safeRatio = ratio == null ? BigDecimal.ONE : ratio.max(BigDecimal.ZERO).min(BigDecimal.ONE);
         if (safeRatio.signum() <= 0) return BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
-
-        List<JkOperationProfitRecord> rows = recordDao.selectList(new LambdaQueryWrapper<JkOperationProfitRecord>()
-                .eq(JkOperationProfitRecord::getSourceType, sourceType)
-                .eq(JkOperationProfitRecord::getSourceId, sourceId)
-                .eq(JkOperationProfitRecord::getIsDeleted, false)
-                .ne(JkOperationProfitRecord::getStatus, "VOID")
-                .ne(JkOperationProfitRecord::getStatus, "REVERSAL"));
-        BigDecimal totalRemaining = BigDecimal.ZERO;
-        for (JkOperationProfitRecord row : rows) {
-            totalRemaining = totalRemaining.add(remaining(row));
-        }
-        BigDecimal target = totalRemaining.multiply(safeRatio).setScale(2, RoundingMode.HALF_UP).min(totalRemaining);
-        if (target.signum() <= 0) return BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
-
-        // 旧接口没有业务 requestNo；关键退款/退货调用方会继续迁移到正式 reverse 接口并传业务幂等键。
-        String requestNo = "PROFIT_REVERSE_LEGACY:" + sourceType + ":" + sourceId + ":" + IdWorker.getIdStr();
-        profitService.reverse(sourceType, sourceId, null, target, requestNo, reason);
-        return target;
-    }
-
-    private BigDecimal remaining(JkOperationProfitRecord row) {
-        return money(row.getProfitAmount()).subtract(money(row.getReversedAmount())).max(BigDecimal.ZERO);
-    }
-
-    private BigDecimal money(BigDecimal value) {
-        return value == null ? BigDecimal.ZERO : value;
+        String requestNo = "PROFIT_REVERSE_LEGACY:" + sourceType + ":" + sourceId + ":" + System.nanoTime();
+        profitService.reverseByRatio(sourceType, sourceId, null, safeRatio, requestNo, reason);
+        return safeRatio;
     }
 }
