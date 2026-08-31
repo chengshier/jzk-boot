@@ -64,6 +64,8 @@ public class JkPerformanceServiceImpl implements JkPerformanceService {
         if (performanceType != null && !performanceType.trim().isEmpty()) query.eq(JkPerformanceRecord::getPerformanceType, performanceType);
         BigDecimal result = BigDecimal.ZERO;
         for (JkPerformanceRecord row : recordDao.selectList(query)) {
+            // 防御性保护：即使未来查询条件被调整，也不能把负数冲正审计行再次计入净业绩。
+            if (isReverseAudit(row)) continue;
             result = result.add(money(row.getPerformanceAmount()).subtract(money(row.getReversedAmount())));
         }
         return result.max(BigDecimal.ZERO).setScale(2, RoundingMode.HALF_UP);
@@ -121,6 +123,9 @@ public class JkPerformanceServiceImpl implements JkPerformanceService {
         }
     }
 
+    private boolean isReverseAudit(JkPerformanceRecord row) {
+        return row != null && row.getPerformanceType() != null && row.getPerformanceType().endsWith("_REVERSE");
+    }
     private BigDecimal remaining(JkPerformanceRecord row) { return money(row.getPerformanceAmount()).subtract(money(row.getReversedAmount())).max(BigDecimal.ZERO); }
     private BigDecimal money(BigDecimal value) { return value == null ? BigDecimal.ZERO : value; }
     private boolean notBlank(String value) { return value != null && !value.trim().isEmpty(); }
