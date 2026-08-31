@@ -54,7 +54,9 @@ public class JkOperationProfitServiceImpl implements JkOperationProfitService {
         BigDecimal result = BigDecimal.ZERO;
         for (JkOperationProfitRecord row : recordDao.selectList(new LambdaQueryWrapper<JkOperationProfitRecord>()
                 .eq(JkOperationProfitRecord::getUserId, userId).eq(JkOperationProfitRecord::getIsDeleted, false)
-                .ne(JkOperationProfitRecord::getStatus, "VOID"))) {
+                .ne(JkOperationProfitRecord::getStatus, "VOID")
+                // REVERSAL 是负数审计明细；原记录的 reversedAmount 已反映冲正结果，汇总时不能再次扣减。
+                .ne(JkOperationProfitRecord::getStatus, "REVERSAL"))) {
             result = result.add(money(row.getProfitAmount()).subtract(money(row.getReversedAmount())));
         }
         return result.setScale(2, RoundingMode.HALF_UP);
