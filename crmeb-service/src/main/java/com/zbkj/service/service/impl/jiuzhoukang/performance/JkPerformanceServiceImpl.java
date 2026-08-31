@@ -58,7 +58,9 @@ public class JkPerformanceServiceImpl implements JkPerformanceService {
         LambdaQueryWrapper<JkPerformanceRecord> query = new LambdaQueryWrapper<JkPerformanceRecord>()
                 .eq(JkPerformanceRecord::getOwnerUserId, ownerUserId)
                 .eq(JkPerformanceRecord::getIsDeleted, false)
-                .ne(JkPerformanceRecord::getStatus, "VOID");
+                .ne(JkPerformanceRecord::getStatus, "VOID")
+                // 冲正明细是审计记录；原记录上的 reversedAmount 已反映冲正结果，汇总时不能再次扣减负数冲正行。
+                .notLike(JkPerformanceRecord::getPerformanceType, "_REVERSE");
         if (performanceType != null && !performanceType.trim().isEmpty()) query.eq(JkPerformanceRecord::getPerformanceType, performanceType);
         BigDecimal result = BigDecimal.ZERO;
         for (JkPerformanceRecord row : recordDao.selectList(query)) {
