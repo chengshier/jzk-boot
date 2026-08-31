@@ -57,6 +57,8 @@ public class JkOperationProfitServiceImpl implements JkOperationProfitService {
                 .ne(JkOperationProfitRecord::getStatus, "VOID")
                 // REVERSAL 是负数审计明细；原记录的 reversedAmount 已反映冲正结果，汇总时不能再次扣减。
                 .ne(JkOperationProfitRecord::getStatus, "REVERSAL"))) {
+            // 防御性保护：即使查询条件未来被调整，也不能把负数冲正审计行重复计入净收益。
+            if (row != null && "REVERSAL".equals(row.getStatus())) continue;
             result = result.add(money(row.getProfitAmount()).subtract(money(row.getReversedAmount())));
         }
         return result.setScale(2, RoundingMode.HALF_UP);
