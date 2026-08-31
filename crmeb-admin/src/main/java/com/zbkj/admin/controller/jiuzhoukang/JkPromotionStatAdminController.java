@@ -24,7 +24,7 @@ public class JkPromotionStatAdminController {
     @Autowired private JkPromotionSceneService service;
 
     @GetMapping("/list")
-    @PreAuthorize("hasAuthority('" + JkV31PermissionCodes.ADMIN_PROMOTION_STAT_LIST + "')")
+    @PreAuthorize("hasAuthority('" + JkV31PermissionCodes.ADMIN_PROMOTION_EFFECT_VIEW + "')")
     @JkBizPermission(value = JkBizPermissionCodes.REPORT_VIEW, checkDataScope = true)
     public CommonResult<CommonPage<JkPromotionStat>> list(@RequestParam(required = false) Long sceneId,
                                                            @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") Date startDate,

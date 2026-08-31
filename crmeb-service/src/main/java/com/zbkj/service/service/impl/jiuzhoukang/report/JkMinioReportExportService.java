@@ -30,7 +30,9 @@ import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * V3.1 报表导出任务。文件只保存到 MinIO，数据库仅保存对象键和元数据。
@@ -154,10 +156,20 @@ public class JkMinioReportExportService {
             }
         } else if ("OFFLINE_SALE".equals(reportType)) {
             csv.append("销售单号,销售人,角色,区域,客户类型,销售时间,销售额,成本,经营毛利,审核状态,业务状态\n");
+            Map<Long, BigDecimal> costBySale = new HashMap<Long, BigDecimal>();
+            Map<Long, BigDecimal> netProfitBySale = new HashMap<Long, BigDecimal>();
+            for (JkOperationProfitRecord profit : profitDao.selectList(new LambdaQueryWrapper<JkOperationProfitRecord>()
+                    .eq(JkOperationProfitRecord::getSourceType, "OFFLINE_SALE")
+                    .eq(JkOperationProfitRecord::getIsDeleted, false).last("limit 100000"))) {
+                if (profit.getSourceId() == null) continue;
+                costBySale.put(profit.getSourceId(), money(costBySale.get(profit.getSourceId())).add(money(profit.getCostAmount())));
+                BigDecimal net = money(profit.getProfitAmount()).subtract(money(profit.getReversedAmount()));
+                netProfitBySale.put(profit.getSourceId(), money(netProfitBySale.get(profit.getSourceId())).add(net));
+            }
             for (JkOfflineSale row : offlineSaleDao.selectList(new LambdaQueryWrapper<JkOfflineSale>()
                     .eq(JkOfflineSale::getIsDeleted, false).orderByDesc(JkOfflineSale::getId).last("limit 100000"))) {
                 line(csv, row.getSaleNo(), row.getSellerUserId(), row.getSellerRoleCode(), row.getRegionCode(), row.getCustomerType(),
-                        row.getSaleTime(), row.getTotalAmount(), row.getTotalCostAmount(), row.getTotalProfitAmount(), row.getAuditStatus(), row.getStatus());
+                        row.getSaleTime(), row.getTotalAmount(), costBySale.get(row.getId()), netProfitBySale.get(row.getId()), auditStatus(row), row.getStatus());
             }
         } else if ("STOCK_CHECK".equals(reportType)) {
             csv.append("盘点单号,库存账户,归属用户,账面数量,实盘数量,盘盈,盘亏,冻结状态,业务状态,完成时间\n");
@@ -170,6 +182,13 @@ public class JkMinioReportExportService {
             throw new CrmebException("不支持的报表类型");
         }
         return csv.toString().getBytes(StandardCharsets.UTF_8);
+    }
+
+    private String auditStatus(JkOfflineSale sale) {
+        if (!Boolean.TRUE.equals(sale.getAuditRequired())) return "NOT_REQUIRED";
+        if ("REJECTED".equals(sale.getStatus())) return "REJECTED";
+        if (sale.getAuditTime() != null) return "APPROVED";
+        return "PENDING";
     }
 
     private void line(StringBuilder csv, Object... values) {
@@ -192,6 +211,7 @@ public class JkMinioReportExportService {
     private JkReportExportTask require(Long id) { JkReportExportTask task = taskDao.selectById(id); if (task == null || Boolean.TRUE.equals(task.getIsDeleted())) throw new CrmebException("导出任务不存在"); return task; }
     private void requireSupported(String type) { if (!Arrays.asList("PERFORMANCE", "OPERATION_PROFIT", "OFFLINE_SALE", "STOCK_CHECK").contains(type)) throw new CrmebException("不支持的报表类型"); }
     private int nvl(Integer value) { return value == null ? 0 : value; }
+    private BigDecimal money(BigDecimal value) { return value == null ? BigDecimal.ZERO : value; }
     private boolean notBlank(String value) { return value != null && !value.trim().isEmpty(); }
     private String safe(String value) { return value == null ? "未知错误" : value.replace('\n', ' ').replace('\r', ' ').substring(0, Math.min(value.length(), 900)); }
 }

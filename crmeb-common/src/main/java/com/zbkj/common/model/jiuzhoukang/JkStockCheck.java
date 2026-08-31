@@ -12,6 +12,10 @@ import java.math.BigDecimal;
 import java.util.Date;
 import java.util.List;
 
+/**
+ * V3.1 库存盘点单。
+ * 持久化字段与 jk_v31_phase3_operations_health.sql 保持一致；旧模型字段仅作兼容展示，不参与 SQL。
+ */
 @Data
 @Accessors(chain = true)
 @TableName("jk_stock_check")
@@ -21,26 +25,38 @@ public class JkStockCheck implements Serializable {
     private String requestNo;
     private Long stockAccountId;
     private Long ownerUserId;
-    private String ownerRoleCode;
-    private String regionCode;
-    private String checkType;
+    private String scopeType;
     private String status;
-    private Date snapshotTime;
-    private Date submittedAt;
+    private String freezeStatus;
+    private Integer bookTotalQty;
+    private Integer actualTotalQty;
+    private Integer profitQty;
+    private Integer lossQty;
     private Long auditUserId;
     private Date auditTime;
     private String auditRemark;
-    private Integer differenceQuantity;
-    private BigDecimal differenceAmount;
+    private String adjustActionKey;
+    private Date completedTime;
     private Boolean isDeleted;
     private Long createUserId;
     private Long updateUserId;
     private Date createTime;
     private Date updateTime;
-    private Integer version;
+
+    /* 历史模型兼容字段：Phase3 最终表不持久化。 */
+    @TableField(exist = false) private String ownerRoleCode;
+    @TableField(exist = false) private String regionCode;
+    @TableField(exist = false) private String checkType;
+    @TableField(exist = false) private Date snapshotTime;
+    @TableField(exist = false) private Date submittedAt;
+    @TableField(exist = false) private Integer differenceQuantity;
+    @TableField(exist = false) private BigDecimal differenceAmount;
+    @TableField(exist = false) private Integer version;
+
     @TableField(exist = false) private String ownerName;
     @TableField(exist = false) private String statusText;
     @TableField(exist = false) private String statusTag;
     @TableField(exist = false) private List<JkStockCheckItem> items;
+    @TableField(exist = false) private List<JkStockCheckAuditLog> auditLogs;
     @TableField(exist = false) private List<JkStockCheckLog> logs;
 }

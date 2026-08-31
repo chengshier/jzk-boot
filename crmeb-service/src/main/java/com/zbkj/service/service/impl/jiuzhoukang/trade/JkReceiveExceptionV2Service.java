@@ -29,9 +29,9 @@ import com.zbkj.service.dao.jiuzhoukang.JkStockTransferDao;
 import com.zbkj.service.dao.jiuzhoukang.JkStockTransferItemDao;
 import com.zbkj.service.dao.jiuzhoukang.JkTradeReceiveExceptionDao;
 import com.zbkj.service.dao.jiuzhoukang.JkTradeReceiveExceptionItemDao;
-import com.zbkj.service.service.impl.jiuzhoukang.commission.JkCommissionV31Service;
 import com.zbkj.service.service.impl.jiuzhoukang.performance.JkOperationProfitLedgerService;
 import com.zbkj.service.service.impl.jiuzhoukang.performance.JkPerformanceLedgerService;
+import com.zbkj.service.service.jiuzhoukang.commission.CommissionScenarioService;
 import com.zbkj.service.service.jiuzhoukang.stock.StockFlowService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DuplicateKeyException;
@@ -66,7 +66,7 @@ public class JkReceiveExceptionV2Service {
     @Autowired private JkStockBatchDao batchDao;
     @Autowired private JkPerformanceLedgerService performanceService;
     @Autowired private JkOperationProfitLedgerService profitService;
-    @Autowired private JkCommissionV31Service commissionService;
+    @Autowired private CommissionScenarioService commissionService;
     @Autowired private JkBusinessEventDao eventDao;
 
     @Transactional(rollbackFor = Exception.class)
@@ -184,14 +184,16 @@ public class JkReceiveExceptionV2Service {
                     .setQuantity(qty).setBaseAmount(amount).setPerformanceAmount(amount)
                     .setRequestNo("PERFORMANCE:RECEIVE_EXCEPTION:" + entity.getId() + ":" + item.getId())
                     .setSourceSnapshotJson(entity.getResolutionSnapshotJson()));
-            commissionService.createForScenario(new JkCommissionRuleTrialRequest().setSourceType("PLATFORM_ORDER")
-                    .setSourceId(order.getId()).setSourceItemId(item.getId()).setSourceNo(order.getPlatformOrderNo())
-                    .setOwnerUserId(order.getUserId()).setOwnerRoleCode(order.getRoleCode()).setPurchaserUserId(order.getUserId())
-                    .setCountyAgentUserId(order.getCountyAgentId()).setRegionCode(order.getRegionCode())
+            String commissionRequestNo = "COMMISSION:RECEIVE_EXCEPTION:" + entity.getId() + ":" + item.getId();
+            JkCommissionRuleTrialRequest scenario = new JkCommissionRuleTrialRequest().setScenario("PLATFORM_ORDER_RECEIVED")
+                    .setSourceType("PLATFORM_ORDER").setSourceId(order.getId()).setSourceItemId(item.getId()).setSourceNo(order.getPlatformOrderNo())
+                    .setBuyerUserId(order.getUserId()).setPurchaserUserId(order.getUserId()).setSellerUserId(order.getUserId())
+                    .setOwnerUserId(order.getUserId()).setCountyAgentUserId(order.getCountyAgentId()).setRegionCode(order.getRegionCode())
                     .setProductId(item.getProductId()).setSkuId(item.getSkuId()).setQuantity(qty).setBaseAmount(amount)
                     .setRegisteredCustomer(true).setVoucherPresent(true).setAudited(true)
-                    .setSourceSnapshotJson(entity.getResolutionSnapshotJson()),
-                    "COMMISSION:RECEIVE_EXCEPTION:" + entity.getId() + ":" + item.getId());
+                    .setRelationSnapshotJson(entity.getResolutionSnapshotJson()).setSourceSnapshotJson(entity.getResolutionSnapshotJson())
+                    .setBusinessTime(new Date());
+            commissionService.dispatch(scenario, commissionRequestNo, order.getPlatformOrderNo(), commissionRequestNo);
         }
         int updated = platformOrderDao.update(null, new UpdateWrapper<JkPlatformOrder>()
                 .eq("id", order.getId()).eq("status", "RECEIVE_EXCEPTION").eq("is_deleted", false)
@@ -233,16 +235,18 @@ public class JkReceiveExceptionV2Service {
                         .setSkuId(item.getSkuId()).setQuantity(qty).setRevenueAmount(revenue).setCostAmount(costAmount)
                         .setProfitAmount(spread).setCostSnapshotJson(cost.json).setRelationSnapshotJson(entity.getResolutionSnapshotJson())
                         .setRequestNo("PROFIT:RECEIVE_EXCEPTION:" + entity.getId() + ":" + item.getId()));
+                String commissionRequestNo = "COMMISSION:RECEIVE_EXCEPTION:" + entity.getId() + ":" + item.getId();
+                JkCommissionRuleTrialRequest scenario = new JkCommissionRuleTrialRequest().setScenario("STOCK_TRANSFER_RECEIVED")
+                        .setSourceType("STOCK_TRANSFER").setSourceId(transfer.getId()).setSourceItemId(item.getId()).setSourceNo(transfer.getTransferNo())
+                        .setBuyerUserId(transfer.getUserId()).setPurchaserUserId(transfer.getUserId()).setOwnerUserId(transfer.getUserId())
+                        .setSellerUserId(transfer.getCountyAgentId()).setCountyAgentUserId(transfer.getCountyAgentId()).setRegionCode(transfer.getRegionCode())
+                        .setProductId(item.getProductId()).setSkuId(item.getSkuId()).setQuantity(qty)
+                        .setBaseAmount(revenue).setCostAmount(costAmount).setRealGrossProfit(spread)
+                        .setRegisteredCustomer(true).setVoucherPresent(true).setAudited(true)
+                        .setRelationSnapshotJson(entity.getResolutionSnapshotJson()).setSourceSnapshotJson(entity.getResolutionSnapshotJson())
+                        .setBusinessTime(new Date());
+                commissionService.dispatch(scenario, commissionRequestNo, transfer.getTransferNo(), commissionRequestNo);
             }
-            commissionService.createForScenario(new JkCommissionRuleTrialRequest().setSourceType("STOCK_TRANSFER")
-                    .setSourceId(transfer.getId()).setSourceItemId(item.getId()).setSourceNo(transfer.getTransferNo())
-                    .setOwnerUserId(transfer.getUserId()).setOwnerRoleCode(transfer.getRoleCode())
-                    .setSellerUserId(transfer.getCountyAgentId()).setPurchaserUserId(transfer.getUserId())
-                    .setCountyAgentUserId(transfer.getCountyAgentId()).setRegionCode(transfer.getRegionCode())
-                    .setProductId(item.getProductId()).setSkuId(item.getSkuId()).setQuantity(qty)
-                    .setBaseAmount(revenue).setCostAmount(costAmount).setRegisteredCustomer(true)
-                    .setVoucherPresent(true).setAudited(true).setSourceSnapshotJson(entity.getResolutionSnapshotJson()),
-                    "COMMISSION:RECEIVE_EXCEPTION:" + entity.getId() + ":" + item.getId());
         }
         int updated = transferDao.update(null, new UpdateWrapper<JkStockTransfer>()
                 .eq("id", transfer.getId()).eq("status", "RECEIVE_EXCEPTION").eq("is_deleted", false)

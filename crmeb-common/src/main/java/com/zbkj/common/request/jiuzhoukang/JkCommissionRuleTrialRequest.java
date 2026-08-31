@@ -21,7 +21,11 @@ public class JkCommissionRuleTrialRequest {
     /** 原业务发生时间，用于命中规则版本和周期封顶；不得用当前时间替代历史业务时间。 */
     private Date businessTime;
     private Long buyerUserId;
+    /** 平台订货等场景的采购方快照。 */
+    private Long purchaserUserId;
     private Long sellerUserId;
+    /** 业绩/调拨等场景的归属人快照。 */
+    private Long ownerUserId;
     private Long directParentUserId;
     private Long countyAgentUserId;
     private String regionCode;
@@ -29,8 +33,13 @@ public class JkCommissionRuleTrialRequest {
     private Integer skuId;
     private Integer quantity;
     @NotNull(message = "计算基数不能为空") @DecimalMin(value = "0", message = "计算基数不能小于0") private BigDecimal baseAmount;
+    /** 真实成本快照；REAL_GROSS_PROFIT 规则只允许基于业务发生时成本计算。 */
+    private BigDecimal costAmount;
     private BigDecimal realGrossProfit;
     private Boolean registeredCustomer;
     private Boolean voucherPresent;
     private Boolean audited;
+    /** 业务发生时关系与来源快照，佣金入账后不得改读当前关系。 */
+    private String relationSnapshotJson;
+    private String sourceSnapshotJson;
 }
