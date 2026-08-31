@@ -86,14 +86,27 @@ public class JkPerformanceServiceImpl implements JkPerformanceService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void reverse(String sourceType, Long sourceId, Long sourceItemId, BigDecimal amount, String requestNo, String reason) {
-        LambdaQueryWrapper<JkPerformanceRecord> query = new LambdaQueryWrapper<JkPerformanceRecord>()
-                .eq(JkPerformanceRecord::getSourceType, sourceType).eq(JkPerformanceRecord::getSourceId, sourceId)
-                .eq(JkPerformanceRecord::getIsDeleted, false).notLike(JkPerformanceRecord::getPerformanceType, "_REVERSE");
-        if (sourceItemId != null) query.eq(JkPerformanceRecord::getSourceItemId, sourceItemId);
-        List<JkPerformanceRecord> rows = recordDao.selectList(query);
-        BigDecimal totalRemaining = BigDecimal.ZERO;
-        for (JkPerformanceRecord row : rows) totalRemaining = totalRemaining.add(remaining(row));
+        List<JkPerformanceRecord> rows = recordDao.selectList(sourceQuery(sourceType, sourceId, sourceItemId));
+        BigDecimal totalRemaining = totalRemaining(rows);
         BigDecimal target = amount == null ? totalRemaining : amount.min(totalRemaining).max(BigDecimal.ZERO);
+        reverseRows(sourceType, sourceId, rows, totalRemaining, target, requestNo, reason);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public BigDecimal reverseByRatio(String sourceType, Long sourceId, Long sourceItemId, BigDecimal ratio, String requestNo, String reason) {
+        BigDecimal safeRatio = ratio == null ? BigDecimal.ONE : ratio.max(BigDecimal.ZERO).min(BigDecimal.ONE);
+        if (safeRatio.signum() <= 0) return BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
+        List<JkPerformanceRecord> rows = recordDao.selectList(sourceQuery(sourceType, sourceId, sourceItemId));
+        BigDecimal totalRemaining = totalRemaining(rows);
+        if (totalRemaining.signum() <= 0) return BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
+        BigDecimal target = totalRemaining.multiply(safeRatio).setScale(2, RoundingMode.HALF_UP).min(totalRemaining);
+        reverseRows(sourceType, sourceId, rows, totalRemaining, target, requestNo, reason);
+        return target;
+    }
+
+    private void reverseRows(String sourceType, Long sourceId, List<JkPerformanceRecord> rows,
+                             BigDecimal totalRemaining, BigDecimal target, String requestNo, String reason) {
         if (target.signum() <= 0 || totalRemaining.signum() <= 0) return;
         BigDecimal allocated = BigDecimal.ZERO;
         for (int index = 0; index < rows.size(); index++) {
@@ -121,6 +134,21 @@ public class JkPerformanceServiceImpl implements JkPerformanceService {
             allocated = allocated.add(part);
             if (allocated.compareTo(target) >= 0) break;
         }
+    }
+
+    private LambdaQueryWrapper<JkPerformanceRecord> sourceQuery(String sourceType, Long sourceId, Long sourceItemId) {
+        LambdaQueryWrapper<JkPerformanceRecord> query = new LambdaQueryWrapper<JkPerformanceRecord>()
+                .eq(JkPerformanceRecord::getSourceType, sourceType).eq(JkPerformanceRecord::getSourceId, sourceId)
+                .eq(JkPerformanceRecord::getIsDeleted, false)
+                .notLike(JkPerformanceRecord::getPerformanceType, "_REVERSE");
+        if (sourceItemId != null) query.eq(JkPerformanceRecord::getSourceItemId, sourceItemId);
+        return query;
+    }
+
+    private BigDecimal totalRemaining(List<JkPerformanceRecord> rows) {
+        BigDecimal total = BigDecimal.ZERO;
+        for (JkPerformanceRecord row : rows) total = total.add(remaining(row));
+        return total;
     }
 
     private boolean isReverseAudit(JkPerformanceRecord row) {
