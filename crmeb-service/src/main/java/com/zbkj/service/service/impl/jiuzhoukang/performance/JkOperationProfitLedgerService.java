@@ -1,5 +1,6 @@
 package com.zbkj.service.service.impl.jiuzhoukang.performance;
 
+import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import com.github.pagehelper.PageInfo;
 import com.zbkj.common.model.jiuzhoukang.JkOperationProfitRecord;
 import com.zbkj.common.request.PageParamRequest;
@@ -52,8 +53,7 @@ public class JkOperationProfitLedgerService {
     public BigDecimal reverseBySource(String sourceType, Long sourceId, BigDecimal ratio, String reason) {
         BigDecimal safeRatio = ratio == null ? BigDecimal.ONE : ratio.max(BigDecimal.ZERO).min(BigDecimal.ONE);
         if (safeRatio.signum() <= 0) return BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
-        String requestNo = "PROFIT_REVERSE_LEGACY:" + sourceType + ":" + sourceId + ":" + System.nanoTime();
-        profitService.reverseByRatio(sourceType, sourceId, null, safeRatio, requestNo, reason);
-        return safeRatio;
+        String requestNo = "PROFIT_REVERSE_LEGACY:" + sourceType + ":" + sourceId + ":" + IdWorker.getIdStr();
+        return profitService.reverseByRatio(sourceType, sourceId, null, safeRatio, requestNo, reason);
     }
 }
