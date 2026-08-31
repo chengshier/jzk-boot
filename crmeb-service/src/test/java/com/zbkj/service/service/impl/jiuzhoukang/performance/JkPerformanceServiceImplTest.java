@@ -11,7 +11,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.math.BigDecimal;
-import java.util.Collections;
+import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicReference;
 
 public class JkPerformanceServiceImplTest {
@@ -24,13 +24,22 @@ public class JkPerformanceServiceImplTest {
             if ("selectList".equals(method.getName())) {
                 Wrapper<?> wrapper = (Wrapper<?>) args[0];
                 sqlSegment.set(wrapper.getSqlSegment());
-                return Collections.singletonList(new JkPerformanceRecord()
-                        .setOwnerUserId(100L)
-                        .setPerformanceType("RETAIL_ONLINE")
-                        .setPerformanceAmount(new BigDecimal("100.00"))
-                        .setReversedAmount(new BigDecimal("30.00"))
-                        .setStatus("PARTIALLY_REVERSED")
-                        .setIsDeleted(false));
+                return Arrays.asList(
+                        new JkPerformanceRecord()
+                                .setOwnerUserId(100L)
+                                .setPerformanceType("RETAIL_ONLINE")
+                                .setPerformanceAmount(new BigDecimal("100.00"))
+                                .setReversedAmount(new BigDecimal("30.00"))
+                                .setStatus("PARTIALLY_REVERSED")
+                                .setIsDeleted(false),
+                        new JkPerformanceRecord()
+                                .setOwnerUserId(100L)
+                                .setPerformanceType("RETAIL_ONLINE_REVERSE")
+                                .setPerformanceAmount(new BigDecimal("-30.00"))
+                                .setReversedAmount(BigDecimal.ZERO)
+                                .setStatus("VALID")
+                                .setIsDeleted(false)
+                );
             }
             return null;
         });
