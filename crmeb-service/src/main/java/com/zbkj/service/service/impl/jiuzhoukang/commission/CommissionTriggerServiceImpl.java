@@ -17,6 +17,7 @@ import com.zbkj.common.model.jiuzhoukang.JkStockBatchReservation;
 import com.zbkj.common.model.jiuzhoukang.JkStockTransfer;
 import com.zbkj.common.model.jiuzhoukang.JkStockTransferItem;
 import com.zbkj.common.model.jiuzhoukang.JkStockTransferReturn;
+import com.zbkj.common.model.jiuzhoukang.JkStockTransferReturnItem;
 import com.zbkj.common.request.jiuzhoukang.JkCommissionRuleTrialRequest;
 import com.zbkj.service.dao.jiuzhoukang.JkBusinessEventDao;
 import com.zbkj.service.dao.jiuzhoukang.JkCommissionAccountDao;
@@ -30,6 +31,7 @@ import com.zbkj.service.dao.jiuzhoukang.JkStockBatchReservationDao;
 import com.zbkj.service.dao.jiuzhoukang.JkStockTransferDao;
 import com.zbkj.service.dao.jiuzhoukang.JkStockTransferItemDao;
 import com.zbkj.service.dao.jiuzhoukang.JkStockTransferReturnDao;
+import com.zbkj.service.dao.jiuzhoukang.JkStockTransferReturnItemDao;
 import com.zbkj.service.service.jiuzhoukang.commission.CommissionFreezeService;
 import com.zbkj.service.service.jiuzhoukang.commission.CommissionReverseService;
 import com.zbkj.service.service.jiuzhoukang.commission.CommissionScenarioService;
@@ -76,6 +78,7 @@ public class CommissionTriggerServiceImpl implements CommissionTriggerService {
     @Autowired private JkStockTransferDao stockTransferDao;
     @Autowired private JkStockTransferItemDao stockTransferItemDao;
     @Autowired private JkStockTransferReturnDao transferReturnDao;
+    @Autowired private JkStockTransferReturnItemDao transferReturnItemDao;
     @Autowired private JkStockBatchReservationDao reservationDao;
     @Autowired private JkStockBatchDao batchDao;
 
@@ -252,29 +255,73 @@ public class CommissionTriggerServiceImpl implements CommissionTriggerService {
     @Transactional(rollbackFor = Exception.class)
     public void onTransferReturnCompleted(Long id, String no, String requestNo) {
         JkStockTransferReturn returnOrder = transferReturnDao.selectById(id);
-        if (returnOrder == null || !"COMPLETED".equals(returnOrder.getStatus())) throw new IllegalArgumentException("调拨退回单不存在或尚未完成");
-        JkStockTransfer transfer = stockTransferDao.selectById(returnOrder.getOriginalTransferId());
-        BigDecimal originalAmount = transfer == null ? BigDecimal.ZERO : safe(transfer.getTotalAmount());
-        BigDecimal returnAmount = safe(returnOrder.getReturnAmount());
-        performanceService.reverse("STOCK_TRANSFER", returnOrder.getOriginalTransferId(), null, returnAmount,
-                requestNo + ":PERFORMANCE", "调拨退回");
-        profitService.reverse("STOCK_TRANSFER", returnOrder.getOriginalTransferId(), null, returnAmount,
-                requestNo + ":PROFIT", "调拨退回");
-        List<JkCommissionRecord> records = recordDao.selectList(new LambdaQueryWrapper<JkCommissionRecord>()
-                .eq(JkCommissionRecord::getSourceType, "STOCK_TRANSFER")
-                .and(q -> q.eq(JkCommissionRecord::getSourceId, returnOrder.getOriginalTransferId())
-                        .or().eq(JkCommissionRecord::getSourceNo, returnOrder.getOriginalTransferNo()))
-                .eq(JkCommissionRecord::getIsDeleted, false));
-        for (JkCommissionRecord record : records) {
-            BigDecimal remaining = safe(record.getCommissionAmount()).subtract(priorReversed(record.getId())).max(BigDecimal.ZERO);
-            if (remaining.signum() <= 0) continue;
-            BigDecimal reverseAmount = originalAmount.signum() <= 0 || returnAmount.compareTo(originalAmount) >= 0
-                    ? remaining : remaining.multiply(returnAmount).divide(originalAmount, 2, RoundingMode.HALF_UP).min(remaining);
-            if (reverseAmount.signum() > 0) reverseService.reverse(record.getId(), "STOCK_TRANSFER_RETURN", id, no,
-                    "TRANSFER_RETURN", reverseAmount, requestNo + ":" + record.getId(), null, "按原调拨规则快照比例冲正");
+        if (returnOrder == null || !"COMPLETED".equals(returnOrder.getStatus())) {
+            throw new IllegalArgumentException("调拨退回单不存在或尚未完成");
         }
+        JkStockTransfer transfer = stockTransferDao.selectById(returnOrder.getOriginalTransferId());
+        if (transfer == null || Boolean.TRUE.equals(transfer.getIsDeleted())) {
+            throw new IllegalArgumentException("原调拨单不存在");
+        }
+        List<JkStockTransferReturnItem> returnItems = transferReturnItemDao.selectList(
+                new LambdaQueryWrapper<JkStockTransferReturnItem>()
+                        .eq(JkStockTransferReturnItem::getReturnId, id)
+                        .eq(JkStockTransferReturnItem::getIsDeleted, false));
+        if (returnItems.isEmpty()) throw new IllegalArgumentException("调拨退回明细不存在");
+
+        for (JkStockTransferReturnItem returnItem : returnItems) {
+            JkStockTransferItem originalItem = stockTransferItemDao.selectById(returnItem.getOriginalTransferItemId());
+            if (originalItem == null || Boolean.TRUE.equals(originalItem.getIsDeleted())
+                    || !returnOrder.getOriginalTransferId().equals(originalItem.getTransferId())) {
+                throw new IllegalArgumentException("原调拨明细不存在或与退回单不匹配");
+            }
+            int originalQty = originalItem.getQuantity() == null ? 0 : originalItem.getQuantity();
+            int returnQty = returnItem.getReturnQuantity() == null ? 0 : returnItem.getReturnQuantity();
+            if (originalQty <= 0 || returnQty <= 0 || returnQty > originalQty) {
+                throw new IllegalArgumentException("调拨退回数量不合法");
+            }
+            BigDecimal itemRatio = BigDecimal.valueOf(returnQty)
+                    .divide(BigDecimal.valueOf(originalQty), 8, RoundingMode.HALF_UP);
+            String itemRequestNo = requestNo + ":ITEM:" + originalItem.getId();
+
+            // 同一调拨明细可能同时存在收货方业绩和区县代周转业绩，两条都按原明细数量比例冲正。
+            performanceService.reverseByRatio("STOCK_TRANSFER", returnOrder.getOriginalTransferId(), originalItem.getId(), itemRatio,
+                    itemRequestNo + ":PERFORMANCE", "调拨退回按原明细数量比例冲正");
+            // 经营收益的冲正基数必须是原毛利，而不是退回销售额。
+            profitService.reverseByRatio("STOCK_TRANSFER", returnOrder.getOriginalTransferId(), originalItem.getId(), itemRatio,
+                    itemRequestNo + ":PROFIT", "调拨退回按原明细数量比例冲正");
+
+            List<JkCommissionRecord> itemRecords = recordDao.selectList(new LambdaQueryWrapper<JkCommissionRecord>()
+                    .eq(JkCommissionRecord::getSourceType, "STOCK_TRANSFER")
+                    .eq(JkCommissionRecord::getSourceItemId, originalItem.getId())
+                    .and(q -> q.eq(JkCommissionRecord::getSourceId, returnOrder.getOriginalTransferId())
+                            .or().eq(JkCommissionRecord::getSourceNo, returnOrder.getOriginalTransferNo()))
+                    .eq(JkCommissionRecord::getIsDeleted, false));
+            for (JkCommissionRecord record : itemRecords) {
+                reverseCommissionByOriginalRatio(record, itemRatio, id, no,
+                        itemRequestNo + ":COMMISSION:" + record.getId(), "按原调拨明细数量比例冲正");
+            }
+        }
+
+        // 兼容历史上未记录 sourceItemId 的整单佣金：按退回金额 / 原调拨金额做整单比例冲正。
+        BigDecimal originalAmount = safe(transfer.getTotalAmount());
+        BigDecimal returnAmount = safe(returnOrder.getReturnAmount());
+        if (originalAmount.signum() > 0 && returnAmount.signum() > 0) {
+            BigDecimal sourceRatio = returnAmount.divide(originalAmount, 8, RoundingMode.HALF_UP)
+                    .max(BigDecimal.ZERO).min(BigDecimal.ONE);
+            List<JkCommissionRecord> legacyRecords = recordDao.selectList(new LambdaQueryWrapper<JkCommissionRecord>()
+                    .eq(JkCommissionRecord::getSourceType, "STOCK_TRANSFER")
+                    .isNull(JkCommissionRecord::getSourceItemId)
+                    .and(q -> q.eq(JkCommissionRecord::getSourceId, returnOrder.getOriginalTransferId())
+                            .or().eq(JkCommissionRecord::getSourceNo, returnOrder.getOriginalTransferNo()))
+                    .eq(JkCommissionRecord::getIsDeleted, false));
+            for (JkCommissionRecord record : legacyRecords) {
+                reverseCommissionByOriginalRatio(record, sourceRatio, id, no,
+                        requestNo + ":LEGACY_COMMISSION:" + record.getId(), "历史整单佣金按退回金额比例冲正");
+            }
+        }
+
         recordBusinessEvent("STOCK_TRANSFER_RETURNED", id, no, requestNo, "SUCCESS",
-                "调拨退回已分别冲正业绩、经营收益和平台佣金");
+                "调拨退回已按原调拨明细数量比例冲正业绩、经营收益和平台佣金");
     }
 
     @Override
@@ -360,6 +407,20 @@ public class CommissionTriggerServiceImpl implements CommissionTriggerService {
         catch (Exception error) {
             recordBusinessEvent(eventType + "_COMMISSION", businessId, sourceNo, requestNo, "FAILED",
                     "佣金计算失败，业务和业绩不回滚，进入事件补偿：" + safeMessage(error));
+        }
+    }
+
+    private void reverseCommissionByOriginalRatio(JkCommissionRecord record, BigDecimal ratio,
+                                                  Long returnId, String returnNo, String reverseRequestNo, String reason) {
+        BigDecimal safeRatio = ratio == null ? BigDecimal.ZERO : ratio.max(BigDecimal.ZERO).min(BigDecimal.ONE);
+        if (safeRatio.signum() <= 0) return;
+        BigDecimal originalCommission = safe(record.getCommissionAmount());
+        BigDecimal remaining = originalCommission.subtract(priorReversed(record.getId())).max(BigDecimal.ZERO);
+        if (remaining.signum() <= 0) return;
+        BigDecimal reverseAmount = originalCommission.multiply(safeRatio).setScale(2, RoundingMode.HALF_UP).min(remaining);
+        if (reverseAmount.signum() > 0) {
+            reverseService.reverse(record.getId(), "STOCK_TRANSFER_RETURN", returnId, returnNo,
+                    "TRANSFER_RETURN", reverseAmount, reverseRequestNo, null, reason);
         }
     }
 
