@@ -12,6 +12,7 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.math.BigDecimal;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.concurrent.atomic.AtomicReference;
 
 public class JkOperationProfitServiceImplTest {
@@ -41,6 +42,12 @@ public class JkOperationProfitServiceImplTest {
         ReflectionTestUtils.setField(service, "recordDao", dao);
 
         Assert.assertEquals(new BigDecimal("70.00"), service.summary(100L));
+    }
+
+    @Test
+    public void reverseByRatioUsesOriginalProfitAcrossRepeatedPartialReturns() {
+        Assert.assertEquals(new BigDecimal("20.00"), reverseRatioTarget(new BigDecimal("20.00")));
+        Assert.assertEquals(new BigDecimal("20.00"), reverseRatioTarget(new BigDecimal("40.00")));
     }
 
     @Test
@@ -92,6 +99,24 @@ public class JkOperationProfitServiceImplTest {
         Assert.assertNotNull(captured.get());
         Assert.assertEquals("PROFIT:TEST:200", captured.get().getActionKey());
         Assert.assertEquals(new BigDecimal("70.00"), legacy.confirmedProfit(100L));
+    }
+
+    private BigDecimal reverseRatioTarget(BigDecimal alreadyReversed) {
+        JkOperationProfitServiceImpl service = new JkOperationProfitServiceImpl();
+        JkOperationProfitRecord original = new JkOperationProfitRecord()
+                .setId(1L).setUserId(100L).setSourceType("STOCK_TRANSFER").setSourceId(200L).setSourceItemId(300L)
+                .setProfitAmount(new BigDecimal("100.00")).setReversedAmount(alreadyReversed)
+                .setStatus("PARTIALLY_REVERSED").setIsDeleted(false);
+        JkOperationProfitRecordDao dao = proxy(JkOperationProfitRecordDao.class, (method, args) -> {
+            if ("selectList".equals(method.getName())) return Collections.singletonList(original);
+            if ("update".equals(method.getName())) return 1;
+            if ("selectOne".equals(method.getName())) return null;
+            if ("insert".equals(method.getName())) return 1;
+            return null;
+        });
+        ReflectionTestUtils.setField(service, "recordDao", dao);
+        return service.reverseByRatio("STOCK_TRANSFER", 200L, 300L, new BigDecimal("0.20"),
+                "RETURN:1:" + alreadyReversed, "部分退回");
     }
 
     private <T> T proxy(Class<T> type, Invocation invocation) {
