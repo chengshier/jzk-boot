@@ -2,7 +2,6 @@ package com.zbkj.service.service.impl.jiuzhoukang.performance;
 
 import com.zbkj.common.model.jiuzhoukang.JkPerformanceRecord;
 import com.zbkj.service.dao.jiuzhoukang.JkPerformanceRecordDao;
-import com.zbkj.service.service.jiuzhoukang.performance.JkPerformanceService;
 import org.junit.Assert;
 import org.junit.Test;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -12,6 +11,7 @@ import java.lang.reflect.Proxy;
 import java.math.BigDecimal;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 public class JkPerformanceServiceImplTest {
@@ -59,35 +59,42 @@ public class JkPerformanceServiceImplTest {
     }
 
     @Test
-    public void legacyLedgerDelegatesToCanonicalServiceWithRequestNoAsActionKey() {
-        JkPerformanceLedgerService legacy = new JkPerformanceLedgerService();
-        AtomicReference<JkPerformanceRecord> captured = new AtomicReference<JkPerformanceRecord>();
-        JkPerformanceService canonical = proxy(JkPerformanceService.class, (method, args) -> {
-            if ("record".equals(method.getName())) {
-                JkPerformanceRecord value = (JkPerformanceRecord) args[0];
-                captured.set(value);
-                return value;
-            }
-            if ("summary".equals(method.getName())) {
-                return new BigDecimal("70.00");
+    public void canonicalRecordUsesActionKeyAsRequestNoAndIsIdempotent() {
+        JkPerformanceServiceImpl service = new JkPerformanceServiceImpl();
+        AtomicReference<JkPerformanceRecord> stored = new AtomicReference<JkPerformanceRecord>();
+        AtomicInteger inserts = new AtomicInteger();
+        JkPerformanceRecordDao dao = proxy(JkPerformanceRecordDao.class, (method, args) -> {
+            if ("selectOne".equals(method.getName())) return stored.get();
+            if ("insert".equals(method.getName())) {
+                inserts.incrementAndGet();
+                stored.set((JkPerformanceRecord) args[0]);
+                return 1;
             }
             return null;
         });
-        ReflectionTestUtils.setField(legacy, "performanceService", canonical);
+        ReflectionTestUtils.setField(service, "recordDao", dao);
 
-        JkPerformanceRecord value = new JkPerformanceRecord()
+        JkPerformanceRecord first = service.record(new JkPerformanceRecord()
                 .setOwnerUserId(100L)
                 .setSourceType("PLATFORM_ORDER")
                 .setSourceId(200L)
                 .setPerformanceType("PLATFORM_PURCHASE")
+                .setBaseAmount(new BigDecimal("100.00"))
                 .setPerformanceAmount(new BigDecimal("100.00"))
-                .setRequestNo("PERFORMANCE:TEST:200");
+                .setActionKey("PERFORMANCE:TEST:200"));
+        JkPerformanceRecord second = service.record(new JkPerformanceRecord()
+                .setOwnerUserId(100L)
+                .setSourceType("PLATFORM_ORDER")
+                .setSourceId(200L)
+                .setPerformanceType("PLATFORM_PURCHASE")
+                .setBaseAmount(new BigDecimal("999.00"))
+                .setPerformanceAmount(new BigDecimal("999.00"))
+                .setActionKey("PERFORMANCE:TEST:200"));
 
-        legacy.record(value);
-
-        Assert.assertNotNull(captured.get());
-        Assert.assertEquals("PERFORMANCE:TEST:200", captured.get().getActionKey());
-        Assert.assertEquals(new BigDecimal("70.00"), legacy.validAmount(100L));
+        Assert.assertEquals("PERFORMANCE:TEST:200", first.getRequestNo());
+        Assert.assertSame(first, second);
+        Assert.assertEquals(1, inserts.get());
+        Assert.assertEquals(new BigDecimal("100.00"), second.getPerformanceAmount());
     }
 
     private BigDecimal reverseRatioTarget(BigDecimal alreadyReversed) {
