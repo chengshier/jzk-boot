@@ -1,5 +1,7 @@
 package com.zbkj.service.service.impl.jiuzhoukang.trade;
 
+import com.baomidou.mybatisplus.core.MybatisConfiguration;
+import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
 import com.zbkj.common.model.jiuzhoukang.JkOperationProfitRecord;
 import com.zbkj.common.model.jiuzhoukang.JkPerformanceRecord;
 import com.zbkj.common.model.jiuzhoukang.JkStockBatch;
@@ -18,6 +20,7 @@ import com.zbkj.service.service.jiuzhoukang.commission.CommissionScenarioService
 import com.zbkj.service.service.jiuzhoukang.performance.JkPerformanceService;
 import com.zbkj.service.service.jiuzhoukang.profit.JkOperationProfitService;
 import com.zbkj.service.service.jiuzhoukang.stock.StockFlowService;
+import org.apache.ibatis.builder.MapperBuilderAssistant;
 import org.junit.Assert;
 import org.junit.Test;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -33,6 +36,7 @@ public class JkReceiveExceptionV2ServiceTest {
 
     @Test
     public void transferPartialReceiveUsesActualQtyAndStableCanonicalLedgerKeys() {
+        initTableInfo(JkStockBatchFlow.class);
         JkReceiveExceptionV2Service service = new JkReceiveExceptionV2Service();
 
         JkTradeReceiveException exception = new JkTradeReceiveException()
@@ -205,6 +209,13 @@ public class JkReceiveExceptionV2ServiceTest {
         Assert.assertEquals(profits.get(0).getActionKey(), profits.get(1).getActionKey());
         Assert.assertEquals(2, commissionKeys.size());
         Assert.assertEquals(commissionKeys.get(0), commissionKeys.get(1));
+    }
+
+    private void initTableInfo(Class<?> entityType) {
+        MybatisConfiguration configuration = new MybatisConfiguration();
+        MapperBuilderAssistant assistant = new MapperBuilderAssistant(configuration, "unit-test");
+        assistant.setCurrentNamespace(entityType.getName());
+        TableInfoHelper.initTableInfo(assistant, entityType);
     }
 
     private void invokeFinalizeTransfer(JkReceiveExceptionV2Service service, JkTradeReceiveException exception,
