@@ -58,10 +58,14 @@ public class JkPerformanceServiceImpl implements JkPerformanceService {
         LambdaQueryWrapper<JkPerformanceRecord> query = new LambdaQueryWrapper<JkPerformanceRecord>()
                 .eq(JkPerformanceRecord::getOwnerUserId, ownerUserId)
                 .eq(JkPerformanceRecord::getIsDeleted, false)
-                .ne(JkPerformanceRecord::getStatus, "VOID");
+                .ne(JkPerformanceRecord::getStatus, "VOID")
+                // 冲正明细是审计记录；原记录上的 reversedAmount 已反映冲正结果，汇总时不能再次扣减负数冲正行。
+                .notLike(JkPerformanceRecord::getPerformanceType, "_REVERSE");
         if (performanceType != null && !performanceType.trim().isEmpty()) query.eq(JkPerformanceRecord::getPerformanceType, performanceType);
         BigDecimal result = BigDecimal.ZERO;
         for (JkPerformanceRecord row : recordDao.selectList(query)) {
+            // 防御性保护：即使未来查询条件被调整，也不能把负数冲正审计行再次计入净业绩。
+            if (isReverseAudit(row)) continue;
             result = result.add(money(row.getPerformanceAmount()).subtract(money(row.getReversedAmount())));
         }
         return result.max(BigDecimal.ZERO).setScale(2, RoundingMode.HALF_UP);
@@ -82,14 +86,28 @@ public class JkPerformanceServiceImpl implements JkPerformanceService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void reverse(String sourceType, Long sourceId, Long sourceItemId, BigDecimal amount, String requestNo, String reason) {
-        LambdaQueryWrapper<JkPerformanceRecord> query = new LambdaQueryWrapper<JkPerformanceRecord>()
-                .eq(JkPerformanceRecord::getSourceType, sourceType).eq(JkPerformanceRecord::getSourceId, sourceId)
-                .eq(JkPerformanceRecord::getIsDeleted, false).notLike(JkPerformanceRecord::getPerformanceType, "_REVERSE");
-        if (sourceItemId != null) query.eq(JkPerformanceRecord::getSourceItemId, sourceItemId);
-        List<JkPerformanceRecord> rows = recordDao.selectList(query);
-        BigDecimal totalRemaining = BigDecimal.ZERO;
-        for (JkPerformanceRecord row : rows) totalRemaining = totalRemaining.add(remaining(row));
+        List<JkPerformanceRecord> rows = recordDao.selectList(sourceQuery(sourceType, sourceId, sourceItemId));
+        BigDecimal totalRemaining = totalRemaining(rows);
         BigDecimal target = amount == null ? totalRemaining : amount.min(totalRemaining).max(BigDecimal.ZERO);
+        reverseRows(sourceType, sourceId, rows, totalRemaining, target, requestNo, reason);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public BigDecimal reverseByRatio(String sourceType, Long sourceId, Long sourceItemId, BigDecimal ratio, String requestNo, String reason) {
+        BigDecimal safeRatio = ratio == null ? BigDecimal.ONE : ratio.max(BigDecimal.ZERO).min(BigDecimal.ONE);
+        if (safeRatio.signum() <= 0) return BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
+        List<JkPerformanceRecord> rows = recordDao.selectList(sourceQuery(sourceType, sourceId, sourceItemId));
+        BigDecimal totalRemaining = totalRemaining(rows);
+        if (totalRemaining.signum() <= 0) return BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
+        // 比例始终以原始业绩为基准，避免连续部分退回时出现“剩余金额再次乘比例”的复利式少冲。
+        BigDecimal target = totalOriginal(rows).multiply(safeRatio).setScale(2, RoundingMode.HALF_UP).min(totalRemaining);
+        reverseRows(sourceType, sourceId, rows, totalRemaining, target, requestNo, reason);
+        return target;
+    }
+
+    private void reverseRows(String sourceType, Long sourceId, List<JkPerformanceRecord> rows,
+                             BigDecimal totalRemaining, BigDecimal target, String requestNo, String reason) {
         if (target.signum() <= 0 || totalRemaining.signum() <= 0) return;
         BigDecimal allocated = BigDecimal.ZERO;
         for (int index = 0; index < rows.size(); index++) {
@@ -119,6 +137,30 @@ public class JkPerformanceServiceImpl implements JkPerformanceService {
         }
     }
 
+    private LambdaQueryWrapper<JkPerformanceRecord> sourceQuery(String sourceType, Long sourceId, Long sourceItemId) {
+        LambdaQueryWrapper<JkPerformanceRecord> query = new LambdaQueryWrapper<JkPerformanceRecord>()
+                .eq(JkPerformanceRecord::getSourceType, sourceType).eq(JkPerformanceRecord::getSourceId, sourceId)
+                .eq(JkPerformanceRecord::getIsDeleted, false)
+                .notLike(JkPerformanceRecord::getPerformanceType, "_REVERSE");
+        if (sourceItemId != null) query.eq(JkPerformanceRecord::getSourceItemId, sourceItemId);
+        return query;
+    }
+
+    private BigDecimal totalRemaining(List<JkPerformanceRecord> rows) {
+        BigDecimal total = BigDecimal.ZERO;
+        for (JkPerformanceRecord row : rows) total = total.add(remaining(row));
+        return total;
+    }
+
+    private BigDecimal totalOriginal(List<JkPerformanceRecord> rows) {
+        BigDecimal total = BigDecimal.ZERO;
+        for (JkPerformanceRecord row : rows) total = total.add(money(row.getPerformanceAmount()).max(BigDecimal.ZERO));
+        return total;
+    }
+
+    private boolean isReverseAudit(JkPerformanceRecord row) {
+        return row != null && row.getPerformanceType() != null && row.getPerformanceType().endsWith("_REVERSE");
+    }
     private BigDecimal remaining(JkPerformanceRecord row) { return money(row.getPerformanceAmount()).subtract(money(row.getReversedAmount())).max(BigDecimal.ZERO); }
     private BigDecimal money(BigDecimal value) { return value == null ? BigDecimal.ZERO : value; }
     private boolean notBlank(String value) { return value != null && !value.trim().isEmpty(); }

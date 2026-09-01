@@ -54,7 +54,11 @@ public class JkOperationProfitServiceImpl implements JkOperationProfitService {
         BigDecimal result = BigDecimal.ZERO;
         for (JkOperationProfitRecord row : recordDao.selectList(new LambdaQueryWrapper<JkOperationProfitRecord>()
                 .eq(JkOperationProfitRecord::getUserId, userId).eq(JkOperationProfitRecord::getIsDeleted, false)
-                .ne(JkOperationProfitRecord::getStatus, "VOID"))) {
+                .ne(JkOperationProfitRecord::getStatus, "VOID")
+                // REVERSAL 是负数审计明细；原记录的 reversedAmount 已反映冲正结果，汇总时不能再次扣减。
+                .ne(JkOperationProfitRecord::getStatus, "REVERSAL"))) {
+            // 防御性保护：即使查询条件未来被调整，也不能把负数冲正审计行重复计入净收益。
+            if (row != null && "REVERSAL".equals(row.getStatus())) continue;
             result = result.add(money(row.getProfitAmount()).subtract(money(row.getReversedAmount())));
         }
         return result.setScale(2, RoundingMode.HALF_UP);
@@ -82,22 +86,36 @@ public class JkOperationProfitServiceImpl implements JkOperationProfitService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void reverse(String sourceType, Long sourceId, Long sourceItemId, BigDecimal amount, String requestNo, String reason) {
-        LambdaQueryWrapper<JkOperationProfitRecord> query = new LambdaQueryWrapper<JkOperationProfitRecord>()
-                .eq(JkOperationProfitRecord::getSourceType, sourceType).eq(JkOperationProfitRecord::getSourceId, sourceId)
-                .eq(JkOperationProfitRecord::getIsDeleted, false).ne(JkOperationProfitRecord::getStatus, "VOID");
-        if (sourceItemId != null) query.eq(JkOperationProfitRecord::getSourceItemId, sourceItemId);
-        List<JkOperationProfitRecord> rows = recordDao.selectList(query);
-        BigDecimal total = BigDecimal.ZERO;
-        for (JkOperationProfitRecord row : rows) total = total.add(remaining(row));
-        BigDecimal target = amount == null ? total : amount.min(total).max(BigDecimal.ZERO);
-        if (target.signum() <= 0 || total.signum() <= 0) return;
+        List<JkOperationProfitRecord> rows = recordDao.selectList(sourceQuery(sourceType, sourceId, sourceItemId));
+        BigDecimal totalRemaining = totalRemaining(rows);
+        BigDecimal target = amount == null ? totalRemaining : amount.min(totalRemaining).max(BigDecimal.ZERO);
+        reverseRows(sourceType, sourceId, rows, totalRemaining, target, requestNo, reason);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public BigDecimal reverseByRatio(String sourceType, Long sourceId, Long sourceItemId, BigDecimal ratio, String requestNo, String reason) {
+        BigDecimal safeRatio = ratio == null ? BigDecimal.ONE : ratio.max(BigDecimal.ZERO).min(BigDecimal.ONE);
+        if (safeRatio.signum() <= 0) return BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
+        List<JkOperationProfitRecord> rows = recordDao.selectList(sourceQuery(sourceType, sourceId, sourceItemId));
+        BigDecimal totalRemaining = totalRemaining(rows);
+        if (totalRemaining.signum() <= 0) return BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
+        // 比例始终以原始毛利为基准，避免连续部分退回时基于剩余毛利再次乘比例而少冲。
+        BigDecimal target = totalOriginal(rows).multiply(safeRatio).setScale(2, RoundingMode.HALF_UP).min(totalRemaining);
+        reverseRows(sourceType, sourceId, rows, totalRemaining, target, requestNo, reason);
+        return target;
+    }
+
+    private void reverseRows(String sourceType, Long sourceId, List<JkOperationProfitRecord> rows,
+                             BigDecimal totalRemaining, BigDecimal target, String requestNo, String reason) {
+        if (target.signum() <= 0 || totalRemaining.signum() <= 0) return;
         BigDecimal allocated = BigDecimal.ZERO;
         for (int index = 0; index < rows.size(); index++) {
             JkOperationProfitRecord row = rows.get(index);
             BigDecimal remain = remaining(row);
             if (remain.signum() <= 0) continue;
             BigDecimal part = index == rows.size() - 1 ? target.subtract(allocated)
-                    : target.multiply(remain).divide(total, 2, RoundingMode.HALF_UP);
+                    : target.multiply(remain).divide(totalRemaining, 2, RoundingMode.HALF_UP);
             part = part.min(remain).max(BigDecimal.ZERO);
             if (part.signum() <= 0) continue;
             int updated = recordDao.update(null, new UpdateWrapper<JkOperationProfitRecord>()
@@ -116,6 +134,28 @@ public class JkOperationProfitServiceImpl implements JkOperationProfitService {
             allocated = allocated.add(part);
             if (allocated.compareTo(target) >= 0) break;
         }
+    }
+
+    private LambdaQueryWrapper<JkOperationProfitRecord> sourceQuery(String sourceType, Long sourceId, Long sourceItemId) {
+        LambdaQueryWrapper<JkOperationProfitRecord> query = new LambdaQueryWrapper<JkOperationProfitRecord>()
+                .eq(JkOperationProfitRecord::getSourceType, sourceType).eq(JkOperationProfitRecord::getSourceId, sourceId)
+                .eq(JkOperationProfitRecord::getIsDeleted, false)
+                .ne(JkOperationProfitRecord::getStatus, "VOID")
+                .ne(JkOperationProfitRecord::getStatus, "REVERSAL");
+        if (sourceItemId != null) query.eq(JkOperationProfitRecord::getSourceItemId, sourceItemId);
+        return query;
+    }
+
+    private BigDecimal totalRemaining(List<JkOperationProfitRecord> rows) {
+        BigDecimal total = BigDecimal.ZERO;
+        for (JkOperationProfitRecord row : rows) total = total.add(remaining(row));
+        return total;
+    }
+
+    private BigDecimal totalOriginal(List<JkOperationProfitRecord> rows) {
+        BigDecimal total = BigDecimal.ZERO;
+        for (JkOperationProfitRecord row : rows) total = total.add(money(row.getProfitAmount()).max(BigDecimal.ZERO));
+        return total;
     }
 
     private BigDecimal remaining(JkOperationProfitRecord row) { return money(row.getProfitAmount()).subtract(money(row.getReversedAmount())).max(BigDecimal.ZERO); }

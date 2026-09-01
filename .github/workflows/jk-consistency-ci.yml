@@ -28,13 +28,31 @@ jobs:
           java-version: '8'
           cache: maven
       - name: Compile all modules
+        id: compile
         run: |
           set -o pipefail
           mvn -B -DskipTests compile 2>&1 | tee maven-compile.log
       - name: Upload failed compile log
-        if: failure()
+        if: failure() && steps.compile.outcome == 'failure'
         uses: actions/upload-artifact@v4
         with:
           name: maven-compile-log
           path: maven-compile.log
+          retention-days: 3
+      - name: Run ledger convergence regression tests
+        id: ledger-tests
+        shell: bash
+        run: |
+          set -o pipefail
+          mvn -B -pl crmeb-service -am \
+            -Dtest=JkPerformanceServiceImplTest,JkOperationProfitServiceImplTest,CommissionTriggerServiceImplTransferReturnTest \
+            -Dsurefire.failIfNoSpecifiedTests=false \
+            -DfailIfNoTests=false \
+            test 2>&1 | tee ledger-regression-test.log
+      - name: Upload failed ledger regression test log
+        if: failure() && steps.ledger-tests.outcome == 'failure'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ledger-regression-test-log
+          path: ledger-regression-test.log
           retention-days: 3

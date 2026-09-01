@@ -11,4 +11,5 @@ public interface JkPerformanceService {
     BigDecimal summary(Long ownerUserId, String performanceType);
     PageInfo<JkPerformanceRecord> list(Long ownerUserId, String performanceType, String sourceType, String status, PageParamRequest page);
     void reverse(String sourceType, Long sourceId, Long sourceItemId, BigDecimal amount, String requestNo, String reason);
+    BigDecimal reverseByRatio(String sourceType, Long sourceId, Long sourceItemId, BigDecimal ratio, String requestNo, String reason);
 }
