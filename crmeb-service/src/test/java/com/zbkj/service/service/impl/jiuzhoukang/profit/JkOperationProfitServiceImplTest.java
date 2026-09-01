@@ -2,8 +2,6 @@ package com.zbkj.service.service.impl.jiuzhoukang.profit;
 
 import com.zbkj.common.model.jiuzhoukang.JkOperationProfitRecord;
 import com.zbkj.service.dao.jiuzhoukang.JkOperationProfitRecordDao;
-import com.zbkj.service.service.impl.jiuzhoukang.performance.JkOperationProfitLedgerService;
-import com.zbkj.service.service.jiuzhoukang.profit.JkOperationProfitService;
 import org.junit.Assert;
 import org.junit.Test;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -13,6 +11,7 @@ import java.lang.reflect.Proxy;
 import java.math.BigDecimal;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 public class JkOperationProfitServiceImplTest {
@@ -73,32 +72,42 @@ public class JkOperationProfitServiceImplTest {
     }
 
     @Test
-    public void legacyLedgerDelegatesToCanonicalServiceWithRequestNoAsActionKey() {
-        JkOperationProfitLedgerService legacy = new JkOperationProfitLedgerService();
-        AtomicReference<JkOperationProfitRecord> captured = new AtomicReference<JkOperationProfitRecord>();
-        JkOperationProfitService canonical = proxy(JkOperationProfitService.class, (method, args) -> {
-            if ("record".equals(method.getName())) {
-                JkOperationProfitRecord value = (JkOperationProfitRecord) args[0];
-                captured.set(value);
-                return value;
+    public void canonicalRecordUsesActionKeyAsRequestNoAndIsIdempotent() {
+        JkOperationProfitServiceImpl service = new JkOperationProfitServiceImpl();
+        AtomicReference<JkOperationProfitRecord> stored = new AtomicReference<JkOperationProfitRecord>();
+        AtomicInteger inserts = new AtomicInteger();
+        JkOperationProfitRecordDao dao = proxy(JkOperationProfitRecordDao.class, (method, args) -> {
+            if ("selectOne".equals(method.getName())) return stored.get();
+            if ("insert".equals(method.getName())) {
+                inserts.incrementAndGet();
+                stored.set((JkOperationProfitRecord) args[0]);
+                return 1;
             }
-            if ("summary".equals(method.getName())) return new BigDecimal("70.00");
             return null;
         });
-        ReflectionTestUtils.setField(legacy, "profitService", canonical);
+        ReflectionTestUtils.setField(service, "recordDao", dao);
 
-        JkOperationProfitRecord value = new JkOperationProfitRecord()
+        JkOperationProfitRecord first = service.record(new JkOperationProfitRecord()
                 .setUserId(100L)
                 .setSourceType("STOCK_TRANSFER")
                 .setSourceId(200L)
                 .setRevenueAmount(new BigDecimal("100.00"))
-                .setRequestNo("PROFIT:TEST:200");
+                .setCostAmount(new BigDecimal("30.00"))
+                .setProfitAmount(new BigDecimal("70.00"))
+                .setActionKey("PROFIT:TEST:200"));
+        JkOperationProfitRecord second = service.record(new JkOperationProfitRecord()
+                .setUserId(100L)
+                .setSourceType("STOCK_TRANSFER")
+                .setSourceId(200L)
+                .setRevenueAmount(new BigDecimal("999.00"))
+                .setCostAmount(BigDecimal.ZERO)
+                .setProfitAmount(new BigDecimal("999.00"))
+                .setActionKey("PROFIT:TEST:200"));
 
-        legacy.record(value);
-
-        Assert.assertNotNull(captured.get());
-        Assert.assertEquals("PROFIT:TEST:200", captured.get().getActionKey());
-        Assert.assertEquals(new BigDecimal("70.00"), legacy.confirmedProfit(100L));
+        Assert.assertEquals("PROFIT:TEST:200", first.getRequestNo());
+        Assert.assertSame(first, second);
+        Assert.assertEquals(1, inserts.get());
+        Assert.assertEquals(new BigDecimal("70.00"), second.getProfitAmount());
     }
 
     private BigDecimal reverseRatioTarget(BigDecimal alreadyReversed) {
