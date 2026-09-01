@@ -100,7 +100,8 @@ public class JkPerformanceServiceImpl implements JkPerformanceService {
         List<JkPerformanceRecord> rows = recordDao.selectList(sourceQuery(sourceType, sourceId, sourceItemId));
         BigDecimal totalRemaining = totalRemaining(rows);
         if (totalRemaining.signum() <= 0) return BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
-        BigDecimal target = totalRemaining.multiply(safeRatio).setScale(2, RoundingMode.HALF_UP).min(totalRemaining);
+        // 比例始终以原始业绩为基准，避免连续部分退回时出现“剩余金额再次乘比例”的复利式少冲。
+        BigDecimal target = totalOriginal(rows).multiply(safeRatio).setScale(2, RoundingMode.HALF_UP).min(totalRemaining);
         reverseRows(sourceType, sourceId, rows, totalRemaining, target, requestNo, reason);
         return target;
     }
@@ -148,6 +149,12 @@ public class JkPerformanceServiceImpl implements JkPerformanceService {
     private BigDecimal totalRemaining(List<JkPerformanceRecord> rows) {
         BigDecimal total = BigDecimal.ZERO;
         for (JkPerformanceRecord row : rows) total = total.add(remaining(row));
+        return total;
+    }
+
+    private BigDecimal totalOriginal(List<JkPerformanceRecord> rows) {
+        BigDecimal total = BigDecimal.ZERO;
+        for (JkPerformanceRecord row : rows) total = total.add(money(row.getPerformanceAmount()).max(BigDecimal.ZERO));
         return total;
     }
 
