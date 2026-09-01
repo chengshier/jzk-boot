@@ -221,18 +221,31 @@ public class JkReceiveExceptionV2Service {
                     .setSpreadAmount(spread).setCostMethod("FIFO_BATCH").setCostSnapshotJson(cost.json)
                     .setProfitStatus(cost.unitCost == null ? "COST_MISSING" : "CONFIRMED").setUpdateTime(new Date());
             transferItemDao.updateById(item);
-            String performanceRequestNo = "PERFORMANCE:RECEIVE_EXCEPTION:" + entity.getId() + ":" + item.getId();
+            Long sender = transfer.getCountyAgentId();
+            Long receiver = transfer.getUserId();
+            String receiverPerformanceRequestNo = "PERFORMANCE:RECEIVE_EXCEPTION:" + entity.getId() + ":" + item.getId()
+                    + ":RECEIVER:" + receiver;
             performanceService.record(new JkPerformanceRecord().setSourceType("STOCK_TRANSFER").setSourceId(transfer.getId())
                     .setSourceNo(transfer.getTransferNo()).setSourceItemId(item.getId()).setPerformanceType("STOCK_TRANSFER")
-                    .setOwnerUserId(transfer.getCountyAgentId()).setOwnerRoleCode("county_agent").setSourceUserId(transfer.getUserId())
-                    .setSourceRoleCode(transfer.getRoleCode()).setCountyAgentUserId(transfer.getCountyAgentId())
-                    .setRegionCode(transfer.getRegionCode()).setProductId(item.getProductId()).setSkuId(item.getSkuId())
+                    .setOwnerUserId(receiver).setOwnerRoleCode(transfer.getRoleCode()).setSourceUserId(sender)
+                    .setCountyAgentUserId(sender).setRegionCode(transfer.getRegionCode()).setProductId(item.getProductId()).setSkuId(item.getSkuId())
                     .setQuantity(qty).setBaseAmount(revenue).setPerformanceAmount(revenue)
-                    .setRequestNo(performanceRequestNo).setActionKey(performanceRequestNo)
+                    .setRequestNo(receiverPerformanceRequestNo).setActionKey(receiverPerformanceRequestNo)
                     .setSourceSnapshotJson(entity.getResolutionSnapshotJson()));
-            if (cost.unitCost != null) {
+            if (sender != null) {
+                String senderPerformanceRequestNo = "PERFORMANCE:RECEIVE_EXCEPTION:" + entity.getId() + ":" + item.getId();
+                performanceService.record(new JkPerformanceRecord().setSourceType("STOCK_TRANSFER").setSourceId(transfer.getId())
+                        .setSourceNo(transfer.getTransferNo()).setSourceItemId(item.getId()).setPerformanceType("INVENTORY_TURNOVER")
+                        .setOwnerUserId(sender).setOwnerRoleCode("county_agent").setSourceUserId(receiver)
+                        .setSourceRoleCode(transfer.getRoleCode()).setCountyAgentUserId(sender)
+                        .setRegionCode(transfer.getRegionCode()).setProductId(item.getProductId()).setSkuId(item.getSkuId())
+                        .setQuantity(qty).setBaseAmount(revenue).setPerformanceAmount(revenue)
+                        .setRequestNo(senderPerformanceRequestNo).setActionKey(senderPerformanceRequestNo)
+                        .setSourceSnapshotJson(entity.getResolutionSnapshotJson()));
+            }
+            if (cost.unitCost != null && sender != null) {
                 String profitRequestNo = "PROFIT:RECEIVE_EXCEPTION:" + entity.getId() + ":" + item.getId();
-                profitService.record(new JkOperationProfitRecord().setUserId(transfer.getCountyAgentId()).setRoleCode("county_agent")
+                profitService.record(new JkOperationProfitRecord().setUserId(sender).setRoleCode("county_agent")
                         .setIncomeNature("OFFLINE_REALIZED").setSourceType("STOCK_TRANSFER").setSourceId(transfer.getId())
                         .setSourceNo(transfer.getTransferNo()).setSourceItemId(item.getId()).setProductId(item.getProductId())
                         .setSkuId(item.getSkuId()).setQuantity(qty).setRevenueAmount(revenue).setCostAmount(costAmount)
@@ -241,8 +254,8 @@ public class JkReceiveExceptionV2Service {
                 String commissionRequestNo = "COMMISSION:RECEIVE_EXCEPTION:" + entity.getId() + ":" + item.getId();
                 JkCommissionRuleTrialRequest scenario = new JkCommissionRuleTrialRequest().setScenario("STOCK_TRANSFER_RECEIVED")
                         .setSourceType("STOCK_TRANSFER").setSourceId(transfer.getId()).setSourceItemId(item.getId()).setSourceNo(transfer.getTransferNo())
-                        .setBuyerUserId(transfer.getUserId()).setPurchaserUserId(transfer.getUserId()).setOwnerUserId(transfer.getUserId())
-                        .setSellerUserId(transfer.getCountyAgentId()).setCountyAgentUserId(transfer.getCountyAgentId()).setRegionCode(transfer.getRegionCode())
+                        .setBuyerUserId(receiver).setPurchaserUserId(receiver).setOwnerUserId(receiver)
+                        .setSellerUserId(sender).setCountyAgentUserId(sender).setRegionCode(transfer.getRegionCode())
                         .setProductId(item.getProductId()).setSkuId(item.getSkuId()).setQuantity(qty)
                         .setBaseAmount(revenue).setCostAmount(costAmount).setRealGrossProfit(spread)
                         .setRegisteredCustomer(true).setVoucherPresent(true).setAudited(true)
